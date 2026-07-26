@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "luahud",
+	"version": "${version}",
+	"name": "LuaHUD",
+	"description": "Creates highly flexible and fully customizable HUDs using Lua scripting",
+	"authors": [
+		"iFair_"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/luahud",
+		"sources": "https://github.com/iFair1/luahud"
+	},
+	"license": "GPLv3",
+	"icon": "assets/luahud/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"me.ifair.luahud.LuaHUD"
+		],
+		"fabric-datagen": [
+			"me.ifair.luahud.LuaHUDDataGenerator"
+		],
+		"client": [
+			"me.ifair.luahud.LuaHUDClient"
+		]
+	},
+	"mixins": [
+		"luahud.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.21",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
