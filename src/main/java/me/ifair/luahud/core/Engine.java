@@ -48,6 +48,9 @@ public class Engine {
                 Files.createDirectories(configDir);
             }
 
+            // Start file listener in the background
+            startWatcher(configDir);
+
             if (!Files.exists(scriptFile)) {
                 LuaHUD.LOGGER.error("Couldn't find the main.lua file at {}", scriptFile.toAbsolutePath());
                 return;
@@ -61,8 +64,6 @@ public class Engine {
                 LuaHUD.LOGGER.info("Script loaded successfully at {}", scriptFile.toAbsolutePath());
             }
 
-            // Start file listener in the background
-            startWatcher(configDir);
 
         } catch (Exception e) {
             LuaHUD.LOGGER.error("There was an error while loading the script: {}", e.getMessage());
