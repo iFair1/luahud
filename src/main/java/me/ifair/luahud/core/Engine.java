@@ -20,7 +20,6 @@ public class Engine {
 
     private final AtomicBoolean needsReload = new AtomicBoolean(false);
     private WatchService watchService;
-    private Thread watchThread;
 
     public void init() {
         // Clear the watcher and the old thread while reload
@@ -78,7 +77,7 @@ public class Engine {
             watchService = FileSystems.getDefault().newWatchService();
             configDir.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
 
-            watchThread = new Thread(() -> {
+            Thread watchThread = new Thread(() -> {
                 try {
                     WatchKey key;
                     while ((key = watchService.take()) != null) {
