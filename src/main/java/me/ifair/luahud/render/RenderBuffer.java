@@ -9,12 +9,31 @@ import java.util.List;
 import java.util.Stack;
 
 public class RenderBuffer {
-    private static final List<RenderTask> TASKS = new ArrayList<>();
+    // A simple class that holds the data instead of lambda
+    private static class TextElement {
+        String text;
+        int color, bgColor, xOffset, yOffset;
+        String anchor;
+
+        void update(String text, int color, int bgColor, String anchor, int xOffset, int yOffset) {
+            this.text = text;
+            this.color = color;
+            this.bgColor = bgColor;
+            this.anchor = anchor;
+            this.xOffset = xOffset;
+            this.yOffset = yOffset;
+        }
+    }
+
+    // Object Pool
+    private static final List<TextElement> TEXT_POOL = new ArrayList<>();
+    private static int activeElements = 0; // counter for active texts on the screen
+
     private static final Stack<SectionState> STATE_STACK = new Stack<>();
     private static SectionState currentState = new SectionState();
 
     public static void clear() {
-        TASKS.clear();
+        activeElements = 0; // Reset the index rather than deleting the list, so object stays on the ram and there is fewer problems with GC
         STATE_STACK.clear();
         currentState = new SectionState();
     }
@@ -29,7 +48,6 @@ public class RenderBuffer {
             if (!options.get("offsetX").isnil()) currentState.offsetX += options.get("offsetX").checkint();
             if (!options.get("offsetY").isnil()) currentState.offsetY += options.get("offsetY").checkint();
         }
-
         currentState.cursorY = 0;
     }
 
@@ -40,46 +58,55 @@ public class RenderBuffer {
     }
 
     public static void addText(String text, LuaTable options) {
-        final int color = currentState.textColor;
-        final int bgColor = currentState.backgroundColor;
-        final String anchor = currentState.anchor;
-        final int xOffset = currentState.offsetX;
-        final int yOffset = currentState.offsetY + currentState.cursorY;
+        TextElement element;
+        // use If there is already a ready object, else create one and add it to the pool
+        if (activeElements < TEXT_POOL.size()) {
+            element = TEXT_POOL.get(activeElements);
+        } else {
+            element = new TextElement();
+            TEXT_POOL.add(element);
+        }
 
-        TASKS.add(((context, textRenderer, screenWidth, screenHeight) -> {
-            int finalX = xOffset;
-            int finalY = yOffset;
+        element.update(
+                text,
+                currentState.textColor,
+                currentState.backgroundColor,
+                currentState.anchor,
+                currentState.offsetX,
+                currentState.offsetY + currentState.cursorY
+        );
 
-            int textWidth = textRenderer.getWidth(text);
-            int textHeight = textRenderer.fontHeight;
-
-            switch (anchor) {
-                case "topRight":
-                    finalX = screenWidth - textWidth - xOffset;
-                    break;
-                case "bottomLeft":
-                    finalY = screenHeight - textHeight - yOffset;
-                    break;
-                case "bottomRight":
-                    finalX = screenWidth - textWidth - xOffset;
-                    finalY = screenHeight - textHeight - yOffset;
-                    break;
-            }
-
-            // I copied these bit operations, but the thing I know is that it checks whether there is a backgroundColor or not
-            if ((bgColor >> 24 & 0xFF) > 0) {
-                context.fill(finalX - 2, finalY - 2, finalX + textWidth + 2, finalY + textHeight + 2, bgColor);
-            }
-
-            context.drawText(textRenderer, text, finalX, finalY, color, true);
-        }));
-
-        currentState.cursorY += 10; // Go down 10y for the next line
+        activeElements++;
+        currentState.cursorY += 10;
     }
 
     public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
-        for (RenderTask task : TASKS) {
-            task.draw(context, textRenderer, screenWidth, screenHeight);
+        // Draw only the active elements
+        for (int i = 0; i < activeElements; i++) {
+            TextElement el = TEXT_POOL.get(i);
+
+            int finalX = el.xOffset;
+            int finalY = el.yOffset;
+            int textWidth = textRenderer.getWidth(el.text);
+            int textHeight = textRenderer.fontHeight;
+
+            switch (el.anchor) {
+                case "topRight":
+                    finalX = screenWidth - textWidth - el.xOffset;
+                    break;
+                case "bottomLeft":
+                    finalY = screenHeight - textHeight - el.yOffset;
+                    break;
+                case "bottomRight":
+                    finalX = screenWidth - textWidth - el.xOffset;
+                    finalY = screenHeight - textHeight - el.yOffset;
+                    break;
+            }
+
+            if ((el.bgColor >> 24 & 0xFF) > 0) {
+                context.fill(finalX - 2, finalY - 2, finalX + textWidth + 2, finalY + textHeight + 2, el.bgColor);
+            }
+            context.drawText(textRenderer, el.text, finalX, finalY, el.color, true);
         }
     }
 
