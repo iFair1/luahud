@@ -1,6 +1,7 @@
 package me.ifair.luahud.core;
 
 import me.ifair.luahud.LuaHUD;
+import me.ifair.luahud.api.PerformanceModule;
 import me.ifair.luahud.api.RenderModule;
 import me.ifair.luahud.api.WorldModule;
 import net.fabricmc.loader.api.FabricLoader;
@@ -34,6 +35,7 @@ public class Engine {
 
         new RenderModule().register(lh);
         new WorldModule().register(lh);
+        new PerformanceModule().register(lh);
 
         globals.set("lh", lh);
 
