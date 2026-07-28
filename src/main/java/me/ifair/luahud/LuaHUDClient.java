@@ -1,39 +1,46 @@
 package me.ifair.luahud;
 
+import me.ifair.luahud.api.WorldModule;
+import me.ifair.luahud.core.Engine;
+import me.ifair.luahud.core.EventDispatcher;
+import me.ifair.luahud.core.TimerManager;
+import me.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
 
 public class LuaHUDClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        HudRenderCallback.EVENT.register((DrawContext drawContext, RenderTickCounter tickCounter) -> {
-            renderCustomHud(drawContext);
+        Engine engine = new Engine();
+        engine.init();
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || Engine.getLhTable() == null) return; // return early if not in world or LhTable is null
+
+            // Check for Update
+            engine.checkForUpdates();
+
+            TimerManager.tick();
+            EventDispatcher.fireEvent("tick");
         });
-    }
 
-    private void renderCustomHud(DrawContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        HudRenderCallback.EVENT.register(((drawContext, tickCounter) -> {
+            MinecraftClient client = MinecraftClient.getInstance();
 
-        if (client.player == null) return; // If player is at main menu
+            if (client.player == null || Engine.getLhTable() == null) return;
 
-        context.drawText(
-                client.textRenderer,
-                "Hello World!",
-                10,
-                10,
-                0xFFFFFFFF,
-                true
-        );
+            WorldModule.updatePositions(Engine.getLhTable(), client.player);
 
-        String fps = client.getCurrentFps() + " FPS";
+            RenderBuffer.clear();
+            EventDispatcher.fireEvent("render");
 
-        context.fill(5, 5, 150, 40, 0x80000000);
-        context.drawText(client.textRenderer, fps, 10, 25, 0x00BB00, true);
+            int width = client.getWindow().getScaledWidth();
+            int height = client.getWindow().getScaledHeight();
 
-
+            RenderBuffer.renderAll(drawContext, client.textRenderer, width, height);
+        }));
     }
 }
