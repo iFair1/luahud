@@ -13,7 +13,7 @@ public class WorldModule implements ApiModule {
     }
 
     public static void updatePositions(LuaTable lh, PlayerEntity player) {
-        // Return early if lh table hasn't loaded yet, instead of fucking crashing
+        // Return early if lh table hasn't loaded yet, instead of crashing
         if (lh == null) return;
 
         LuaValue posValue = lh.get("pos");
