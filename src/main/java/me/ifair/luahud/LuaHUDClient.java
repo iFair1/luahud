@@ -23,6 +23,8 @@ public class LuaHUDClient implements ClientModInitializer {
             // Check for Update
             engine.checkForUpdates();
 
+            WorldModule.updatePositions(Engine.getLhTable(), client.player);
+
             TimerManager.tick();
             EventDispatcher.fireEvent("tick");
         });
@@ -31,8 +33,6 @@ public class LuaHUDClient implements ClientModInitializer {
             MinecraftClient client = MinecraftClient.getInstance();
 
             if (client.player == null || Engine.getLhTable() == null) return;
-
-            WorldModule.updatePositions(Engine.getLhTable(), client.player);
 
             RenderBuffer.clear();
             EventDispatcher.fireEvent("render");
