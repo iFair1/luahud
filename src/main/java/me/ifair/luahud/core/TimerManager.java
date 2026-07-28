@@ -7,6 +7,7 @@ import org.luaj.vm2.lib.ThreeArgFunction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TimerManager {
     private static class TimerTask {
@@ -20,7 +21,7 @@ public class TimerManager {
         }
     }
 
-    private static final List<TimerTask> TASKS = new ArrayList<>();
+    private static final List<TimerTask> TASKS = new CopyOnWriteArrayList<>();
 
     public static void registerToLua(LuaTable lh) {
         lh.set("setInterval", new ThreeArgFunction() {

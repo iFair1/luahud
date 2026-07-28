@@ -9,9 +9,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventDispatcher {
-    private static final Map<String, List<LuaValue>> LISTENERS = new HashMap<>();
+    private static final Map<String, List<LuaValue>> LISTENERS = new ConcurrentHashMap<>();
 
     public static void registerToLua(LuaTable lh) {
         lh.set("on", new TwoArgFunction() {
@@ -20,7 +22,7 @@ public class EventDispatcher {
                 if (eventName.isstring() && callback.isfunction()) {
                     String event = eventName.checkjstring();
 
-                    LISTENERS.computeIfAbsent(event, k -> new ArrayList<>()).add(callback);
+                    LISTENERS.computeIfAbsent(event, k -> new CopyOnWriteArrayList<>()).add(callback);
                 }
                 return LuaValue.NIL;
             }
