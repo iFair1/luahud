@@ -11,19 +11,22 @@ import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.jse.JsePlatform;
 
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Engine {
     public static Globals globals;
     public static LuaTable lh;
 
-    // for hot reloading
-    private long lastModifiedTime = 0;
-    private int checkTimer = 0;
+    private final AtomicBoolean needsReload = new AtomicBoolean(false);
+    private WatchService watchService;
+    private Thread watchThread;
 
     public void init() {
-        // reset all old things when reload
+        // Clear the watcher and the old thread while reload
+        stopWatcher();
+
+        // Reset old states
         globals = JsePlatform.standardGlobals();
         lh = new LuaTable();
 
@@ -52,9 +55,6 @@ public class Engine {
                 return;
             }
 
-            // Comparing only the last edit time rather than reading through the whole file
-            lastModifiedTime = Files.getLastModifiedTime(scriptFile).toMillis(); // save the last modified time in milliseconds
-
             try (InputStream stream = Files.newInputStream(scriptFile)) {
                 LuaValue chunk = globals.load(stream, "@main.lua", "bt", globals);
                 chunk.call();
@@ -62,30 +62,63 @@ public class Engine {
                 EventDispatcher.fireEvent("init");
                 LuaHUD.LOGGER.info("Script loaded successfully at {}", scriptFile.toAbsolutePath());
             }
+
+            // Start file listener in the background
+            startWatcher(configDir);
+
         } catch (Exception e) {
-            LuaHUD.LOGGER.error("There was en error while loading the script: {}", e.getMessage());
+            LuaHUD.LOGGER.error("There was an error while loading the script: {}", e.getMessage());
         }
     }
 
-    // Gets called every second
-    public void checkForUpdates() {
-        checkTimer++;
-        if (checkTimer >= 20) { // 20 Tick = 1 Saniye
-            checkTimer = 0;
-            try {
-                Path scriptFile = FabricLoader.getInstance().getConfigDir().resolve("luahud").resolve("main.lua");
-                if (Files.exists(scriptFile)) {
-                    long currentModifiedTime = Files.getLastModifiedTime(scriptFile).toMillis();
 
-                    // currentModifiedTime should be bigger than the lastModifiedTime if the user changed the file
-                    if (currentModifiedTime > lastModifiedTime) {
-                        LuaHUD.LOGGER.info("A change was detected at the script file. HUD is reloading...");
-                        init(); // Load everything again
+    // async thread that listens the configDir
+    private void startWatcher(Path configDir) {
+        try {
+            watchService = FileSystems.getDefault().newWatchService();
+            configDir.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+
+            watchThread = new Thread(() -> {
+                try {
+                    WatchKey key;
+                    while ((key = watchService.take()) != null) {
+                        for (WatchEvent<?> event : key.pollEvents()) {
+                            Path changed = (Path) event.context();
+                            if (changed.toString().equals("main.lua")) {
+                                needsReload.set(true); // send reload signal to the main thread
+                            }
+                        }
+                        key.reset();
                     }
+                } catch (ClosedWatchServiceException e) {
+                    // Here will trigger when the watcher is closed. No problem, just skip
+                } catch (Exception e) {
+                    LuaHUD.LOGGER.error("Error in file watcher thread: {}", e.getMessage());
                 }
-            } catch (Exception e) {
-                LuaHUD.LOGGER.error("There was an error while checking for updates in the script file: {}", e.getMessage());
+            }, "LuaHUD-FileWatcher");
+
+            watchThread.setDaemon(true); // Make the thread automatically die when the game closes
+            watchThread.start();
+
+        } catch (Exception e) {
+            LuaHUD.LOGGER.error("Failed to initialize File Watcher: {}", e.getMessage());
+        }
+    }
+
+    private void stopWatcher() {
+        try {
+            if (watchService != null) {
+                watchService.close();
             }
+        } catch (Exception ignored) {}
+    }
+
+
+    // This should be called only by the main thread every tick. It doesn't read/write anything, only checks a boolean
+    public void checkForUpdates() {
+        if (needsReload.compareAndSet(true, false)) {
+            LuaHUD.LOGGER.info("A change was detected at main.lua. HUD is reloading...");
+            init(); // Reload the script.
         }
     }
 
