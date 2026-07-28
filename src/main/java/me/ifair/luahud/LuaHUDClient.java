@@ -23,8 +23,6 @@ public class LuaHUDClient implements ClientModInitializer {
             // Check for Update
             engine.checkForUpdates();
 
-            WorldModule.updatePositions(Engine.getLhTable(), client.player);
-
             TimerManager.tick();
             EventDispatcher.fireEvent("tick");
         });

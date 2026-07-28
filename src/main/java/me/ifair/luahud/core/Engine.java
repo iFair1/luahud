@@ -1,6 +1,7 @@
 package me.ifair.luahud.core;
 
 import me.ifair.luahud.LuaHUD;
+import me.ifair.luahud.api.ApiRegistry;
 import me.ifair.luahud.api.PerformanceModule;
 import me.ifair.luahud.api.RenderModule;
 import me.ifair.luahud.api.WorldModule;
@@ -35,9 +36,7 @@ public class Engine {
         EventDispatcher.registerToLua(lh);
         TimerManager.registerToLua(lh);
 
-        new RenderModule().register(lh);
-        new WorldModule().register(lh);
-        new PerformanceModule().register(lh);
+        ApiRegistry.registerAll(lh);
 
         globals.set("lh", lh);
 

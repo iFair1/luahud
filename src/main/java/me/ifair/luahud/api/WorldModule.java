@@ -1,27 +1,44 @@
 package me.ifair.luahud.api;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
+import org.luaj.vm2.Lua;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.lib.ZeroArgFunction;
 
 public class WorldModule implements ApiModule {
-
     @Override
     public void register(LuaTable lh) {
-        LuaTable posTable = new LuaTable();
-        lh.set("pos", posTable);
+        LuaTable worldTable = new LuaTable();
+        lh.set("world", worldTable);
+        registerMethods(worldTable);
     }
 
-    public static void updatePositions(LuaTable lh, PlayerEntity player) {
-        // Return early if lh table hasn't loaded yet, instead of crashing
-        if (lh == null) return;
+    private static void registerMethods(LuaTable table) {
 
-        LuaValue posValue = lh.get("pos");
-        if (posValue.istable()) {
-            LuaTable posTable = (LuaTable) posValue;
-            posTable.set("x", LuaValue.valueOf(player.getX()));
-            posTable.set("y", LuaValue.valueOf(player.getY()));
-            posTable.set("z", LuaValue.valueOf(player.getZ()));
-        }
+        table.set("getX", new ZeroArgFunction() {
+            @Override
+            public LuaValue call() {
+                PlayerEntity player = MinecraftClient.getInstance().player;
+                return player != null ? LuaValue.valueOf(player.getX()) : LuaValue.ZERO;
+            }
+        });
+
+        table.set("getY", new ZeroArgFunction() {
+            @Override
+            public LuaValue call() {
+                PlayerEntity player = MinecraftClient.getInstance().player;
+                return player != null ? LuaValue.valueOf(player.getY()) : LuaValue.ZERO;
+            }
+        });
+
+        table.set("getZ", new ZeroArgFunction() {
+            @Override
+            public LuaValue call() {
+                PlayerEntity player = MinecraftClient.getInstance().player;
+                return player != null ? LuaValue.valueOf(player.getZ()) : LuaValue.ZERO;
+            }
+        });
     }
 }
