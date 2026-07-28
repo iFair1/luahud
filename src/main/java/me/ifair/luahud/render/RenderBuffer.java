@@ -103,8 +103,9 @@ public class RenderBuffer {
                     break;
             }
 
-            if ((el.bgColor >> 24 & 0xFF) > 0) {
-                context.fill(finalX - 2, finalY - 2, finalX + textWidth + 2, finalY + textHeight + 2, el.bgColor);
+            // Draw background if background's alpha is not 00, and text width is bigger than zero
+            if (((el.bgColor >> 24 & 0xFF) > 0) && textWidth > 0) {
+                context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, el.bgColor);
             }
             context.drawText(textRenderer, el.text, finalX, finalY, el.color, true);
         }
