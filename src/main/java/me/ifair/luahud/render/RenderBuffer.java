@@ -29,32 +29,26 @@ public class RenderBuffer {
     private static final List<TextElement> TEXT_POOL = new ArrayList<>();
     private static int activeElements = 0; // counter for active texts on the screen
 
-    private static final Stack<SectionState> STATE_STACK = new Stack<>();
     private static SectionState currentState = new SectionState();
 
     public static void clear() {
         activeElements = 0; // Reset the index rather than deleting the list, so object stays on the ram and there is fewer problems with GC
-        STATE_STACK.clear();
         currentState = new SectionState();
     }
 
-    public static void pushSection(LuaTable options) {
-        STATE_STACK.push(currentState.copy());
+    public static void setSection(LuaTable options) {
+        // Yeni bir section başlatıldığında state'i varsayılan ayarlara döndürüp üzerine yazabiliriz
+        // Ya da bir önceki değerlerin üstüne yazabiliriz (Tercih meselesi, sıfırlamak daha temizdir)
+        currentState = new SectionState();
 
         if (options != null && !options.isnil()) {
             if (!options.get("anchor").isnil()) currentState.anchor = options.get("anchor").checkjstring();
             if (!options.get("textColor").isnil()) currentState.textColor = parseColor(options.get("textColor").checkjstring());
             if (!options.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(options.get("backgroundColor").checkjstring());
-            if (!options.get("offsetX").isnil()) currentState.offsetX += options.get("offsetX").checkint();
-            if (!options.get("offsetY").isnil()) currentState.offsetY += options.get("offsetY").checkint();
+            if (!options.get("offsetX").isnil()) currentState.offsetX = options.get("offsetX").checkint();
+            if (!options.get("offsetY").isnil()) currentState.offsetY = options.get("offsetY").checkint();
         }
-        currentState.cursorY = 0;
-    }
-
-    public static void popSection() {
-        if (!STATE_STACK.isEmpty()) {
-            currentState = STATE_STACK.pop();
-        }
+        currentState.cursorY = 0; // Resetting the cursorY because I'm on a new section
     }
 
     public static void addText(String text, LuaTable options) {
