@@ -17,26 +17,24 @@ public class LuaHUDClient implements ClientModInitializer {
         engine.init();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || Engine.getLhTable() == null) return; // return early if not in world or LhTable is null
+            if (client.player == null || Engine.getLhTable() == null) return;
 
-            // Check for Update
             engine.checkForUpdates();
-
             TimerManager.tick();
+
+            RenderBuffer.clear();
             EventDispatcher.fireEvent("tick");
+            EventDispatcher.fireEvent("render");
         });
 
         HudRenderCallback.EVENT.register(((drawContext, tickCounter) -> {
             MinecraftClient client = MinecraftClient.getInstance();
 
-            if (client.player == null || Engine.getLhTable() == null) return;
+            if (client.player == null || Engine.getLhTable() == null) return; // Return if not in a world
 
-            RenderBuffer.clear();
-            EventDispatcher.fireEvent("render");
-
+            // Java does the drawning
             int width = client.getWindow().getScaledWidth();
             int height = client.getWindow().getScaledHeight();
-
             RenderBuffer.renderAll(drawContext, client.textRenderer, width, height);
         }));
     }
