@@ -1,6 +1,5 @@
 package me.ifair.luahud;
 
-import me.ifair.luahud.api.WorldModule;
 import me.ifair.luahud.core.Engine;
 import me.ifair.luahud.core.EventDispatcher;
 import me.ifair.luahud.core.TimerManager;
