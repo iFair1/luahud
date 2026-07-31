@@ -1,6 +1,7 @@
 package me.ifair.luahud.api;
 
 import net.minecraft.client.MinecraftClient;
+import org.apache.logging.log4j.util.Lazy;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.TwoArgFunction;
@@ -8,26 +9,10 @@ import org.luaj.vm2.lib.TwoArgFunction;
 public class PerformanceModule implements ApiModule {
     @Override
     public void register(LuaTable lh) {
-        LuaTable performanceTable = new LuaTable();
-        LuaTable metatable = new LuaTable();
+        LazyTable performance = new LazyTable();
 
-        metatable.set(LuaValue.INDEX, new TwoArgFunction() {
-            @Override
-            public LuaValue call(LuaValue table, LuaValue key) {
-                if (!key.isstring()) return LuaValue.NIL;
+        performance.addInt("fps", () -> MinecraftClient.getInstance().getCurrentFps());
 
-                String varName = key.checkjstring();
-
-                if ("fps".equals(varName)) {
-                    int fps = MinecraftClient.getInstance().getCurrentFps();
-                    return LuaValue.valueOf(fps);
-                }
-
-                return LuaValue.NIL;
-            }
-        });
-
-        performanceTable.setmetatable(metatable);
-        lh.set("performance", performanceTable);
+        lh.set("performance", performance.build());
     }
 }

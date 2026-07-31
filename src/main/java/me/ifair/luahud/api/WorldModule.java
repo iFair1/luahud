@@ -9,31 +9,24 @@ import org.luaj.vm2.lib.TwoArgFunction;
 public class WorldModule implements ApiModule {
     @Override
     public void register(LuaTable lh) {
-        LuaTable worldTable = new LuaTable();
-        LuaTable metatable = new LuaTable();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        LazyTable world = new LazyTable();
 
-        metatable.set(LuaValue.INDEX, new TwoArgFunction() {
-            @Override
-            public LuaValue call(LuaValue table, LuaValue key) {
-                // Only accepts string calls
-                if (!key.isstring()) return LuaValue.NIL;
-
-                String varName = key.checkjstring();
-                PlayerEntity player = MinecraftClient.getInstance().player;
-
-                if (player == null) return LuaValue.ZERO;
-
-                // Return the wanted var
-                switch (varName) {
-                    case "x": return LuaValue.valueOf(player.getX());
-                    case "y": return LuaValue.valueOf(player.getY());
-                    case "z": return LuaValue.valueOf(player.getZ());
-                    default: return LuaValue.NIL; // Return nil if lua called an invalid var
-                }
-            }
+        world.addDouble("x", () -> {
+            PlayerEntity player = mc.player;
+            return player != null ? player.getX() : 0.0;
         });
 
-        worldTable.setmetatable(metatable);
-        lh.set("world", worldTable);
+        world.addDouble("y", () -> {
+            PlayerEntity player = mc.player;
+            return player != null ? player.getY() : 0.0;
+        });
+
+        world.addDouble("z", () -> {
+            PlayerEntity player = mc.player;
+            return player != null ? player.getZ() : 0.0;
+        });
+
+        lh.set("world", world.build());
     }
 }
