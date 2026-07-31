@@ -37,8 +37,6 @@ public class RenderBuffer {
     }
 
     public static void setSection(LuaTable options) {
-        // Yeni bir section başlatıldığında state'i varsayılan ayarlara döndürüp üzerine yazabiliriz
-        // Ya da bir önceki değerlerin üstüne yazabiliriz (Tercih meselesi, sıfırlamak daha temizdir)
         currentState = new SectionState();
 
         if (options != null && !options.isnil()) {
