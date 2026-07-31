@@ -24,7 +24,6 @@ public class LuaHUDClient implements ClientModInitializer {
 
             RenderBuffer.clear();
             EventDispatcher.fireEvent("tick");
-            EventDispatcher.fireEvent("render");
         });
 
         HudRenderCallback.EVENT.register(((drawContext, tickCounter) -> {
