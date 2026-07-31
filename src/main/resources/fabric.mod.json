@@ -18,9 +18,6 @@
 		"main": [
 			"me.ifair.luahud.LuaHUD"
 		],
-		"fabric-datagen": [
-			"me.ifair.luahud.LuaHUDDataGenerator"
-		],
 		"client": [
 			"me.ifair.luahud.LuaHUDClient"
 		]
