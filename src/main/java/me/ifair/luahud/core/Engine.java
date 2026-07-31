@@ -2,9 +2,6 @@ package me.ifair.luahud.core;
 
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.ApiRegistry;
-import me.ifair.luahud.api.PerformanceModule;
-import me.ifair.luahud.api.RenderModule;
-import me.ifair.luahud.api.WorldModule;
 import net.fabricmc.loader.api.FabricLoader;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;

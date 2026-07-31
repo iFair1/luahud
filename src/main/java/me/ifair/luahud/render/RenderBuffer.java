@@ -6,7 +6,6 @@ import org.luaj.vm2.LuaTable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
 
 public class RenderBuffer {
     // A simple class that holds the data instead of lambda
