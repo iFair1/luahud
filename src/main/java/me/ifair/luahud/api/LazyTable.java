@@ -35,6 +35,11 @@ public class LazyTable {
         });
     }
 
+    // This is for nested static tables, not dynamic fancy things
+    public void addTable(String name, LuaTable table) {
+        vars.put(name, () -> table);
+    }
+
     // If I want to return special types
     public void add(String name, Supplier<LuaValue> supplier) {
         vars.put(name, supplier);
