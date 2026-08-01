@@ -11,6 +11,11 @@
 ---@alias Direction "north" | "south" | "east" | "west"
 ---@alias Gamemode "survival" | "creative" | "adventure" | "spectator"
 
+---@class LHStatusEffect
+---@field id string
+---@field name string
+---@field level integer
+---@field duration number
 
 ---@class LHItemStack
 ---@field id string
@@ -139,7 +144,7 @@
 ---@field xp LHXp
 ---@field gamemode Gamemode
 ---@field slots LHPlayerSlots
--- TODO: Add status effects here
+---@field effects LHStatusEffect
 
 ---@class LHPlayerPosition : LHPosition I inherit x, y & z so you just type lh.pos.x instead of something like lh.pos.pos.x
 ---@field biome string Name of the biome ("Plains ")
