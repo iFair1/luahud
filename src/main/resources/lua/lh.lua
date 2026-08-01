@@ -17,6 +17,12 @@
 ---| "RARE"
 ---| "EPIC"
 
+---@alias LHGamemode
+---| "SURVIVAL"
+---| "CREATIVE"
+---| "ADVENTURE"
+---| "SPECTATOR"
+
 ---@class LHItemStack
 ---@field id string The id of the item (e.g., "minecraft:golden_apple")
 ---@field name string The visible name of the item (changes depending on your language, renaming etc.) (e.g., "My Pretty Sword")
@@ -75,5 +81,12 @@
 ---@field hotbar LHItemStack[]
 ---@field inventory LHItemStack[]
 
-
-
+---@class LHPlayer
+---@field username string
+---@field health float
+---@field maxHealth double
+---@field hunger integer
+---@field gamemode LHGamemode
+---@field level XP Level
+---@field xp XP Points in the current level
+---@field xpNeeded XP Points needed to level up
