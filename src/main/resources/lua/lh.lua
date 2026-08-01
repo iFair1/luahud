@@ -9,6 +9,7 @@
 ---@alias BlockFacing "north" | "south" | "east" | "west" | "up" | "down"
 ---@alias TimeUnit "ticks" | "seconds" | "milliseconds"
 ---@alias Direction "north" | "south" | "east" | "west"
+---@alias Gamemode "survival" | "creative" | "adventure" | "spectator"
 
 
 ---@class LHItemStack
@@ -135,7 +136,7 @@
 ---@field hunger LHHunger
 ---@field armor LHArmor
 ---@field xp LHXp
----@field gamemode "survival" | "creative" | "adventure" | "spectator"
+---@field gamemode Gamemode
 ---@field slots LHPlayerSlots
 -- TODO: Add status effects here
 
