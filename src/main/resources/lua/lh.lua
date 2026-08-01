@@ -40,9 +40,9 @@
 
 --- Position with x, y and z
 ---@class LHPosition
----@field x double X coordinate
----@field y double Y coordinate
----@field z double Z coordinate
+---@field x number X coordinate
+---@field y number Y coordinate
+---@field z number Z coordinate
 
 
 ---@alias LHBlockStateValue string | boolean | integer
