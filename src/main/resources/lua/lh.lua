@@ -29,14 +29,10 @@
 ---@field count integer Count of the item
 ---@field enchantments LHEnchantment[]
 
-
 ---@class LHEnchantment
 ---@field id string
----@field name string
----@field maxLevel integer
----@field minLevel integer
----@field isCurse boolean
----@field supportedItems string[] Supported item tags and ids
+---@field level integer
+
 
 --- Position with x, y and z
 ---@class LHPosition
