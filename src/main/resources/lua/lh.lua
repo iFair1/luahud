@@ -53,7 +53,8 @@
 ---@field name string
 ---@field uuid string
 ---@field health number
----@field maxHealth number -- TODO: Add attributes to here
+---@field maxHealth number
+-- TODO: Add attributes to here
 
 ---@class LHPlayerSlots
 ---@field head LHItemStack
