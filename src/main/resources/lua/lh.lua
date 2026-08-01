@@ -83,15 +83,15 @@
 
 ---@class LHPlayer
 ---@field username string
----@field health float
----@field maxHealth double
+---@field health number
+---@field maxHealth number
 ---@field hunger integer
----@field saturation float
----@field exhaustion float 0-4f range for reducing hunger/saturation
----@field armor double
----@field armorToughness double
----@field knockbackResistance double
----@field level integerqqq XP Level
----@field xp XP Points in the current level
----@field xpNeeded XP Points needed to level up
+---@field saturation number
+---@field exhaustion number 0-4f range for reducing hunger/saturation
+---@field armor number
+---@field armorToughness number
+---@field knockbackResistance number
+---@field level integer XP Level
+---@field xp number XP Points in the current level
+---@field xpNeeded number XP Points needed to level up
 ---@field gamemode LHGamemode
