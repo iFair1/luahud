@@ -69,8 +69,6 @@
 ---@field states LHBlockStates
 ---@field nbt? table<string, any> Only for block entities
 
-
-
 ---@class LHPlayerSlots
 ---@field head LHItemStack
 ---@field chest LHItemStack
@@ -81,17 +79,36 @@
 ---@field hotbar LHItemStack[]
 ---@field inventory LHItemStack[]
 
+---@class LHArmor
+---@field armor number
+---@field toughness number
+---@field knockbackResistance number
+
+---@class LHXp
+---@field total integer Total points
+---@field level integer 
+---@field progress number 0-1f range for the next level
+
+---@class LHHunger
+---@field food integer
+---@field saturation number
+---@field exhaustion number 0-4f range
+
+--------------------------------------
+-- Groups
+--------------------------------------
+
 ---@class LHPlayer
 ---@field username string
 ---@field health number
 ---@field maxHealth number
----@field hunger integer
----@field saturation number
----@field exhaustion number 0-4f range for reducing hunger/saturation
----@field armor number
----@field armorToughness number
----@field knockbackResistance number
----@field xpTotal integer Total xp points
----@field xpLevel integer Xp level
----@field xpProgress number 0-1f range for the next level
+---@field hunger LHHunger
+---@field armor LHArmor
+---@field xp LHXp
 ---@field gamemode LHGamemode
+---@field slots LHPlayerSlots
+
+
+---@class LHAPI
+---@field player LHPlayer
+lh = {}
