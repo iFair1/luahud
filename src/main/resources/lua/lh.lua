@@ -108,7 +108,13 @@
 ---@field gamemode LHGamemode
 ---@field slots LHPlayerSlots
 
+---@class LHFacing
+---@field direction "north" | "south" | "east" | "west"
+---@field yaw number
+---@field pitch number
+---@field targetBlock LHBlock
 
 ---@class LHAPI
 ---@field player LHPlayer
+---@field facing LHFacing
 lh = {}
