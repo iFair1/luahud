@@ -62,3 +62,18 @@
 ---@field position LHPosition
 ---@field states LHBlockStates
 ---@field nbt? table<string, any> Only for block entities
+
+
+
+---@class LHPlayerSlots
+---@field head LHItemStack
+---@field chest LHItemStack
+---@field legs LHItemStack
+---@field feet LHItemStack
+---@field mainHand LHItemStack
+---@field offHand LHItemStack
+---@field hotbar LHItemStack[]
+---@field inventory LHItemStack[]
+
+
+
