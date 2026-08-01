@@ -91,7 +91,7 @@
 ---@field armor number
 ---@field armorToughness number
 ---@field knockbackResistance number
----@field level integer XP Level
----@field xp number XP Points in the current level
----@field xpNeeded number XP Points needed to level up
+---@field xpTotal integer Total xp points
+---@field xpLevel integer Xp level
+---@field xpProgress number 0-1f range for the next level
 ---@field gamemode LHGamemode
