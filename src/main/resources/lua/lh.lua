@@ -5,34 +5,19 @@
 -- Data Types & Options
 --------------------------------------
 
----@alias LHEnchantmentRarity
----| "COMMON"
----| "UNCOMMON"
----| "RARE"
----| "VERY_RARE"
+---@alias AnchorType "topLeft" | "bottomLeft" | "topRight" | "bottomRight"
+---@alias BlockFacing "north" | "south" | "east" | "west" | "up" | "down"
+---@alias TimeUnit "ticks" | "seconds" | "milliseconds"
+---@alias Direction "north" | "south" | "east" | "west"
 
----@alias LHRarity
----| "COMMON"
----| "UNCOMMON"
----| "RARE"
----| "EPIC"
-
----@alias LHGamemode
----| "SURVIVAL"
----| "CREATIVE"
----| "ADVENTURE"
----| "SPECTATOR"
 
 ---@class LHItemStack
----@field id string The id of the item (e.g., "minecraft:golden_apple")
----@field name string The visible name of the item (changes depending on your language, renaming etc.) (e.g., "My Pretty Sword")
----@field count integer Count of the item
----@field enchantments LHEnchantment[]
-
----@class LHEnchantment
 ---@field id string
----@field level integer
-
+---@field name string
+---@field count integer Count of the item
+---@field enchantments table<string, integer>
+---@field damage? integer How much the item is damaged
+---@field maxDamage? integer How much durability does the item have total
 
 --- Position with x, y and z
 ---@class LHPosition
@@ -40,13 +25,10 @@
 ---@field y number Y coordinate
 ---@field z number Z coordinate
 
-
----@alias LHBlockStateValue string | boolean | integer
-
 --- Not every single one of them, but most common ones
 ---@class LHBlockStates
----@field facing? "north" | "south" | "east" | "west" | "up" | "down"
----@field half? "top" | "bottom" | "upper" | "lower"
+---@field facing?
+---@field half? BlockFacing
 ---@field axis? "x" | "y" | "z"
 ---@field shape? string
 ---@field powered? boolean
@@ -54,16 +36,23 @@
 ---@field lit? boolean
 ---@field open? boolean
 ---@field power? integer
----@field [string] LHBlockStateValue Any other properties
+---@field [string] string | boolean | integer Any other properties
 
 
---- This is a class for placed blocks, not for blocks in inventory/any container
----@class LHBlock
+--- This is a class for placed blocks, not for blocks in inventory/any container (ItemStack)
+---@class LHBlock : LHPosition
 ---@field id string
 ---@field name string
----@field position LHPosition
 ---@field states LHBlockStates
 ---@field nbt? table<string, any> Only for block entities
+
+--- This is a class for living entities, not static ones.
+---@class LHEntity : LHPosition
+---@field id string
+---@field name string
+---@field uuid string
+---@field health number
+---@field maxHealth number -- TODO: Add attributes to here
 
 ---@class LHPlayerSlots
 ---@field head LHItemStack
@@ -72,8 +61,8 @@
 ---@field feet LHItemStack
 ---@field mainHand LHItemStack
 ---@field offHand LHItemStack
----@field hotbar LHItemStack[]
----@field inventory LHItemStack[]
+---@field hotbar LHItemStack[] 1-9
+---@field inventory LHItemStack[] 1-27
 
 ---@class LHArmor
 ---@field armor number
@@ -90,27 +79,165 @@
 ---@field saturation number
 ---@field exhaustion number 0-4f range
 
+---@class LHCPU
+---@field name string
+---@field usage integer Usage percentage
+---@field cores integer Core count
+---@field threads integer Threads count
+
+---@class LHGPU
+---@field name string
+---@field usage integer Usage percentage
+
+---@class LHMemory
+---@field allocated integer Memory allocated in MBs
+---@field used integer Memory used in MBs
+---@field total integer Total memory Minecraft can access in MBs
+---@field allocatedPercentage integer Memory allocated percentage
+---@field usedPercentage integer Memory used percentage
+---@field totalPercentage integer Total memory Minecraft can access percentage
+
+---@class LHChunk : LHPosition These xyz coordinates are relative (in-chunk coordinates)
+---@field isSlimeChunk boolean
+
+
+
+---@class GeneralOptions
+---@field backgroundColor? string
+---@field XOffset? integer
+---@field YOffset? integer
+
+---@class TextOptions : GeneralOptions
+---@field textColor? string
+---@field shadow? boolean
+
+---@class IconOptions : GeneralOptions
+---@field scale? number
+
+---@class SectionOptions : TextOptions, IconOptions
+---@field anchor? AnchorType
+
+
 --------------------------------------
 -- Groups
 --------------------------------------
 
----@class LHPlayer
+---@class LHPerformance
+---@field fps integer
+---@field ping integer
+---@field tps number
+---@field cpu LHCPU
+---@field gpu LHGPU
+---@field memory LHMemory
+
+---@class LHPlayer : LHEntity
 ---@field username string
----@field health number
----@field maxHealth number
 ---@field hunger LHHunger
 ---@field armor LHArmor
 ---@field xp LHXp
----@field gamemode LHGamemode
+---@field gamemode "survival" | "creative" | "adventure" | "spectator"
 ---@field slots LHPlayerSlots
+-- TODO: Add status effects here
+
+---@class LHPlayerPosition : LHPosition I inherit x, y & z so you just type lh.pos.x instead of something like lh.pos.pos.x
+---@field biome string Name of the biome ("Plains ")
+---@field biomeId string Id of the biome ("minecraft:plains")
+---@field dimension string Name of the dimension ("The Overworld")
+---@field dimensionId string Id of the dimension ("minecraft:overworld")
+---@field chunk LHChunk
+
+---@class LHTime
+---@field tick integer Days Tick 0-24000
+---@field day integer The number of days in MC Time since the world has created
+---@field hour integer Hours in MC Time
+---@field minute integer Minutes in MC Time
+---@field seconds integer Seconds in MC Time
+
+---@class LHWeather
+---@field isRaining boolean This is true unless weather is clear. Yes, it rains even if it's snowing/thundering
+---@field isThundering boolean
 
 ---@class LHFacing
----@field direction "north" | "south" | "east" | "west"
+---@field direction Direction
 ---@field yaw number
 ---@field pitch number
 ---@field targetBlock LHBlock
+---@field targetEntity LHEntity
+
+---@class LHDisplay
+---@field width integer Screen width
+---@field height integer Screen height
+---@field scale integer GUI Scale (1,2,3,4 ...)
 
 ---@class LHAPI
+---@field perf LHPerformance
 ---@field player LHPlayer
+---@field pos LHPlayerPosition
+---@field time LHTime
+---@field weather LHWeather
 ---@field facing LHFacing
+---@field display LHDisplay
 lh = {}
+
+--------------------------------------
+-- Useful functions
+--------------------------------------
+
+---@param coordinate string This is a relative coordinate ~ and ^ is accepted, and processed
+---@return LHBlock
+function lh.getBlockAt(coordinate) end
+
+--------------------------------------
+-- Timer Functions
+--------------------------------------
+
+---@param event string For now, only "tick" is supported
+---@param callback function
+---@return nil
+function lh.on(event, callback) end
+
+--- Repeats the callback function every {number} {type} times. Example: lh.setInterval(20, "ticks" function() ... end)
+---@param number integer
+---@param type TimeUnit
+---@param callback function
+---@return integer timerId
+function lh.setInterval(number, type, callback) end
+
+---@param timerId integer
+---@return nil
+function lh.clearInterval(timerId) end
+
+--- Waits {number} {type} and executes the callback.
+---@param number integer
+---@param type string
+---@param callback function
+---@return integer timerId
+function lh.setTimeout(number, type, callback) end
+
+---@param timerId integer
+---@return nil
+function lh.clearTimeout(timerId) end
+
+--------------------------------------
+-- Render Functions
+--------------------------------------
+
+---@param options SectionOptions
+---@return nil
+function lh.section(options) end
+
+
+---@param text string
+---@param options? TextOptions
+---@return nil
+function lh.draw(text, options) end
+
+---@param id string Id of Item/Block that you want to draw to the screen
+---@param options? IconOptions
+---@return nil
+function lh.drawIcon(id, options) end
+
+---@param path string Path of the texture you want to draw to the screen
+---@param options? IconOptions
+---@return nil
+function lh.drawTexture(path, options) end
