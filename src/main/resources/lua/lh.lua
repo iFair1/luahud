@@ -86,7 +86,12 @@
 ---@field health float
 ---@field maxHealth double
 ---@field hunger integer
----@field gamemode LHGamemode
----@field level XP Level
+---@field saturation float
+---@field exhaustion float 0-4f range for reducing hunger/saturation
+---@field armor double
+---@field armorToughness double
+---@field knockbackResistance double
+---@field level integerqqq XP Level
 ---@field xp XP Points in the current level
 ---@field xpNeeded XP Points needed to level up
+---@field gamemode LHGamemode
