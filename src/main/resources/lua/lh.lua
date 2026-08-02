@@ -93,7 +93,7 @@
 ---@field threads integer Threads count
 
 ---@class LHGPU
----@field name string
+---@field name string Do NOT use this on Tick! unless you want to blow up your pc
 ---@field usage integer Usage percentage
 
 ---@class LHMemory
@@ -145,7 +145,7 @@
 ---@field xp LHXp
 ---@field gamemode Gamemode
 ---@field slots LHPlayerSlots
----@field effects LHStatusEffect
+---@field effects LHStatusEffect[]
 
 ---@class LHPlayerPosition : LHPosition I inherit x, y & z so you just type lh.pos.x instead of something like lh.pos.pos.x
 ---@field biome string Name of the biome ("Plains ")
@@ -235,7 +235,7 @@ function lh.clearTimeout(timerId) end
 function lh.section(options) end
 
 
----@param text string
+---@param text string | integer | number
 ---@param options? TextOptions
 ---@return nil
 function lh.draw(text, options) end
