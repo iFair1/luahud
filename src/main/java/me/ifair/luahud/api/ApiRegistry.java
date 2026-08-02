@@ -10,6 +10,7 @@ public class ApiRegistry {
 
     static {
         MODULES.add(new RenderModule());
+        MODULES.add(new PerformanceModule());
     }
 
     public static void registerAll(LuaTable lh) {
