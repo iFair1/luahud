@@ -7,21 +7,22 @@
 
 ---@alias AnchorType "topLeft" | "bottomLeft" | "topRight" | "bottomRight"
 ---@alias BlockFacing "north" | "south" | "east" | "west" | "up" | "down"
+---@alias BlockHalf "top" | "bottom" | "upper" | "lower"
 ---@alias TimeUnit "ticks" | "seconds" | "milliseconds"
 ---@alias Direction "north" | "south" | "east" | "west"
 ---@alias Gamemode "survival" | "creative" | "adventure" | "spectator"
 
 ---@class LHStatusEffect
----@field id string
----@field name string
----@field level integer
----@field duration number
+---@field id string Id of the effect. Example: "minecraft:strength"
+---@field name string Name of the effect depending on your language (Strength, Kuvvet)
+---@field level integer Level of the effect 1-256
+---@field duration number How many seconds will the effect last
 
 ---@class LHItemStack
----@field id string
----@field name string
+---@field id string The id of the item. Example: "minecraft:diamond"
+---@field name string The name of the item depending on naming and your language. ("My Pretty Sword", "Diamond Sword", "Elmas Kılıç")
 ---@field count integer Count of the item
----@field enchantments table<string, integer>
+---@field enchantments table<string, integer> A list of enchantments of the item
 ---@field damage? integer How much the item is damaged
 ---@field maxDamage? integer How much durability does the item have total
 
@@ -33,8 +34,8 @@
 
 --- Not every single one of them, but most common ones
 ---@class LHBlockStates
----@field facing?
----@field half? BlockFacing
+---@field facing? BlockFacing
+---@field half? BlockHalf
 ---@field axis? "x" | "y" | "z"
 ---@field shape? string
 ---@field powered? boolean
@@ -47,18 +48,18 @@
 
 --- This is a class for placed blocks, not for blocks in inventory/any container (ItemStack)
 ---@class LHBlock : LHPosition
----@field id string
----@field name string
+---@field id string Id of the block. Example: "minecraft:stone"
+---@field name string Name of the block depending on your language. ("Stone", "Taş")
 ---@field states LHBlockStates
 ---@field nbt? table<string, any> Only for block entities
 
 --- This is a class for living entities, not static ones.
 ---@class LHEntity : LHPosition
----@field id string
----@field name string
----@field uuid string
----@field health number
----@field maxHealth number
+---@field id string Id of the Entity. Example: "minecraft:creeper"
+---@field name string Name of the entity depending on naming and your language ("Creeper", "Good Creeper")
+---@field uuid string Exact id of the entity in the minecraft world
+---@field health number Health of the entity
+---@field maxHealth number The max health the entity can have
 -- TODO: Add attributes to here
 
 ---@class LHPlayerSlots
