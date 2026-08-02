@@ -47,11 +47,14 @@
 
 
 --- This is a class for placed blocks, not for blocks in inventory/any container (ItemStack)
----@class LHBlock : LHPosition
+---@class LHBlock
 ---@field id string Id of the block. Example: "minecraft:stone"
 ---@field name string Name of the block depending on your language. ("Stone", "Taş")
 ---@field states LHBlockStates
 ---@field nbt? table<string, any> Only for block entities
+---@field x int
+---@field y int
+---@field z int
 
 --- This is a class for living entities, not static ones.
 ---@class LHEntity : LHPosition
