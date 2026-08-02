@@ -55,8 +55,44 @@ public class PerformanceModule implements ApiModule {
             return 69;
         });
 
+        Runtime runtime = Runtime.getRuntime();
         LazyTable memory = new LazyTable();
+        memory.addInt("allocated", () -> {
+            long allocatedBytes = runtime.totalMemory();
+            return (int) (allocatedBytes >> 20); // 1 Byte >> 20 is 1 MiB
+        });
+        memory.addInt("free", () -> {
+            long freeBytes = runtime.freeMemory();
+            return (int) (freeBytes >> 20);
+        });
+        memory.addInt("used", () -> {
+            long allocatedBytes = runtime.totalMemory();
+            long freeBytes = runtime.freeMemory();
+            return (int) ((allocatedBytes - freeBytes) >> 20);
+        });
+        memory.addInt("total", () -> {
+            long maxBytes = runtime.maxMemory();
+            return (int) (maxBytes >> 20);
+        });
 
+        memory.addInt("allocatedPercentage", () -> {
+            long maxBytes = runtime.maxMemory();
+            long allocatedBytes = runtime.totalMemory();
+
+            return (int) (allocatedBytes * 100L / maxBytes);
+        });
+        memory.addInt("freePercentage", () -> {
+            long maxBytes = runtime.maxMemory();
+            long freeBytes = runtime.freeMemory();
+
+            return (int) (freeBytes * 100L / maxBytes);
+        });
+        memory.addInt("usedPercentage", () -> {
+            long maxBytes = runtime.maxMemory();
+            long usedBytes = runtime.totalMemory() - runtime.freeMemory();
+
+            return (int) (usedBytes * 100L / maxBytes);
+        });
 
         performance.addTable("cpu", cpu.build());
         performance.addTable("gpu", gpu.build());

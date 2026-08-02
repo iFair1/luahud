@@ -97,12 +97,13 @@
 ---@field usage integer Usage percentage
 
 ---@class LHMemory
----@field allocated integer Memory allocated in MBs
----@field used integer Memory used in MBs
----@field total integer Total memory Minecraft can access in MBs
+---@field allocated integer Memory allocated in MiBs
+---@field free integer Memory free to use in MiBs
+---@field used integer Memory used in MiBs
+---@field total integer Total memory Minecraft can access in MiBs
 ---@field allocatedPercentage integer Memory allocated percentage
+---@field freePercentage integer Memory free to use in percentage
 ---@field usedPercentage integer Memory used percentage
----@field totalPercentage integer Total memory Minecraft can access percentage
 
 ---@class LHChunk : LHPosition These xyz coordinates are relative (in-chunk coordinates)
 ---@field isSlimeChunk boolean
