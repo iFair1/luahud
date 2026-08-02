@@ -40,6 +40,13 @@ public class LazyTable {
         vars.put(name, () -> table);
     }
 
+    public void AddDynamicTable(String name, Supplier<LuaTable> supplier) {
+        vars.put(name, () -> {
+            LuaTable table = supplier.get();
+            return table == null ? LuaValue.NIL : table;
+        });
+    }
+
     // If I want to return special types
     public void add(String name, Supplier<LuaValue> supplier) {
         vars.put(name, supplier);
