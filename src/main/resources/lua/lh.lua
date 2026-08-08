@@ -52,9 +52,9 @@
 ---@field name string Name of the block depending on your language. ("Stone", "Taş")
 ---@field states LHBlockStates
 ---@field nbt? table<string, any> Only for block entities
----@field x int
----@field y int
----@field z int
+---@field x integer
+---@field y integer
+---@field z integer
 
 --- This is a class for living entities, not static ones.
 ---@class LHEntity : LHPosition
