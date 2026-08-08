@@ -109,6 +109,11 @@
 ---@field freePercentage integer Memory free to use in percentage
 ---@field usedPercentage integer Memory used percentage
 
+---@class LHDisplay
+---@field width integer Screen width
+---@field height integer Screen height
+---@field scale integer GUI Scale (1,2,3,4 ...)
+
 ---@class LHChunk : LHPosition These xyz coordinates are relative (in-chunk coordinates)
 ---@field isSlimeChunk boolean
 
@@ -138,6 +143,9 @@
 ---@field fps integer
 ---@field ping integer
 ---@field tps number
+
+---@class LHPC
+---@field display LHDisplay
 ---@field cpu LHCPU
 ---@field gpu LHGPU
 ---@field memory LHMemory
@@ -177,13 +185,10 @@
 ---@field targetBlock LHBlock
 ---@field targetEntity LHEntity
 
----@class LHDisplay
----@field width integer Screen width
----@field height integer Screen height
----@field scale integer GUI Scale (1,2,3,4 ...)
 
 ---@class LHAPI
 ---@field perf LHPerformance
+---@field pc LHPC
 ---@field player LHPlayer
 ---@field pos LHPlayerPosition
 ---@field time LHTime
