@@ -104,10 +104,7 @@
 ---@field allocated integer Memory allocated in MiBs
 ---@field free integer Memory free to use in MiBs
 ---@field used integer Memory used in MiBs
----@field total integer Total memory Minecraft can access in MiBs
----@field allocatedPercentage integer Memory allocated percentage
----@field freePercentage integer Memory free to use in percentage
----@field usedPercentage integer Memory used percentage
+---@field max integer Maximum memory Minecraft can access in MiBs
 
 ---@class LHDisplay
 ---@field width integer Screen width
