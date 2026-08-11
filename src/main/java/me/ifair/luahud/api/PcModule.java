@@ -1,6 +1,7 @@
 package me.ifair.luahud.api;
 
 import com.sun.management.OperatingSystemMXBean;
+import me.ifair.luahud.api.core.LazyTable;
 import org.luaj.vm2.LuaTable;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;

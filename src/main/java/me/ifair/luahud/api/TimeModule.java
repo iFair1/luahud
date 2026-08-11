@@ -1,7 +1,7 @@
 package me.ifair.luahud.api;
 
+import me.ifair.luahud.api.core.LazyTable;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
 import org.luaj.vm2.LuaTable;
 
 public class TimeModule implements ApiModule{

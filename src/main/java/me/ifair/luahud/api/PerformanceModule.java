@@ -1,16 +1,10 @@
 package me.ifair.luahud.api;
 
-import com.sun.management.OperatingSystemMXBean;
+import me.ifair.luahud.api.core.LazyTable;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.server.MinecraftServer;
 import org.luaj.vm2.LuaTable;
-import oshi.SystemInfo;
-import oshi.hardware.CentralProcessor;
-import oshi.hardware.GraphicsCard;
-
-import java.lang.management.ManagementFactory;
-import java.util.List;
 
 
 public class PerformanceModule implements ApiModule {
