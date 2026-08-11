@@ -111,9 +111,11 @@
 ---@field height integer Screen height
 ---@field scale integer GUI Scale (1,2,3,4 ...)
 
----@class LHChunk : LHPosition These xyz coordinates are relative (in-chunk coordinates)
+---@class LHChunk
 ---@field isSlimeChunk boolean
-
+---@field icx integer In Chunk x
+---@field icy integer In Chunk y
+---@field icz integer In Chunk z
 
 
 ---@class GeneralOptions
