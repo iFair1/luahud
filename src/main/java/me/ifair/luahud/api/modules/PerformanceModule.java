@@ -1,6 +1,7 @@
-package me.ifair.luahud.api;
+package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.api.core.LazyTable;
+import me.ifair.luahud.api.core.ApiModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.server.MinecraftServer;

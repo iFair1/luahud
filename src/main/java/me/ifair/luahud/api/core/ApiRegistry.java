@@ -1,5 +1,6 @@
-package me.ifair.luahud.api;
+package me.ifair.luahud.api.core;
 
+import me.ifair.luahud.api.modules.*;
 import org.luaj.vm2.LuaTable;
 
 import java.util.ArrayList;
@@ -10,9 +11,11 @@ public class ApiRegistry {
 
     static {
         MODULES.add(new RenderModule());
-        MODULES.add(new PerformanceModule());
+
         MODULES.add(new PcModule());
+        MODULES.add(new PerformanceModule());
         MODULES.add(new TimeModule());
+        MODULES.add(new FacingModule());
     }
 
     public static void registerAll(LuaTable lh) {

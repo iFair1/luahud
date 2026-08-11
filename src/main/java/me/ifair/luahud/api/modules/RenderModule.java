@@ -1,5 +1,6 @@
-package me.ifair.luahud.api;
+package me.ifair.luahud.api.modules;
 
+import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.render.RenderBuffer;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;

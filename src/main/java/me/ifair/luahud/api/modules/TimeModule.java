@@ -1,10 +1,11 @@
-package me.ifair.luahud.api;
+package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.api.core.LazyTable;
+import me.ifair.luahud.api.core.ApiModule;
 import net.minecraft.client.MinecraftClient;
 import org.luaj.vm2.LuaTable;
 
-public class TimeModule implements ApiModule{
+public class TimeModule implements ApiModule {
 
     private static final long TICKS_PER_DAY = 24000L;
     private static final long TICKS_PER_HOUR = 1000L;

@@ -1,6 +1,6 @@
 package me.ifair.luahud.api.modules;
 
-import me.ifair.luahud.api.ApiModule;
+import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.api.core.LazyTable;
 import me.ifair.luahud.api.models.BlockModel;
 import me.ifair.luahud.api.models.EntityModel;
