@@ -11,6 +11,8 @@ public class ApiRegistry {
     static {
         MODULES.add(new RenderModule());
         MODULES.add(new PerformanceModule());
+        MODULES.add(new PcModule());
+        MODULES.add(new TimeModule());
     }
 
     public static void registerAll(LuaTable lh) {
