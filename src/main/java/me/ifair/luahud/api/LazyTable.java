@@ -40,7 +40,13 @@ public class LazyTable {
         vars.put(name, () -> table);
     }
 
-    // If I want to return special types
+    public void addLazyTable(String name, Supplier<LuaTable> tableSupplier) {
+        vars.put(name, () -> {
+            LuaTable table = tableSupplier.get();
+            return table == null ? LuaValue.NIL : table;
+        });
+    }
+
     public void add(String name, Supplier<LuaValue> supplier) {
         vars.put(name, supplier);
     }
