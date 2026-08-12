@@ -23,7 +23,7 @@ public class PcModule implements ApiModule {
 
         pc.addTable("cpu", buildCpu());
         pc.addTable("gpu", buildGpu());
-        pc.addTable("memory", buildGpu());
+        pc.addTable("memory", buildMemory());
         lh.set("pc", pc.build());
     }
 
