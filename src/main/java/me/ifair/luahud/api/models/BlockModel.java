@@ -34,7 +34,7 @@ public class BlockModel extends LazyTable {
         });
         addInt("y", () -> {
             BlockPos pos = posSupplier.get();
-            return pos != null ? pos.getX() : 0;
+            return pos != null ? pos.getY() : 0;
         });
         addInt("z", () -> {
             BlockPos pos = posSupplier.get();
