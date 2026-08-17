@@ -193,7 +193,6 @@
 ---@field time LHTime
 ---@field weather LHWeather
 ---@field facing LHFacing
----@field display LHDisplay
 lh = {}
 
 --------------------------------------

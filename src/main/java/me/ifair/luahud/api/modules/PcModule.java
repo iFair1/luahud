@@ -3,6 +3,7 @@ package me.ifair.luahud.api.modules;
 import com.sun.management.OperatingSystemMXBean;
 import me.ifair.luahud.api.core.LazyTable;
 import me.ifair.luahud.api.core.ApiModule;
+import net.minecraft.client.MinecraftClient;
 import org.luaj.vm2.LuaTable;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
@@ -24,6 +25,7 @@ public class PcModule implements ApiModule {
         pc.addTable("cpu", buildCpu());
         pc.addTable("gpu", buildGpu());
         pc.addTable("memory", buildMemory());
+        pc.addTable("display", buildDisplay());
         lh.set("pc", pc.build());
     }
 
@@ -100,6 +102,17 @@ public class PcModule implements ApiModule {
     private int getFreeMemory() {
         long used = RUNTIME.totalMemory() - RUNTIME.freeMemory();
         return (int) ((RUNTIME.maxMemory() - used) / MIB);
+    }
+
+    private LuaTable buildDisplay() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        LazyTable display = new LazyTable();
+
+        display.addInt("width", () -> client.getWindow().getWidth());
+        display.addInt("height", () -> client.getWindow().getHeight());
+        display.addDouble("scale", () -> client.getWindow().getScaleFactor());
+
+        return display.build();
     }
 
 }
