@@ -18,9 +18,7 @@ public class FacingModule implements ApiModule {
 
         LazyTable facing = new LazyTable();
 
-        facing.addString("direction", () -> {
-            return client.player != null ? client.player.getHorizontalFacing().asString() : "";
-        });
+        facing.addString("direction", () -> client.player != null ? client.player.getHorizontalFacing().asString() : "");
 
         facing.addDouble("yaw", () -> client.player != null ? MathHelper.wrapDegrees(client.player.getYaw()) : 0.0);
         facing.addDouble("pitch", () -> client.player != null ? client.player.getPitch() : 0.0);
