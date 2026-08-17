@@ -39,5 +39,7 @@ public class FacingModule implements ApiModule {
             }
             return null;
         });
+
+        lh.set("facing", facing.build());
     }
 }
