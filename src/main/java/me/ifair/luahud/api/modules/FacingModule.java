@@ -8,6 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.MathHelper;
 import org.luaj.vm2.LuaTable;
 
 public class FacingModule implements ApiModule {
@@ -21,7 +22,7 @@ public class FacingModule implements ApiModule {
             return client.player != null ? client.player.getHorizontalFacing().asString() : "";
         });
 
-        facing.addDouble("yaw", () -> client.player != null ? client.player.getYaw() : 0.0);
+        facing.addDouble("yaw", () -> client.player != null ? MathHelper.wrapDegrees(client.player.getYaw()) : 0.0);
         facing.addDouble("pitch", () -> client.player != null ? client.player.getPitch() : 0.0);
 
         facing.addLazyTable("targetBlock", () -> {
