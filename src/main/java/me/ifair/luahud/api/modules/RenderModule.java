@@ -11,6 +11,7 @@ public class RenderModule implements ApiModule {
     @Override
     public void register(LuaTable lh) {
 
+        // TODO: Make draw module be able to draw true and false, maybe even nil
         lh.set("draw", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue text, LuaValue options) {
