@@ -13,6 +13,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class EventDispatcher {
     private static final Map<String, List<LuaValue>> LISTENERS = new ConcurrentHashMap<>();
 
+    private static final Map<String, Long> ERROR_COOLDOWNS = new ConcurrentHashMap<>();
+
     public static void registerToLua(LuaTable lh) {
         lh.set("on", new TwoArgFunction() {
             @Override
@@ -35,7 +37,13 @@ public class EventDispatcher {
                 try {
                     callback.call();
                 } catch (Exception e) {
-                    LuaHUD.LOGGER.error("Lua error on event '{}'! Error: {}", eventName, e.getMessage());
+                    long now = System.currentTimeMillis();
+                    long lastLog = ERROR_COOLDOWNS.getOrDefault(eventName, 0L);
+
+                    if (now - lastLog > 5000) {
+                        LuaHUD.LOGGER.error("Lua error on event '{}': {}", eventName, e.getMessage());
+                        ERROR_COOLDOWNS.put(eventName, now);
+                    }
                 }
             }
         }
