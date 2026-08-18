@@ -40,5 +40,7 @@ public class BlockModel extends LazyTable {
             BlockPos pos = posSupplier.get();
             return pos != null ? pos.getZ() : 0;
         });
+
+        //  TODO: Add blockstates
     }
 }
