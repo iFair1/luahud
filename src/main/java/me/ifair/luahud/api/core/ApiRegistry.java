@@ -1,6 +1,7 @@
 package me.ifair.luahud.api.core;
 
 import me.ifair.luahud.api.modules.*;
+import me.ifair.luahud.api.modules.pc.PcModule;
 import org.luaj.vm2.LuaTable;
 
 import java.util.ArrayList;
