@@ -12,5 +12,7 @@ public class DisplayProvider {
         display.addInt("width", () -> client.getWindow().getWidth());
         display.addInt("height", () -> client.getWindow().getHeight());
         display.addInt("scale", () -> (int) client.getWindow().getScaleFactor());
+
+        return display.build();
     }
 }

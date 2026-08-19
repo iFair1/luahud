@@ -25,6 +25,8 @@ public class GpuProvider {
 
         gpu.addString("name", () -> gpuName);
         gpu.addInt("usage", (IntSupplier) usageCache);
+
+        return gpu.build();
     }
 
     private int fetchUsage() {
