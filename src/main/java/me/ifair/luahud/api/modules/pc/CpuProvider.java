@@ -8,7 +8,6 @@ import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 
 import java.lang.management.ManagementFactory;
-import java.util.function.IntSupplier;
 
 public class CpuProvider {
     private final CentralProcessor processor;

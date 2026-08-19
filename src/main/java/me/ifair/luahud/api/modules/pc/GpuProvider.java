@@ -7,7 +7,6 @@ import oshi.SystemInfo;
 import oshi.hardware.GraphicsCard;
 
 import java.util.List;
-import java.util.function.IntSupplier;
 
 public class GpuProvider {
     private final List<GraphicsCard> cards;
