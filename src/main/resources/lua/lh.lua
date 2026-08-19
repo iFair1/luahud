@@ -117,6 +117,13 @@
 ---@field icy integer In Chunk y
 ---@field icz integer In Chunk z
 
+---@class LHBiome
+---@field id string
+---@field name string
+---@field temperature number
+---@field posTemperature number
+
+
 
 ---@class GeneralOptions
 ---@field backgroundColor? string
@@ -160,10 +167,8 @@
 ---@field effects LHStatusEffect[]
 
 ---@class LHPlayerPosition : LHPosition I inherit x, y & z so you just type lh.pos.x instead of something like lh.pos.pos.x
----@field biome string Name of the biome ("Plains ")
----@field biomeId string Id of the biome ("minecraft:plains")
----@field dimension string Name of the dimension ("The Overworld")
----@field dimensionId string Id of the dimension ("minecraft:overworld")
+---@field biome LHBiome
+---@field dimension LHDimension
 ---@field chunk LHChunk
 
 ---@class LHTime

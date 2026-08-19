@@ -17,6 +17,7 @@ public class ApiRegistry {
         MODULES.add(new TimeModule());
         MODULES.add(new FacingModule());
         MODULES.add(new WeatherModule());
+        MODULES.add(new PositionModule());
     }
 
     public static void registerAll(LuaTable lh) {
