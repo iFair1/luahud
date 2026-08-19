@@ -25,7 +25,7 @@ public class PcModule implements ApiModule {
 
         pc.addTable("cpu", new CpuProvider(systemInfo).build());
         pc.addTable("gpu", new GpuProvider(systemInfo).build());
-        // TODO: Memory
+        pc.addTable("memory", new MemoryProvider().build());
         // TODO: Display
 
         lh.set("pc", pc.build());
