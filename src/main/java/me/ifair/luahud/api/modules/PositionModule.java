@@ -6,7 +6,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.biome.Biome;
 import org.luaj.vm2.LuaTable;
@@ -35,6 +34,16 @@ public class PositionModule implements ApiModule {
         });
 
         pos.addTable("biome", biome.build());
+
+        LazyTable dimension = new LazyTable();
+        dimension.addString("id", () -> {
+            ClientWorld world = MinecraftClient.getInstance().world;
+            if (world == null) return "";
+
+            return world.getRegistryKey().getValue().toString();
+        });
+
+        pos.addTable("dimension", dimension.build());
 
         lh.set("pos", pos.build());
     }

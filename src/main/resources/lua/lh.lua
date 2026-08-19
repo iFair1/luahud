@@ -123,6 +123,9 @@
 ---@field temperature number
 ---@field posTemperature number
 
+---@class LHDimension
+---@field id string
+-- There are no translation keys for for dimensions
 
 
 ---@class GeneralOptions
