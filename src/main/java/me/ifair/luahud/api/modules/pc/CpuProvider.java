@@ -33,7 +33,7 @@ public class CpuProvider {
         cpu.addString("name", () -> cpuName);
         cpu.addInt("cores", () -> coreCount);
         cpu.addInt("threads", () -> threadCount);
-        cpu.addInt("usage", (IntSupplier) usageCache);
+        cpu.addInt("usage", usageCache::get);
 
         return cpu.build();
     }

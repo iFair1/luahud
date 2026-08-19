@@ -24,7 +24,7 @@ public class GpuProvider {
         final String gpuName = !cards.isEmpty() ? cards.getFirst().getName() : "Unknown GPU";
 
         gpu.addString("name", () -> gpuName);
-        gpu.addInt("usage", (IntSupplier) usageCache);
+        gpu.addInt("usage", usageCache::get);
 
         return gpu.build();
     }
