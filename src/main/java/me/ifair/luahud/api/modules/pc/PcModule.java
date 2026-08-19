@@ -24,7 +24,7 @@ public class PcModule implements ApiModule {
         LazyTable pc = new LazyTable();
 
         pc.addTable("cpu", new CpuProvider(systemInfo).build());
-        // TODO: Gpu
+        pc.addTable("gpu", new GpuProvider(systemInfo).build());
         // TODO: Memory
         // TODO: Display
 
