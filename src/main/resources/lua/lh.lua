@@ -110,6 +110,7 @@
 ---@field width integer Screen width
 ---@field height integer Screen height
 ---@field scale integer GUI Scale (1,2,3,4 ...)
+---@field hz integer Refresh rate of the monitor
 
 ---@class LHChunk
 ---@field isSlimeChunk boolean
