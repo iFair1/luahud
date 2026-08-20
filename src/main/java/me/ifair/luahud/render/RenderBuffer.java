@@ -142,9 +142,9 @@ public class RenderBuffer {
                     currentY += textHeight + 2; // Down ↓
             } else {
                 if (element.anchor.equals("topLeft") || element.anchor.equals("bottomLeft"))
-                    currentX += textWidth + 4; // Right →
+                    currentX += textWidth; // Right →
                 else
-                    currentX -= textWidth + 4; // Left ←
+                    currentX -= textWidth; // Left ←
             }
         }
     }
