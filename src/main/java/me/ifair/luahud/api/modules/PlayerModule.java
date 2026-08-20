@@ -12,6 +12,8 @@ public class PlayerModule implements ApiModule {
         // Doing this once because PlayerModule always looks at client.player
         PlayerModel playerModel = new PlayerModel(() -> client.player);
 
+        playerModel.addBoolean("sprintHeld", client.options.sprintKey::isPressed);
+
         lh.set("player", playerModel.build());
     }
 }
