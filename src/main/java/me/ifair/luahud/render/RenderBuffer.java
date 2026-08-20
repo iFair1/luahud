@@ -51,8 +51,6 @@ public class RenderBuffer {
         }
     }
 
-    // newLine = true  -> drawln() behaviour (starts a fresh line)
-    // newLine = false -> draw() behaviour (continues on the same line)
     public static void addText(String text, LuaTable options, boolean newLine) {
         TextElement element;
         // use If there is already a ready object, else create one and add it to the pool
