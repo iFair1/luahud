@@ -15,7 +15,7 @@ public class RenderModule implements ApiModule {
             @Override
             public LuaValue call(LuaValue text, LuaValue options) {
                 String str = text.tojstring();
-                RenderBuffer.addText(str, options.opttable(null));
+                RenderBuffer.addText(str, options.opttable(null), false);
                 return LuaValue.NIL;
             }
         });
@@ -24,7 +24,7 @@ public class RenderModule implements ApiModule {
             @Override
             public LuaValue call(LuaValue text, LuaValue options) {
                 String str = text.tojstring();
-                RenderBuffer.addText(str, options.opttable(null));
+                RenderBuffer.addText(str, options.opttable(null), true);
                 return LuaValue.NIL;
             }
         });

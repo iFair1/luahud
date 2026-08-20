@@ -47,10 +47,13 @@ public class RenderBuffer {
             if (!options.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(options.get("backgroundColor").checkjstring());
             if (!options.get("offsetX").isnil()) currentState.offsetX = options.get("offsetX").checkint();
             if (!options.get("offsetY").isnil()) currentState.offsetY = options.get("offsetY").checkint();
+            if (!options.get("shadow").isnil()) currentState.shadow = options.get("shadow").checkboolean();
         }
     }
 
-    public static void addText(String text, LuaTable options) {
+    // newLine = true  -> drawln() behaviour (starts a fresh line)
+    // newLine = false -> draw() behaviour (continues on the same line)
+    public static void addText(String text, LuaTable options, boolean newLine) {
         TextElement element;
         // use If there is already a ready object, else create one and add it to the pool
         if (activeElements < TEXT_POOL.size()) {
@@ -59,7 +62,6 @@ public class RenderBuffer {
             element = new TextElement();
             TEXT_POOL.add(element);
         }
-
 
         int finalColor = currentState.textColor;
         int finalBgColor = currentState.backgroundColor;
@@ -79,7 +81,7 @@ public class RenderBuffer {
                 currentState.anchor,
                 currentState.offsetX,
                 currentState.offsetY,
-                true // temporarily hardcoded
+                newLine
         );
 
         activeElements++;
@@ -103,7 +105,7 @@ public class RenderBuffer {
                 currentY = 0;
                 lastAnchor = element.anchor;
                 lastBaseX = element.baseX;
-                lastBaseX = element.baseY;
+                lastBaseY = element.baseY;
             }
 
             int finalX = element.baseX + currentX;
@@ -128,7 +130,7 @@ public class RenderBuffer {
             if (((element.bgColor >> 24 & 0xFF) > 0) && textWidth > 0) {
                 context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, element.bgColor);
             }
-            context.drawText(textRenderer, element.text, finalX, finalY, element.color, true);
+            context.drawText(textRenderer, element.text, finalX, finalY, element.color, element.shadow);
 
             // New Line Logic
             if (element.isNewLine) {
@@ -139,11 +141,10 @@ public class RenderBuffer {
                 else
                     currentY += textHeight + 2; // Down ↓
             } else {
-                // I'm not sure if I should put a 4 px space between elements
-                if (element.anchor.equals("topLeft") || element.anchor.equals("topRight"))
-                    currentX += 4; // Right →
+                if (element.anchor.equals("topLeft") || element.anchor.equals("bottomLeft"))
+                    currentX += textWidth + 4; // Right →
                 else
-                    currentX -= 4; // Left ←
+                    currentX -= textWidth + 4; // Left ←
             }
         }
     }
