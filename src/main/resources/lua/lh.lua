@@ -162,7 +162,8 @@
 
 ---@class LHPlayer : LHEntity
 ---@field username string
----@field sprinting boolean Toggle sprint is on / Holding Sprint
+---@field sprinting boolean Character sprinting
+---@field sprintToggled boolean Sprint is toggled
 ---@field hunger LHHunger
 ---@field armor LHArmor
 ---@field xp LHXp

@@ -1,6 +1,7 @@
 package me.ifair.luahud.api.models;
 
 import me.ifair.luahud.api.core.LazyTable;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -34,6 +35,9 @@ public class PlayerModel extends EntityModel {
             GameMode gameMode = entry.getGameMode();
             return gameMode.name().toLowerCase(Locale.ROOT); // Locale.ROOT because Turkish İ Problem 🇹🇷🇹🇷
         });
+
+        // TODO: Inventory Slots
+        // TODO: Status effects
     }
 
     private static LuaTable buildHunger(Supplier<ClientPlayerEntity> playerSupplier) {
