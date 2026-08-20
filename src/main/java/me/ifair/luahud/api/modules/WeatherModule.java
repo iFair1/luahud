@@ -14,9 +14,9 @@ public class WeatherModule implements ApiModule {
     public void register(LuaTable lh) {
         LazyTable weather = new LazyTable();
 
-        weather.addBoolean("isRaining", this::isRaining);
-        weather.addBoolean("isSnowing", this::isSnowing);
-        weather.addBoolean("isThundering", this::isThundering);
+        weather.addBoolean("raining", this::isRaining);
+        weather.addBoolean("snowing", this::isSnowing);
+        weather.addBoolean("thundering", this::isThundering);
 
         lh.set("weather", weather.build());
     }

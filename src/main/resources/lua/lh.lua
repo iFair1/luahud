@@ -183,9 +183,9 @@
 ---@field seconds integer Seconds in MC Time
 
 ---@class LHWeather
----@field isRaining boolean This is true unless weather is clear. Yes, it rains even if it's snowing/thundering
----@field isSnowing boolean
----@field isThundering boolean
+---@field raining boolean This is true unless weather is clear. Yes, it rains even if it's snowing/thundering
+---@field snowing boolean
+---@field thundering boolean
 
 ---@class LHFacing
 ---@field direction Direction
