@@ -8,8 +8,6 @@ public class SectionState {
     public int textColor = 0xFFFFFFFF;
     public int backgroundColor = 0x80000000;
 
-    public int cursorY = 0;
-
     public SectionState copy() {
         SectionState state = new SectionState();
         state.anchor = this.anchor;
