@@ -10,38 +10,40 @@ import net.minecraft.world.biome.Biome;
 import org.luaj.vm2.LuaTable;
 
 public class WeatherModule implements ApiModule {
-
-    private enum Precipitation {
-        CLEAR,
-        RAINING,
-        SNOWING,
-        THUNDERING,
-    }
-
     @Override
     public void register(LuaTable lh) {
         LazyTable weather = new LazyTable();
 
-        weather.addBoolean("isRaining", () -> getPrecipitation() == Precipitation.RAINING);
-        weather.addBoolean("isSnowing", () -> getPrecipitation() == Precipitation.SNOWING);
-        weather.addBoolean("isThundering", () -> getPrecipitation() == Precipitation.THUNDERING);
+        weather.addBoolean("isRaining", this::isRaining);
+        weather.addBoolean("isSnowing", this::isSnowing);
+        weather.addBoolean("isThundering", this::isThundering);
 
         lh.set("weather", weather.build());
     }
 
-    private Precipitation getPrecipitation() {
+    private boolean isRaining() {
+        return checkPrecipitation(Biome.Precipitation.RAIN);
+    }
+
+    private boolean isSnowing() {
+        return checkPrecipitation(Biome.Precipitation.SNOW);
+    }
+
+    private boolean isThundering() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        return client.world != null && client.world.isThundering();
+    }
+
+    private boolean checkPrecipitation(Biome.Precipitation expectedType) {
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (client.world == null || client.player == null) return Precipitation.CLEAR;
-        if (!client.world.isRaining()) return Precipitation.CLEAR;
+        if (client.world == null || client.player == null || !client.world.isRaining()) {
+            return false;
+        }
 
         BlockPos pos = client.player.getBlockPos();
-        Biome.Precipitation precipitation = client.world.getBiome(pos).value().getPrecipitation(pos);
+        Biome.Precipitation currentPrecipitation = client.world.getBiome(pos).value().getPrecipitation(pos);
 
-        if (precipitation == Biome.Precipitation.NONE) return Precipitation.CLEAR;
-        if (precipitation == Biome.Precipitation.SNOW) return Precipitation.SNOWING;
-        if (client.world.isThundering()) return Precipitation.THUNDERING;
-
-        return Precipitation.RAINING;
+        return currentPrecipitation == expectedType;
     }
 }
