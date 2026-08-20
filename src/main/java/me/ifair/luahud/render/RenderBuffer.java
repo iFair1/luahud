@@ -11,23 +11,26 @@ public class RenderBuffer {
     // A simple class that holds the data instead of lambda
     private static class TextElement {
         String text;
-        int color, bgColor, xOffset, yOffset;
+        int color, bgColor, baseX, baseY;
         String anchor;
+        boolean shadow;
+        boolean isNewLine;
 
-        void update(String text, int color, int bgColor, String anchor, int xOffset, int yOffset) {
+        void update(String text, int color, int bgColor, boolean shadow, String anchor, int baseX, int baseY, boolean isNewLine) {
             this.text = text;
             this.color = color;
             this.bgColor = bgColor;
+            this.shadow = shadow;
             this.anchor = anchor;
-            this.xOffset = xOffset;
-            this.yOffset = yOffset;
+            this.baseX = baseX;
+            this.baseY = baseY;
+            this.isNewLine = isNewLine;
         }
     }
 
     // Object Pool
     private static final List<TextElement> TEXT_POOL = new ArrayList<>();
     private static int activeElements = 0; // counter for active texts on the screen
-
     private static SectionState currentState = new SectionState();
 
     public static void clear() {
@@ -45,7 +48,6 @@ public class RenderBuffer {
             if (!options.get("offsetX").isnil()) currentState.offsetX = options.get("offsetX").checkint();
             if (!options.get("offsetY").isnil()) currentState.offsetY = options.get("offsetY").checkint();
         }
-        currentState.cursorY = 0; // Resetting the cursorY because I'm on a new section
     }
 
     public static void addText(String text, LuaTable options) {
