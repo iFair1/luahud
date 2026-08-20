@@ -86,6 +86,7 @@ public class GpuProvider {
         int nvidiaUsage = getNvidiaSmiUsage();
         if (nvidiaUsage != -1) return nvidiaUsage;
 
+        // I know this is crazy slow, but I don't know a better way on Windows + AMD/Intel GPUs.
         try {
             String cmd = "powershell -Command \"(Get-Counter '\\GPU Engine(*)\\Utilization Percentage').CounterSamples | Measure-Object -Property CookedValue -Sum | Select-Object -ExpandProperty Sum\"";
             Process process = Runtime.getRuntime().exec(cmd);
