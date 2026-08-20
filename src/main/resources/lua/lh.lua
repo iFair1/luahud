@@ -184,6 +184,7 @@
 
 ---@class LHWeather
 ---@field isRaining boolean This is true unless weather is clear. Yes, it rains even if it's snowing/thundering
+---@field isSnowing boolean
 ---@field isThundering boolean
 
 ---@class LHFacing
