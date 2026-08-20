@@ -86,18 +86,7 @@ public class GpuProvider {
         int nvidiaUsage = getNvidiaSmiUsage();
         if (nvidiaUsage != -1) return nvidiaUsage;
 
-        // I know this is crazy slow, but I don't know a better way on Windows + AMD/Intel GPUs.
-        try {
-            String cmd = "powershell -Command \"(Get-Counter '\\GPU Engine(*)\\Utilization Percentage').CounterSamples | Measure-Object -Property CookedValue -Sum | Select-Object -ExpandProperty Sum\"";
-            Process process = Runtime.getRuntime().exec(cmd);
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line = reader.readLine();
-                if (line != null && !line.trim().isEmpty()) {
-                    double value = Double.parseDouble(line.trim().replace(",", "."));
-                    return (int) Math.min(100, Math.round(value));
-                }
-            }
-        } catch (Exception ignored) {}
+        // TODO: Find a good way to fetch usage on AMD/Intel GPUs
 
         return -1;
     }
