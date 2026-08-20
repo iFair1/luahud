@@ -3,8 +3,6 @@ package me.ifair.luahud.api.modules;
 import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.api.core.LazyTable;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import org.luaj.vm2.LuaTable;
