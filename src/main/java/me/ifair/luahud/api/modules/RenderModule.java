@@ -20,6 +20,15 @@ public class RenderModule implements ApiModule {
             }
         });
 
+        lh.set("drawln", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue text, LuaValue options) {
+                String str = text.tojstring();
+                RenderBuffer.addText(str, options.opttable(null));
+                return LuaValue.NIL;
+            }
+        });
+
         lh.set("section", new OneArgFunction() {
             @Override
             public LuaValue call(LuaValue options) {

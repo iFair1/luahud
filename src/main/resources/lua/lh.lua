@@ -244,6 +244,11 @@ function lh.section(options) end
 ---@return nil
 function lh.draw(text, options) end
 
+---@param text any
+---@param options? TextOptions
+---@return nil
+function lh.drawnln(text, options) end
+
 ---@param id string Id of Item/Block that you want to draw to the screen
 ---@param options? IconOptions
 ---@return nil
