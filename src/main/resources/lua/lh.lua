@@ -239,7 +239,7 @@ function lh.setInterval(number, type, callback) end
 function lh.section(options) end
 
 
----@param text string | integer | number
+---@param text any
 ---@param options? TextOptions
 ---@return nil
 function lh.draw(text, options) end
@@ -247,7 +247,7 @@ function lh.draw(text, options) end
 ---@param id string Id of Item/Block that you want to draw to the screen
 ---@param options? IconOptions
 ---@return nil
-function lh.drawIcon(id, options) end
+function lh.drawItem(id, options) end
 
 ---@param path string Path of the texture you want to draw to the screen
 ---@param options? IconOptions
