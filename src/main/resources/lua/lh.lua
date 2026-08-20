@@ -22,8 +22,9 @@
 ---@field id string The id of the item. Example: "minecraft:diamond"
 ---@field name string The name of the item depending on naming and your language. ("My Pretty Sword", "Diamond Sword", "Elmas Kılıç")
 ---@field count integer Count of the item
----@field enchantments table<string, integer> A list of enchantments of the item
+---@field enchantments? table<string, integer> A list of enchantments of the item
 ---@field damage? integer How much the item is damaged
+---@field damageLeft? integer
 ---@field maxDamage? integer How much durability does the item have total
 
 --- Position with x, y and z
