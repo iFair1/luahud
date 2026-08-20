@@ -230,21 +230,6 @@ function lh.on(event, callback) end
 ---@return integer timerId
 function lh.setInterval(number, type, callback) end
 
----@param timerId integer
----@return nil
-function lh.clearInterval(timerId) end
-
---- Waits {number} {type} and executes the callback.
----@param number integer
----@param type string
----@param callback function
----@return integer timerId
-function lh.setTimeout(number, type, callback) end
-
----@param timerId integer
----@return nil
-function lh.clearTimeout(timerId) end
-
 --------------------------------------
 -- Render Functions
 --------------------------------------
