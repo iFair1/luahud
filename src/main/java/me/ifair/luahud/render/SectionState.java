@@ -5,6 +5,7 @@ public class SectionState {
     public String anchor = "topLeft";
     public int offsetX = 2;
     public int offsetY = 2;
+    public boolean shadow = true;
     public int textColor = 0xFFFFFFFF;
     public int backgroundColor = 0x80000000;
 

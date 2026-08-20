@@ -60,47 +60,91 @@ public class RenderBuffer {
             TEXT_POOL.add(element);
         }
 
+
+        int finalColor = currentState.textColor;
+        int finalBgColor = currentState.backgroundColor;
+        boolean finalShadow = currentState.shadow;
+
+        if (options != null && !options.isnil()) {
+            if (!options.get("textColor").isnil()) finalColor = parseColor(options.get("textColor").checkjstring());
+            if (!options.get("backgroundColor").isnil()) finalBgColor = parseColor(options.get("backgroundColor").checkjstring());
+            if (!options.get("shadow").isnil()) finalShadow = options.get("shadow").checkboolean();
+        }
+
         element.update(
                 text,
-                currentState.textColor,
-                currentState.backgroundColor,
+                finalColor,
+                finalBgColor,
+                finalShadow,
                 currentState.anchor,
                 currentState.offsetX,
-                currentState.offsetY + currentState.cursorY
+                currentState.offsetY,
+                true // temporarily hardcoded
         );
 
         activeElements++;
-        currentState.cursorY += 10;
     }
 
     public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
+        int currentX = 0;
+        int currentY = 0;
+
+        // TODO: Find a better way to actually understand a new section starts
+        String lastAnchor = "";
+        int lastBaseX = -1;
+        int lastBaseY = -1;
+
         // Draw only the active elements
         for (int i = 0; i < activeElements; i++) {
-            TextElement el = TEXT_POOL.get(i);
+            TextElement element = TEXT_POOL.get(i);
 
-            int finalX = el.xOffset;
-            int finalY = el.yOffset;
-            int textWidth = textRenderer.getWidth(el.text);
+            if (!element.anchor.equals(lastAnchor) || element.baseX != lastBaseX || element.baseY != lastBaseY) {
+                currentX = 0;
+                currentY = 0;
+                lastAnchor = element.anchor;
+                lastBaseX = element.baseX;
+                lastBaseX = element.baseY;
+            }
+
+            int finalX = element.baseX + currentX;
+            int finalY = element.baseY + currentY;
+            int textWidth = textRenderer.getWidth(element.text);
             int textHeight = textRenderer.fontHeight;
 
-            switch (el.anchor) {
+            switch (element.anchor) {
                 case "topRight":
-                    finalX = screenWidth - textWidth - el.xOffset;
+                    finalX = screenWidth - textWidth - element.baseX - currentX;
                     break;
                 case "bottomLeft":
-                    finalY = screenHeight - textHeight - el.yOffset;
+                    finalY = screenHeight - textHeight - element.baseY - currentY;
                     break;
                 case "bottomRight":
-                    finalX = screenWidth - textWidth - el.xOffset;
-                    finalY = screenHeight - textHeight - el.yOffset;
+                    finalX = screenWidth - textWidth - element.baseX - currentX;
+                    finalY = screenHeight - textHeight - element.baseY - currentY;
                     break;
             }
 
             // Draw background if background's alpha is not 00, and text width is bigger than zero
-            if (((el.bgColor >> 24 & 0xFF) > 0) && textWidth > 0) {
-                context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, el.bgColor);
+            if (((element.bgColor >> 24 & 0xFF) > 0) && textWidth > 0) {
+                context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, element.bgColor);
             }
-            context.drawText(textRenderer, el.text, finalX, finalY, el.color, true);
+            context.drawText(textRenderer, element.text, finalX, finalY, element.color, true);
+
+            // New Line Logic
+            if (element.isNewLine) {
+                currentX = 0;
+
+                if (element.anchor.equals("bottomLeft") || element.anchor.equals("bottomRight"))
+                    currentY -= textHeight + 2; // Up ↑
+                else
+                    currentY += textHeight + 2; // Down ↓
+            } else {
+                // I'm not sure if I should put a 4 px space between elements
+                if (element.anchor.equals("topLeft") || element.anchor.equals("topRight"))
+                    currentX += 4; // Right →
+                else
+                    currentX -= 4; // Left ←
+            }
         }
     }
 
