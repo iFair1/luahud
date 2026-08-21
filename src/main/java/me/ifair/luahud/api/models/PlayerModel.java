@@ -36,7 +36,8 @@ public class PlayerModel extends EntityModel {
             return gameMode.name().toLowerCase(Locale.ROOT); // Locale.ROOT because Turkish İ Problem 🇹🇷🇹🇷
         });
 
-        // TODO: Inventory Slots
+        addTable("slots", buildSlots(playerSupplier));
+
         // TODO: Status effects
     }
 
@@ -69,5 +70,21 @@ public class PlayerModel extends EntityModel {
         xp.addDouble("progress", () -> playerSupplier.get().experienceProgress);
 
         return xp.build();
+    }
+    private static LuaTable buildSlots(Supplier<ClientPlayerEntity> playerSupplier) {
+        LazyTable slots = new LazyTable();
+
+        slots.addLazyTable("head", () -> new ItemStackModel(() -> playerSupplier.get().getInventory().getStack(39)).build());
+        slots.addLazyTable("chest", () -> new ItemStackModel(() -> playerSupplier.get().getInventory().getStack(38)).build());
+        slots.addLazyTable("legs", () -> new ItemStackModel(() -> playerSupplier.get().getInventory().getStack(37)).build());
+        slots.addLazyTable("feet", () -> new ItemStackModel(() -> playerSupplier.get().getInventory().getStack(36)).build());
+
+        slots.addLazyTable("mainHand", () -> new ItemStackModel(() -> playerSupplier.get().getInventory().getMainHandStack()).build());
+        slots.addLazyTable("offHand", () -> new ItemStackModel(() -> playerSupplier.get().getInventory().player.getOffHandStack()).build());
+
+        // TODO: hotbar[1-9]
+        // TODO: inventory[1-27]
+
+        return slots.build();
     }
 }
