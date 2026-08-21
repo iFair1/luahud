@@ -19,9 +19,22 @@ public class RenderModule implements ApiModule {
         lh.set("section", new OneArgFunction() {
             @Override
             public LuaValue call(LuaValue options) {
+                currentState = new SectionState();
+
                 if (options.istable()) {
-                    RenderBuffer.setSection(options.checktable());
+                    LuaTable table = options.checktable();
+                    if (!table.get("anchor").isnil()) currentState.anchor = table.get("anchor").checkjstring();
+
+                    if (!table.get("textColor").isnil()) currentState.textColor = parseColor(table.get("textColor").checkjstring());
+                    if (!table.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(table.get("backgroundColor").checkjstring());
+
+                    if (!table.get("offsetX").isnil()) currentState.offsetY = table.get("offsetX").checkint();
+                    if (!table.get("offsetY").isnil()) currentState.offsetY = table.get("offsetY").checkint();
+
+                    if (!table.get("shadow").isnil()) currentState.shadow = table.get("shadow").checkboolean();
+                    if (!table.get("scale").isnil()) currentState.scale = (float) table.get("scale").checkdouble(); // scale is not defined in currentState yet
                 }
+
                 return LuaValue.NIL;
             }
         });
