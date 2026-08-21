@@ -32,7 +32,7 @@ public class RenderModule implements ApiModule {
                     if (!table.get("offsetY").isnil()) currentState.offsetY = table.get("offsetY").checkint();
 
                     if (!table.get("shadow").isnil()) currentState.shadow = table.get("shadow").checkboolean();
-                    if (!table.get("scale").isnil()) currentState.scale = (float) table.get("scale").checkdouble(); // scale is not defined in currentState yet
+                    if (!table.get("scale").isnil()) currentState.scale = (float) table.get("scale").checkdouble();
                 }
 
                 return LuaValue.NIL;
