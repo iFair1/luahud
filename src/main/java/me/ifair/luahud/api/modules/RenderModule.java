@@ -85,7 +85,8 @@ public class RenderModule implements ApiModule {
                         currentState.anchor,
                         currentState.offsetX,
                         currentState.offsetY,
-                        false);
+                        false
+                );
                 return LuaValue.NIL;
             }
         });
@@ -102,7 +103,15 @@ public class RenderModule implements ApiModule {
                 float scale = resolveFloat(opts, "scale", currentState.scale);
                 int backgroundColor = resolveColor(opts, "backgroundColor", currentState.backgroundColor);
 
-                RenderBuffer.addItem(itemStack, scale, backgroundColor, currentState.anchor, currentState.offsetX, currentState.offsetY, false);
+                RenderBuffer.addItem(
+                        itemStack,
+                        scale,
+                        backgroundColor,
+                        currentState.anchor,
+                        currentState.offsetX,
+                        currentState.offsetY,
+                        false
+                );
                 return LuaValue.NIL;
             }
         });
@@ -121,7 +130,15 @@ public class RenderModule implements ApiModule {
                 float scale = resolveFloat(opts, "scale", currentState.scale);
                 int backgroundColor = resolveColor(opts, "backgroundColor", currentState.backgroundColor);
 
-                RenderBuffer.addTexture(texture, scale, backgroundColor, currentState.anchor, currentState.offsetX, currentState.offsetY, false);
+                RenderBuffer.addTexture(
+                        texture,
+                        scale,
+                        backgroundColor,
+                        currentState.anchor,
+                        currentState.offsetX,
+                        currentState.offsetY,
+                        false
+                );
                 return LuaValue.NIL;
 
             }
@@ -134,7 +151,15 @@ public class RenderModule implements ApiModule {
         boolean shadow = resolveBoolean(options, "shadow", currentState.shadow);
 
         // I'll update RenderBuffer
-        RenderBuffer.addText(text, textColor, backgroundColor, shadow, currentState.anchor, currentState.offsetX, currentState.offsetY, newLine);
+        RenderBuffer.addText(text,
+                textColor,
+                backgroundColor,
+                shadow,
+                currentState.anchor,
+                currentState.offsetX,
+                currentState.offsetY,
+                newLine
+        );
     }
 
     private static int resolveColor(LuaTable options, String key, int fallback) {
