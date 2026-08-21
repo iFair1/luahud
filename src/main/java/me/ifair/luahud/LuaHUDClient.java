@@ -31,7 +31,7 @@ public class LuaHUDClient implements ClientModInitializer {
 
             if (client.player == null || Engine.getLhTable() == null) return; // Return if not in a world
 
-            // Java does the drawning
+            // Java does the drawing
             int width = client.getWindow().getScaledWidth();
             int height = client.getWindow().getScaledHeight();
             RenderBuffer.renderAll(drawContext, client.textRenderer, width, height);
