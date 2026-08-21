@@ -1,5 +1,6 @@
 package me.ifair.luahud.api.modules;
 
+import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.SectionState;
@@ -106,7 +107,25 @@ public class RenderModule implements ApiModule {
             }
         });
 
+        lh.set("drawTexture", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue path, LuaValue options) {
+                LuaTable opts = options.opttable(null);
 
+                Identifier texture = Identifier.tryParse(path.tojstring());
+                if (texture == null) {
+                    LuaHUD.LOGGER.error("Invalid texture path! Skipping. ({})", path.tojstring());
+                    return LuaValue.NIL;
+                }
+
+                float scale = resolveFloat(opts, "scale", currentState.scale);
+                int backgroundColor = resolveColor(opts, "backgroundColor", currentState.backgroundColor);
+
+                RenderBuffer.addTexture(texture, scale, backgroundColor, currentState.anchor, currentState.offsetX, currentState.offsetY, false);
+                return LuaValue.NIL;
+
+            }
+        });
     }
 
     private void addText(String text, LuaTable options, boolean newLine) {
