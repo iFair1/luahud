@@ -156,4 +156,63 @@ public class RenderBuffer {
         e.baseY = baseY;
         e.newLine = newLine;
     }
+
+    public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
+        int currentX = 0;
+        int currentY = 0;
+
+        String lastAnchor = "";
+        int lastBaseX = -1;
+        int lastBaseY = -1;
+
+        for (int i = 0; i < activeElements; i++) {
+            RenderElement element = ELEMENT_POOL.get(i);
+
+            if (!element.anchor.equals(lastAnchor) || element.baseX != lastBaseX || element.baseY != lastBaseY) {
+                currentX = 0;
+                currentY = 0;
+                lastAnchor = element.anchor;
+                lastBaseX = element.baseX;
+                lastBaseY = element.baseY;
+            }
+
+            int width;
+            int height;
+
+            switch (element.type) {
+                case TEXT:
+                    int[] textSize = renderText(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
+                    width = textSize[0];
+                    height = textSize[1];
+                    break;
+                case STACK:
+                case ITEM:
+                    int[] itemSize = renderItem(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
+                    width = itemSize[0];
+                    height = itemSize[1];
+                    break;
+                case TEXTURE:
+                    int[] textSize = renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
+                    width = textSize[0];
+                    height = textSize[1];
+                default:
+                    width = 0;
+                    height = 0;
+            }
+
+            if (element.newLine) {
+                currentX = 0;
+
+                if (element.anchor.equals("bottomLeft") || element.anchor.equals("bottomRight"))
+                    currentY -= height + 2; // Up ↑
+                else
+                    currentY += height + 2; // Down ↓
+            } else {
+                if (element.anchor.equals("topLeft") || element.anchor.equals("bottomLeft"))
+                    currentX += width; // Right →
+                else
+                    currentX -= width; // Left ←
+            }
+        }
+    }
 }
