@@ -43,8 +43,7 @@ public class TimerManager {
                 try {
                     task.callback.call();
                 } catch (Exception e) {
-                    String errorMessage = "[" + LuaHUD.MOD_ID + "] Interval error: " + e.getMessage();
-                    LuaHUD.LOGGER.error(errorMessage);
+                    LuaHUD.LOGGER.error("Interval error: {}", e.getMessage());
                 }
             }
         }
