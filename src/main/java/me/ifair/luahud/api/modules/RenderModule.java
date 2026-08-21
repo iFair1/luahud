@@ -36,7 +36,7 @@ public class RenderModule implements ApiModule {
                 // Create an ItemStack object with stack
                 // Send it to RenderBuffer as .addStack(ItemStack itemStack, options.opttable(null))
             }
-        })
+        });
 
         lh.set("section", new OneArgFunction() {
             @Override
