@@ -184,7 +184,7 @@ public class RenderModule implements ApiModule {
 
     private static float resolveFloat(LuaTable options, String key, float fallback) {
         if (options != null && !options.get(key).isnil()) {
-            return options.get(key).checkboolean();
+            return (float) options.get(key).checkdouble();
         }
         return fallback;
     }
