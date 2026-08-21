@@ -3,7 +3,11 @@ package me.ifair.luahud.api.modules;
 import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.SectionState;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.OneArgFunction;
@@ -60,8 +64,28 @@ public class RenderModule implements ApiModule {
         lh.set("drawStack", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue stack, LuaValue options) {
-                // Create an ItemStack object with stack
-                // Send it to RenderBuffer as .addStack(ItemStack itemStack, options.opttable(null))
+                LuaTable stackTable = stack.opttable(null);
+                LuaTable opts = options.opttable(null);
+
+                ItemStack itemStack = buildItemStack(stackTable);
+
+                float scale = resolveFloat(opts, "scale", currentState.scale);
+                int backgroundColor = resolveColor(opts, "backgroundColor", currentState.backgroundColor);
+                boolean showDurabilityBar = resolveBoolean(opts, "showDurabilityBar", true);
+                boolean showCount = resolveBoolean(opts, "showCount", true);
+                boolean showGlint = resolveBoolean(opts, "showGlint", !itemStack.getEnchantments().isEmpty());
+
+                RenderBuffer.addStack(itemStack,
+                        scale,
+                        showDurabilityBar,
+                        showCount,
+                        showGlint,
+                        backgroundColor,
+                        currentState.anchor,
+                        currentState.offsetX,
+                        currentState.offsetY,
+                        false);
+                return LuaValue.NIL;
             }
         });
 
@@ -95,5 +119,34 @@ public class RenderModule implements ApiModule {
             return options.get(key).checkboolean();
         }
         return fallback;
+    }
+
+    private static float resolveFloat(LuaTable options, String key, float fallback) {
+        if (options != null && !options.get(key).isnil()) {
+            return options.get(key).checkboolean();
+        }
+        return fallback;
+    }
+
+    private static ItemStack buildItemStack(LuaTable table) {
+        if (table == null) return ItemStack.EMPTY;
+
+        LuaValue idValue = table.get("id");
+        if (idValue.isnil()) return ItemStack.EMPTY;
+
+        Identifier identifier = Identifier.tryParse(idValue.checkjstring());
+        Item item = identifier != null ? Registries.ITEM.get(identifier) : Items.AIR;
+
+        int count = table.get("count").isnil() ? 1 : table.get("count").checkint();
+        ItemStack itemStack = new ItemStack(item, count);
+
+        if (!table.get("damage").isnil()) {
+            itemStack.setDamage(table.get("damage").checkint());
+        }
+
+        // There is no need for enchantments because glint only looks for if it is enchanted or not
+        // Maybe a specific mod or a vanilla feature that removes glint even if the item is enchanted, I need to add that to here
+
+        return itemStack;
     }
 }
