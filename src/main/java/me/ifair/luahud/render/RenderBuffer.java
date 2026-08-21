@@ -215,4 +215,49 @@ public class RenderBuffer {
             }
         }
     }
+
+    private static int[] renderText(
+            DrawContext context,
+            TextRenderer textRenderer,
+            RenderElement element,
+            int currentX,
+            int currentY,
+            int screenWidth,
+            int screenHeight
+            ) {
+        int textWidth = textRenderer.getWidth(element.text);
+        int textHeight = textRenderer.fontHeight;
+
+        int[] pos = resolvePosition(element, textWidth, textHeight, currentX, currentY, screenWidth, screenHeight);
+        int finalX = pos[0];
+        int finalY = pos[1];
+
+        if (((element.backgroundColor >> 24 & 0xFF) > 0) && textWidth > 0) {
+            context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, element.backgroundColor);
+        }
+        context.drawText(textRenderer, element.text, finalX, finalY, element.textColor, element.shadow);
+
+        return new int[]{textWidth, textHeight};
+    }
+
+    private static int[] resolvePosition(RenderElement element, int width, int height, int currentX, int currentY, int screenWidth, int screenHeight) {
+        // "topLeft"
+        int finalX = element.baseX + currentX;
+        int finalY = element.baseY + currentY;
+
+        switch (element.anchor) {
+            case "topRight":
+                finalX = screenWidth - width - element.baseX - currentX;
+                break;
+            case "bottomLeft":
+                finalY = screenHeight - height - element.baseY - currentY;
+                break;
+            case "bottomRight":
+                finalX = screenWidth - width - element.baseX - currentX;
+                finalY = screenHeight - height - element.baseY - currentY;
+                break;
+        }
+
+        return new int[]{finalX, finalY};
+    }
 }
