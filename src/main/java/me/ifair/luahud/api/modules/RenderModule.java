@@ -16,6 +16,16 @@ public class RenderModule implements ApiModule {
     @Override
     public void register(LuaTable lh) {
 
+        lh.set("section", new OneArgFunction() {
+            @Override
+            public LuaValue call(LuaValue options) {
+                if (options.istable()) {
+                    RenderBuffer.setSection(options.checktable());
+                }
+                return LuaValue.NIL;
+            }
+        });
+
         lh.set("draw", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue text, LuaValue options) {
@@ -42,15 +52,7 @@ public class RenderModule implements ApiModule {
             }
         });
 
-        lh.set("section", new OneArgFunction() {
-            @Override
-            public LuaValue call(LuaValue options) {
-                if (options.istable()) {
-                    RenderBuffer.setSection(options.checktable());
-                }
-                return LuaValue.NIL;
-            }
-        });
+
     }
 
     private void addText(String text, LuaTable options, boolean newLine) {
