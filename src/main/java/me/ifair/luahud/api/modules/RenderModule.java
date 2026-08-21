@@ -89,6 +89,23 @@ public class RenderModule implements ApiModule {
             }
         });
 
+        lh.set("drawItem", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue id, LuaValue options) {
+                LuaTable opts = options.opttable(null);
+
+                Identifier identifier = Identifier.tryParse(id.tojstring());
+                Item item = identifier != null ? Registries.ITEM.get(identifier) : Items.AIR;
+                ItemStack itemStack = new ItemStack(item, 1);
+
+                float scale = resolveFloat(opts, "scale", currentState.scale);
+                int backgroundColor = resolveColor(opts, "backgroundColor", currentState.backgroundColor);
+
+                RenderBuffer.addItem(itemStack, scale, backgroundColor, currentState.anchor, currentState.offsetX, currentState.offsetY, false);
+                return LuaValue.NIL;
+            }
+        });
+
 
     }
 
