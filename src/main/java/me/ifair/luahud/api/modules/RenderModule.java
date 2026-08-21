@@ -2,6 +2,7 @@ package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.render.RenderBuffer;
+import net.minecraft.item.ItemStack;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.OneArgFunction;
@@ -28,6 +29,14 @@ public class RenderModule implements ApiModule {
                 return LuaValue.NIL;
             }
         });
+
+        lh.set("drawStack", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue stack, LuaValue options) {
+                // Create an ItemStack object with stack
+                // Send it to RenderBuffer as .addStack(ItemStack itemStack, options.opttable(null))
+            }
+        })
 
         lh.set("section", new OneArgFunction() {
             @Override

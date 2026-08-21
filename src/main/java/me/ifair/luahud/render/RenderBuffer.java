@@ -147,6 +147,7 @@ public class RenderBuffer {
         }
     }
 
+    // TODO: Move this to RenderModule
     private static int parseColor(String hex) {
         if (hex.startsWith("#")) hex = hex.substring(1);
         if (hex.length() == 6) hex = "FF" + hex;

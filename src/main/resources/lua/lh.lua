@@ -142,6 +142,11 @@
 ---@class IconOptions : GeneralOptions
 ---@field scale? number
 
+---@class StackOptions : GeneralOptions, IconOptions
+---@field showDurabilityBar boolean Default: true
+---@field showCount boolean Default: true
+---@field showGlint boolean Default: if item has enchantments
+
 ---@class SectionOptions : TextOptions, IconOptions
 ---@field anchor? AnchorType
 
@@ -259,3 +264,8 @@ function lh.drawItem(id, options) end
 ---@param options? IconOptions
 ---@return nil
 function lh.drawTexture(path, options) end
+
+---@param stack LHItemStack
+---@param options? StackOptions
+---@return nil
+function lh.drawStack(stack, options) end
