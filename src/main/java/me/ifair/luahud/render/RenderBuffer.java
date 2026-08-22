@@ -192,9 +192,9 @@ public class RenderBuffer {
                     height = itemSize[1];
                     break;
                 case TEXTURE:
-                    int[] textSize = renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
-                    width = textSize[0];
-                    height = textSize[1];
+                    int[] textureSize = renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
+                    width = textureSize[0];
+                    height = textureSize[1];
                     break;
                 default:
                     width = 0;
