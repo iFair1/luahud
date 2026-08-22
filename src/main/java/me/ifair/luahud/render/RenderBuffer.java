@@ -195,6 +195,7 @@ public class RenderBuffer {
                     int[] textSize = renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
                     width = textSize[0];
                     height = textSize[1];
+                    break;
                 default:
                     width = 0;
                     height = 0;
