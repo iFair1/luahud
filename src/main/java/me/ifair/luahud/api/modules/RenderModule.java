@@ -4,6 +4,7 @@ import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.core.ApiModule;
 import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.SectionState;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -68,20 +69,16 @@ public class RenderModule implements ApiModule {
                 LuaTable stackTable = stack.opttable(null);
                 LuaTable opts = options.opttable(null);
 
-                ItemStack itemStack = buildItemStack(stackTable);
-
                 float scale = resolveFloat(opts, "scale", currentState.scale);
                 int backgroundColor = resolveColor(opts, "backgroundColor", currentState.backgroundColor);
                 boolean showDurabilityBar = resolveBoolean(opts, "showDurabilityBar", true);
                 boolean showCount = resolveBoolean(opts, "showCount", true);
-                boolean showGlint = resolveBoolean(opts, "showGlint", !itemStack.getEnchantments().isEmpty());
+                boolean showGlint = resolveBoolean(opts, "showGlint", !stackTable.get("enchantments").isnil());
 
-                // TODO: Move showDurabilityBar, showCount and showGlint to buildItemStack
+                ItemStack itemStack = buildItemStack(stackTable, showDurabilityBar, showCount, showGlint);
+
                 RenderBuffer.addStack(itemStack,
                         scale,
-                        showDurabilityBar,
-                        showCount,
-                        showGlint,
                         backgroundColor,
                         currentState.anchor,
                         currentState.offsetX,
@@ -190,7 +187,7 @@ public class RenderModule implements ApiModule {
         return fallback;
     }
 
-    private static ItemStack buildItemStack(LuaTable table) {
+    private static ItemStack buildItemStack(LuaTable table, boolean showDurabilityBar, boolean showCount, boolean showGlint) {
         if (table == null) return ItemStack.EMPTY;
 
         LuaValue idValue = table.get("id");
@@ -199,15 +196,16 @@ public class RenderModule implements ApiModule {
         Identifier identifier = Identifier.tryParse(idValue.checkjstring());
         Item item = identifier != null ? Registries.ITEM.get(identifier) : Items.AIR;
 
-        int count = table.get("count").isnil() ? 1 : table.get("count").checkint();
+        int count = !showCount || table.get("count").isnil() ? 1 : table.get("count").checkint();
         ItemStack itemStack = new ItemStack(item, count);
 
-        if (!table.get("damage").isnil()) {
+        if (showDurabilityBar && !table.get("damage").isnil()) {
             itemStack.setDamage(table.get("damage").checkint());
         }
 
-        // There is no need for enchantments because glint only looks for if it is enchanted or not
-        // Maybe a specific mod or a vanilla feature that removes glint even if the item is enchanted, I need to add that to here
+        if (showGlint) { // It already checks above whether item has enchantments
+            itemStack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+        }
 
         return itemStack;
     }

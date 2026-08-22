@@ -94,9 +94,6 @@ public class RenderBuffer {
     public static void addStack(
             ItemStack itemStack,
             float scale,
-            boolean showDurabilityBar,
-            boolean showCount,
-            boolean showGlint,
             int backgroundColor,
             String anchor,
             int baseX,
@@ -107,9 +104,6 @@ public class RenderBuffer {
         e.type = ElementType.STACK;
         e.itemStack = itemStack;
         e.scale = scale;
-        e.showDurabilityBar = showDurabilityBar;
-        e.showCount = showCount;
-        e.showGlint = showGlint;
         e.backgroundColor = backgroundColor;
         e.anchor = anchor;
         e.baseX = baseX;
