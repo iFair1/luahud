@@ -240,6 +240,22 @@ public class RenderBuffer {
         return new int[]{textWidth, textHeight};
     }
 
+    private static int[] renderTexture(DrawContext context, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
+        int size = 16; // TODO: Make this scalable
+
+        int[] pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
+        int finalX = pos[0];
+        int finalY = pos[1];
+
+        if ((element.backgroundColor >> 24 & 0xFF) > 0) {
+            context.fill(finalX - 1, finalY - 1, finalX + size + 1, finalY + size + 1, element.backgroundColor);
+        }
+
+        context.drawTexture(element.texture, finalX, finalY, 0, 0, size, size, size, size);
+
+        return new int[]{size, size};
+    }
+
     private static int[] resolvePosition(RenderElement element, int width, int height, int currentX, int currentY, int screenWidth, int screenHeight) {
         // "topLeft"
         int finalX = element.baseX + currentX;
