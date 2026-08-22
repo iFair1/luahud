@@ -143,9 +143,9 @@
 ---@field scale? number
 
 ---@class StackOptions : GeneralOptions, IconOptions
----@field showDurabilityBar boolean Default: true
----@field showCount boolean Default: true
----@field showGlint boolean Default: if item has enchantments
+---@field showDurabilityBar? boolean Default: true
+---@field showCount? boolean Default: true
+---@field showGlint? boolean Default: if item has enchantments
 
 ---@class SectionOptions : TextOptions, IconOptions
 ---@field anchor? AnchorType
