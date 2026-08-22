@@ -2,6 +2,7 @@ package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.core.ApiModule;
+import me.ifair.luahud.render.Anchor;
 import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.SectionState;
 import net.minecraft.component.DataComponentTypes;
@@ -33,8 +34,7 @@ public class RenderModule implements ApiModule {
 
                 if (options.istable()) {
                     LuaTable table = options.checktable();
-                    if (!table.get("anchor").isnil()) currentState.anchor = table.get("anchor").checkjstring();
-
+                    if (!table.get("anchor").isnil()) currentState.anchor = Anchor.fromString(table.get("anchor").checkjstring());
                     if (!table.get("textColor").isnil()) currentState.textColor = parseColor(table.get("textColor").checkjstring());
                     if (!table.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(table.get("backgroundColor").checkjstring());
 

@@ -2,7 +2,7 @@ package me.ifair.luahud.render;
 
 public class SectionState {
     // Default values
-    public String anchor = "topLeft";
+    public Anchor anchor = Anchor.TOP_LEFT;
     public int offsetX = 2;
     public int offsetY = 2;
     public boolean shadow = true;

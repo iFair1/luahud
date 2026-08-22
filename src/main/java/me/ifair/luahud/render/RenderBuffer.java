@@ -9,7 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RenderBuffer {
-    public enum ElementType {
+    private record Size(int width, int height) {
+        static final Size ZERO = new Size(0, 0);
+    }
+
+    private record Point(int x, int y) {}
+
+    private static final int LINE_SPACING = 2;
+
+    private enum ElementType {
         TEXT,
         ITEM,
         TEXTURE,
@@ -20,7 +28,7 @@ public class RenderBuffer {
         ElementType type;
 
         // common
-        String anchor;
+        Anchor anchor;
         int baseX, baseY;
         boolean newLine;
         int backgroundColor;
@@ -31,11 +39,8 @@ public class RenderBuffer {
         int textColor;
         boolean shadow;
 
-        // item / stack
-        // This is not exactly like this but not a problem for now
+        // item / stack / texture
         ItemStack itemStack;
-
-        // Texture
         Identifier texture;
 
         void clearReferences() {
@@ -70,7 +75,7 @@ public class RenderBuffer {
             int textColor,
             int backgroundColor,
             boolean shadow,
-            String anchor,
+            Anchor anchor,
             int baseX,
             int baseY,
             boolean newLine
@@ -81,17 +86,14 @@ public class RenderBuffer {
         e.textColor = textColor;
         e.backgroundColor = backgroundColor;
         e.shadow = shadow;
-        e.anchor = anchor;
-        e.baseX = baseX;
-        e.baseY = baseY;
-        e.newLine = newLine;
+        setCommon(e, anchor, baseX, baseY, newLine);
     }
 
     public static void addStack(
             ItemStack itemStack,
             float scale,
             int backgroundColor,
-            String anchor,
+            Anchor anchor,
             int baseX,
             int baseY,
             boolean newLine
@@ -101,17 +103,14 @@ public class RenderBuffer {
         e.itemStack = itemStack;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
-        e.anchor = anchor;
-        e.baseX = baseX;
-        e.baseY = baseY;
-        e.newLine = newLine;
+        setCommon(e, anchor, baseX, baseY, newLine);
     }
 
     public static void addItem(
             ItemStack itemStack,
             float scale,
             int backgroundColor,
-            String anchor,
+            Anchor anchor,
             int baseX,
             int baseY,
             boolean newLine
@@ -121,17 +120,14 @@ public class RenderBuffer {
         e.itemStack = itemStack;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
-        e.anchor = anchor;
-        e.baseX = baseX;
-        e.baseY = baseY;
-        e.newLine = newLine;
+        setCommon(e, anchor, baseX, baseY, newLine);
     }
 
     public static void addTexture(
             Identifier texture,
             float scale,
             int backgroundColor,
-            String anchor,
+            Anchor anchor,
             int baseX,
             int baseY,
             boolean newLine
@@ -141,6 +137,10 @@ public class RenderBuffer {
         e.texture = texture;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
+        setCommon(e, anchor, baseX, baseY, newLine);
+    }
+
+    private static void setCommon(RenderElement e, Anchor anchor, int baseX, int baseY, boolean newLine) {
         e.anchor = anchor;
         e.baseX = baseX;
         e.baseY = baseY;
@@ -151,14 +151,14 @@ public class RenderBuffer {
         int currentX = 0;
         int currentY = 0;
 
-        String lastAnchor = "";
-        int lastBaseX = -1;
-        int lastBaseY = -1;
+        Anchor lastAnchor = null;
+        int lastBaseX = Integer.MIN_VALUE;
+        int lastBaseY = Integer.MIN_VALUE;
 
         for (int i = 0; i < activeElements; i++) {
             RenderElement element = ELEMENT_POOL.get(i);
 
-            if (!element.anchor.equals(lastAnchor) || element.baseX != lastBaseX || element.baseY != lastBaseY) {
+            if (element.anchor != lastAnchor || element.baseX != lastBaseX || element.baseY != lastBaseY) {
                 currentX = 0;
                 currentY = 0;
                 lastAnchor = element.anchor;
@@ -166,48 +166,23 @@ public class RenderBuffer {
                 lastBaseY = element.baseY;
             }
 
-            int width;
-            int height;
 
-            switch (element.type) {
-                case TEXT:
-                    int[] textSize = renderText(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
-                    width = textSize[0];
-                    height = textSize[1];
-                    break;
-                case STACK:
-                case ITEM:
-                    int[] itemSize = renderItem(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
-                    width = itemSize[0];
-                    height = itemSize[1];
-                    break;
-                case TEXTURE:
-                    int[] textureSize = renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
-                    width = textureSize[0];
-                    height = textureSize[1];
-                    break;
-                default:
-                    width = 0;
-                    height = 0;
-            }
+            Size size = switch (element.type) {
+                case TEXT -> renderText(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
+                case STACK, ITEM -> renderItem(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
+                case TEXTURE -> renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
+            };
 
             if (element.newLine) {
                 currentX = 0;
-
-                if (element.anchor.equals("bottomLeft") || element.anchor.equals("bottomRight"))
-                    currentY -= height + 2; // Up ↑
-                else
-                    currentY += height + 2; // Down ↓
+                currentY += size.height() + LINE_SPACING;
             } else {
-                if (element.anchor.equals("topLeft") || element.anchor.equals("bottomLeft"))
-                    currentX += width; // Right →
-                else
-                    currentX -= width; // Left ←
+                currentX += size.width();
             }
         }
     }
 
-    private static int[] renderText(
+    private static Size renderText(
             DrawContext context,
             TextRenderer textRenderer,
             RenderElement element,
@@ -219,72 +194,68 @@ public class RenderBuffer {
         int textWidth = textRenderer.getWidth(element.text);
         int textHeight = textRenderer.fontHeight;
 
-        int[] pos = resolvePosition(element, textWidth, textHeight, currentX, currentY, screenWidth, screenHeight);
-        int finalX = pos[0];
-        int finalY = pos[1];
+        Point pos = resolvePosition(element, textWidth, textHeight, currentX, currentY, screenWidth, screenHeight);
 
-        if (isVisible(element.backgroundColor) && textWidth > 0) {
-            context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, element.backgroundColor);
+        if (textWidth > 0) {
+            drawBackground(context, element.backgroundColor, pos.x() - 2, pos.y() - 1, pos.x() + textWidth + 2, pos.y() + textHeight);
         }
-        context.drawText(textRenderer, element.text, finalX, finalY, element.textColor, element.shadow);
+        context.drawText(textRenderer, element.text, pos.x(), pos.y(), element.textColor, element.shadow);
 
-        return new int[]{textWidth, textHeight};
+        return new Size(textWidth, textHeight);
     }
 
-    private static int[] renderItem(DrawContext context, TextRenderer textRenderer, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
-        if (element.itemStack == null || element.itemStack.isEmpty()) return new int[]{0, 0};
+    private static Size renderItem(DrawContext context, TextRenderer textRenderer, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
+        if (element.itemStack == null || element.itemStack.isEmpty()) return Size.ZERO;
 
         int size = 16; // TODO: Make this scalable
 
-        int[] pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
-        int finalX = pos[0];
-        int finalY = pos[1];
+        Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
-        if (isVisible(element.backgroundColor)) {
-            context.fill(finalX - 1, finalY - 1, finalX + size + 1, finalY + size + 1, element.backgroundColor);
-        }
+        drawBackground(context, element.backgroundColor, pos.x() - 1, pos.y() - 1, pos.x() + size + 1, pos.y() + size + 1);
 
-        context.drawItem(element.itemStack, finalX, finalY);
-        context.drawItemInSlot(textRenderer, element.itemStack, finalX, finalY);
+        context.drawItem(element.itemStack, pos.x(), pos.y());
+        context.drawItemInSlot(textRenderer, element.itemStack, pos.x(), pos.y());
 
-        return new int[]{size, size};
+        return new Size(size, size);
     }
 
-    private static int[] renderTexture(DrawContext context, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
+    private static Size renderTexture(DrawContext context, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
         int size = 16; // TODO: Make this scalable
 
-        int[] pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
-        int finalX = pos[0];
-        int finalY = pos[1];
+        Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
-        if (isVisible(element.backgroundColor)) {
-            context.fill(finalX - 1, finalY - 1, finalX + size + 1, finalY + size + 1, element.backgroundColor);
-        }
+        drawBackground(context, element.backgroundColor, pos.x() - 1, pos.y() - 1, pos.x() + size + 1, pos.y() + size + 1);
 
-        context.drawTexture(element.texture, finalX, finalY, 0, 0, size, size, size, size);
+        context.drawTexture(element.texture, pos.x(), pos.y(), 0, 0, size, size, size, size);
 
-        return new int[]{size, size};
+        return new Size(size, size);
     }
 
-    private static int[] resolvePosition(RenderElement element, int width, int height, int currentX, int currentY, int screenWidth, int screenHeight) {
-        // "topLeft"
-        int finalX = element.baseX + currentX;
-        int finalY = element.baseY + currentY;
-
-        switch (element.anchor) {
-            case "topRight":
-                finalX = screenWidth - width - element.baseX - currentX;
-                break;
-            case "bottomLeft":
-                finalY = screenHeight - height - element.baseY - currentY;
-                break;
-            case "bottomRight":
-                finalX = screenWidth - width - element.baseX - currentX;
-                finalY = screenHeight - height - element.baseY - currentY;
-                break;
+    private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {
+        if (isVisible(color)) {
+            context.fill(x1, y1, x2, y2, color);
         }
+    }
 
-        return new int[]{finalX, finalY};
+
+    private static Point resolvePosition(
+            RenderElement element,
+            int width,
+            int height,
+            int cursorX,
+            int cursorY,
+            int screenWidth,
+            int screenHeight
+    ) {
+        int finalX = element.anchor.right()
+                ? screenWidth - element.baseX - cursorX - width
+                : element.baseX + cursorX;
+
+        int finalY = element.anchor.bottom()
+                ? screenHeight - element.baseY - cursorY - height
+                : element.baseY + cursorY;
+
+        return new Point(finalX, finalY);
     }
 
     private static boolean isVisible(int color) {
