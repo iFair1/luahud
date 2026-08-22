@@ -48,7 +48,7 @@ public class RenderModule implements ApiModule {
             @Override
             public LuaValue call(LuaValue text, LuaValue options) {
                 String str = text.tojstring();
-                RenderBuffer.addText(str, options.opttable(null), false);
+                addText(str, options.opttable(null), false);
                 return LuaValue.NIL;
             }
         });
