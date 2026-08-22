@@ -1,5 +1,6 @@
 package me.ifair.luahud;
 
+import me.ifair.luahud.api.modules.RenderModule;
 import me.ifair.luahud.core.Engine;
 import me.ifair.luahud.core.EventDispatcher;
 import me.ifair.luahud.core.TimerManager;
@@ -23,6 +24,7 @@ public class LuaHUDClient implements ClientModInitializer {
             TimerManager.tick();
 
             RenderBuffer.clear();
+            RenderModule.resetSection();
             EventDispatcher.fireEvent("tick");
         });
 

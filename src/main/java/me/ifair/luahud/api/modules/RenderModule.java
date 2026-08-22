@@ -19,6 +19,10 @@ public class RenderModule implements ApiModule {
 
     private static SectionState currentState = new SectionState();
 
+    public static void resetSection() {
+        currentState = new SectionState();
+    }
+
     @Override
     public void register(LuaTable lh) {
 
