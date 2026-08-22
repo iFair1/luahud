@@ -240,6 +240,25 @@ public class RenderBuffer {
         return new int[]{textWidth, textHeight};
     }
 
+    private static int[] renderItem(DrawContext context, TextRenderer textRenderer, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
+        if (element.itemStack == null || element.itemStack.isEmpty()) return new int[]{0, 0};
+
+        int size = 16; // TODO: Make this scalable
+
+        int pos[] = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
+        int finalX = pos[0];
+        int finalY = pos[1];
+
+        if (isVisible(element.backgroundColor)) {
+            context.fill(finalX - 1, finalY - 1, finalX + size + 1, finalY + size + 1, element.backgroundColor);
+        }
+
+        context.drawItem(element.itemStack, finalX, finalY);
+        context.drawItemInSlot(textRenderer, element.itemStack, finalX, finalY); // FIXME: Right now, this doesn't care about "showDurabilityBar" or "showCount". These should be handled when constructing the ItemStack
+
+        return new int[]{size, size};
+    }
+
     private static int[] renderTexture(DrawContext context, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
         int size = 16; // TODO: Make this scalable
 
