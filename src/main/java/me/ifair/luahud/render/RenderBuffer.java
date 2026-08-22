@@ -232,7 +232,7 @@ public class RenderBuffer {
         int finalX = pos[0];
         int finalY = pos[1];
 
-        if (((element.backgroundColor >> 24 & 0xFF) > 0) && textWidth > 0) {
+        if (isVisible(element.backgroundColor) && textWidth > 0) {
             context.fill(finalX - 2, finalY - 1, finalX + textWidth + 2, finalY + textHeight, element.backgroundColor);
         }
         context.drawText(textRenderer, element.text, finalX, finalY, element.textColor, element.shadow);
@@ -247,7 +247,7 @@ public class RenderBuffer {
         int finalX = pos[0];
         int finalY = pos[1];
 
-        if ((element.backgroundColor >> 24 & 0xFF) > 0) {
+        if (isVisible(element.backgroundColor)) {
             context.fill(finalX - 1, finalY - 1, finalX + size + 1, finalY + size + 1, element.backgroundColor);
         }
 
@@ -275,5 +275,9 @@ public class RenderBuffer {
         }
 
         return new int[]{finalX, finalY};
+    }
+
+    private static boolean isVisible(int color) {
+        return (color >> 24 & 0xFF) > 0;
     }
 }
