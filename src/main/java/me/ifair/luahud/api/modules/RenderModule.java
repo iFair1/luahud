@@ -38,7 +38,7 @@ public class RenderModule implements ApiModule {
                     if (!table.get("textColor").isnil()) currentState.textColor = parseColor(table.get("textColor").checkjstring());
                     if (!table.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(table.get("backgroundColor").checkjstring());
 
-                    if (!table.get("offsetX").isnil()) currentState.offsetY = table.get("offsetX").checkint();
+                    if (!table.get("offsetX").isnil()) currentState.offsetX = table.get("offsetX").checkint();
                     if (!table.get("offsetY").isnil()) currentState.offsetY = table.get("offsetY").checkint();
 
                     if (!table.get("shadow").isnil()) currentState.shadow = table.get("shadow").checkboolean();
