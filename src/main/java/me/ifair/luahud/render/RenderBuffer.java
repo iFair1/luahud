@@ -246,7 +246,7 @@ public class RenderBuffer {
 
         int size = 16; // TODO: Make this scalable
 
-        int pos[] = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
+        int[] pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
         int finalX = pos[0];
         int finalY = pos[1];
 
