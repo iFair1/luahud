@@ -34,9 +34,6 @@ public class RenderBuffer {
         // item / stack
         // This is not exactly like this but not a problem for now
         ItemStack itemStack;
-        boolean showDurabilityBar;
-        boolean showCount;
-        boolean showGlint;
 
         // Texture
         Identifier texture;
