@@ -249,7 +249,7 @@ public class RenderBuffer {
         }
 
         context.drawItem(element.itemStack, finalX, finalY);
-        context.drawItemInSlot(textRenderer, element.itemStack, finalX, finalY); // FIXME: Right now, this doesn't care about "showDurabilityBar" or "showCount". These should be handled when constructing the ItemStack
+        context.drawItemInSlot(textRenderer, element.itemStack, finalX, finalY);
 
         return new int[]{size, size};
     }
