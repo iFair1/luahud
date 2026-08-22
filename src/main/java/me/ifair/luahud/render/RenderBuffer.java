@@ -4,7 +4,6 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
-import org.luaj.vm2.LuaTable;
 
 import java.util.ArrayList;
 import java.util.List;
