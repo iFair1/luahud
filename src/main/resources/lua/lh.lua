@@ -131,12 +131,12 @@
 
 
 ---@class GeneralOptions
----@field backgroundColor? string
+---@field backgroundColor? string | integer
 ---@field XOffset? integer
 ---@field YOffset? integer
 
 ---@class TextOptions : GeneralOptions
----@field textColor? string
+---@field textColor? string | integer
 ---@field shadow? boolean
 
 ---@class IconOptions : GeneralOptions

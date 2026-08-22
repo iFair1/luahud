@@ -35,8 +35,8 @@ public class RenderModule implements ApiModule {
                 if (options.istable()) {
                     LuaTable table = options.checktable();
                     if (!table.get("anchor").isnil()) currentState.anchor = Anchor.fromString(table.get("anchor").checkjstring());
-                    if (!table.get("textColor").isnil()) currentState.textColor = parseColor(table.get("textColor").checkjstring());
-                    if (!table.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(table.get("backgroundColor").checkjstring());
+                    if (!table.get("textColor").isnil()) currentState.textColor = parseColor(table.get("textColor"));
+                    if (!table.get("backgroundColor").isnil()) currentState.backgroundColor = parseColor(table.get("backgroundColor"));
 
                     if (!table.get("offsetX").isnil()) currentState.offsetX = table.get("offsetX").checkint();
                     if (!table.get("offsetY").isnil()) currentState.offsetY = table.get("offsetY").checkint();
@@ -166,12 +166,19 @@ public class RenderModule implements ApiModule {
 
     private static int resolveColor(LuaTable options, String key, int fallback) {
         if (options != null && !options.get(key).isnil()) {
-            return parseColor(options.get(key).checkjstring());
+            return parseColor(options.get(key));
         }
         return fallback;
     }
 
-    private static int parseColor(String hex) {
+    private static int parseColor(LuaValue value) {
+        if (value.type() == LuaValue.TNUMBER) {
+            long num = value.tolong();
+            if ((num & 0xFF000000L) == 0 && num <= 0xFFFFFF) num |= 0xFF000000L;
+            return (int) num;
+        }
+
+        String hex = value.tojstring();
         if (hex.startsWith("#")) hex = hex.substring(1);
         if (hex.length() == 6) hex = "FF" + hex;
         return (int) Long.parseLong(hex, 16);
