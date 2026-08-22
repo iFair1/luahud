@@ -76,6 +76,7 @@ public class RenderModule implements ApiModule {
                 boolean showCount = resolveBoolean(opts, "showCount", true);
                 boolean showGlint = resolveBoolean(opts, "showGlint", !itemStack.getEnchantments().isEmpty());
 
+                // TODO: Move showDurabilityBar, showCount and showGlint to buildItemStack
                 RenderBuffer.addStack(itemStack,
                         scale,
                         showDurabilityBar,
