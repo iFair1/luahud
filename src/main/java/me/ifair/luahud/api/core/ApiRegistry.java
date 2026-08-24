@@ -20,6 +20,7 @@ public class ApiRegistry {
         MODULES.add(new WeatherModule());
         MODULES.add(new PositionModule());
         MODULES.add(new PlayerModule());
+        MODULES.add(new Functions());
     }
 
     public static void registerAll(LuaTable lh) {
