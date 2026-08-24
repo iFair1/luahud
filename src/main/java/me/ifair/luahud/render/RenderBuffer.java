@@ -211,7 +211,7 @@ public class RenderBuffer {
         float scale = element.scale > 0 ? element.scale : 1f;
         int size = Math.round(BASE_SIZE * scale);
 
-        Point pos = resolvePosition(element, size, size, currentX, currentY - 2, screenWidth, screenHeight);
+        Point pos = resolvePosition(element, size, size, currentX, currentY - 3, screenWidth, screenHeight);
 
         drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
 
@@ -232,7 +232,7 @@ public class RenderBuffer {
         float scale = element.scale > 0 ? element.scale : 1f;
         int size = Math.round(BASE_SIZE * scale);
 
-        Point pos = resolvePosition(element, size, size, currentX, currentY - 2, screenWidth, screenHeight);
+        Point pos = resolvePosition(element, size, size, currentX, currentY - 3, screenWidth, screenHeight);
 
         drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
         
