@@ -197,7 +197,7 @@ public class RenderBuffer {
         Point pos = resolvePosition(element, textWidth, textHeight, currentX, currentY, screenWidth, screenHeight);
 
         if (textWidth > 0) {
-            drawBackground(context, element.backgroundColor, pos.x() - 2, pos.y() - 1, pos.x() + textWidth + 2, pos.y() + textHeight);
+            drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + textWidth, pos.y() + textHeight);
         }
         context.drawText(textRenderer, element.text, pos.x(), pos.y(), element.textColor, element.shadow);
 
@@ -211,7 +211,7 @@ public class RenderBuffer {
 
         Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
-        drawBackground(context, element.backgroundColor, pos.x() - 1, pos.y() - 1, pos.x() + size + 1, pos.y() + size + 1);
+        drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
 
         context.drawItem(element.itemStack, pos.x(), pos.y());
         context.drawItemInSlot(textRenderer, element.itemStack, pos.x(), pos.y());
@@ -224,7 +224,7 @@ public class RenderBuffer {
 
         Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
-        drawBackground(context, element.backgroundColor, pos.x() - 1, pos.y() - 1, pos.x() + size + 1, pos.y() + size + 1);
+        drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
 
         context.drawTexture(element.texture, pos.x(), pos.y(), 0, 0, size, size, size, size);
 
