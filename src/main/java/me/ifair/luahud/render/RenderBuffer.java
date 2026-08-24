@@ -16,6 +16,7 @@ public class RenderBuffer {
     private record Point(int x, int y) {}
 
     private static final int LINE_SPACING = 2;
+    private static final int BASE_SIZE = 16;
 
     private enum ElementType {
         TEXT,
@@ -190,7 +191,7 @@ public class RenderBuffer {
             int currentY,
             int screenWidth,
             int screenHeight
-            ) {
+    ) {
         int textWidth = textRenderer.getWidth(element.text);
         int textHeight = textRenderer.fontHeight;
 
@@ -207,20 +208,28 @@ public class RenderBuffer {
     private static Size renderItem(DrawContext context, TextRenderer textRenderer, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
         if (element.itemStack == null || element.itemStack.isEmpty()) return Size.ZERO;
 
-        int size = 16; // TODO: Make this scalable
+        float scale = element.scale > 0 ? element.scale : 1f;
+        int size = Math.round(BASE_SIZE * scale);
 
         Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
         drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
 
-        context.drawItem(element.itemStack, pos.x(), pos.y());
-        context.drawItemInSlot(textRenderer, element.itemStack, pos.x(), pos.y());
+        context.getMatrices().push();
+        context.getMatrices().translate(pos.x(), pos.y(), 0);
+        context.getMatrices().scale(scale, scale, 1f);
+
+        context.drawItem(element.itemStack, 0, 0);
+        context.drawItemInSlot(textRenderer, element.itemStack, 0, 0);
+
+        context.getMatrices().pop();
 
         return new Size(size, size);
     }
 
     private static Size renderTexture(DrawContext context, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
-        int size = 16; // TODO: Make this scalable
+        float scale = element.scale > 0 ? element.scale : 1f;
+        int size = Math.round(BASE_SIZE * scale);
 
         Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
