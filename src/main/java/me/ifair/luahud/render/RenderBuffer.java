@@ -16,7 +16,7 @@ public class RenderBuffer {
     private record Point(int x, int y) {}
 
     private static final int LINE_SPACING = 2;
-    private static final int BASE_SIZE = 16;
+    private static final int BASE_SIZE = 12;
 
     private enum ElementType {
         TEXT,
@@ -215,9 +215,10 @@ public class RenderBuffer {
 
         drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
 
+        float matrixScale = (BASE_SIZE / 16f) * scale;
         context.getMatrices().push();
         context.getMatrices().translate(pos.x(), pos.y(), 0);
-        context.getMatrices().scale(scale, scale, 1f);
+        context.getMatrices().scale(matrixScale, matrixScale, 1f);
 
         context.drawItem(element.itemStack, 0, 0);
         context.drawItemInSlot(textRenderer, element.itemStack, 0, 0);
@@ -234,7 +235,7 @@ public class RenderBuffer {
         Point pos = resolvePosition(element, size, size, currentX, currentY, screenWidth, screenHeight);
 
         drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
-
+        
         context.drawTexture(element.texture, pos.x(), pos.y(), 0, 0, size, size, size, size);
 
         return new Size(size, size);
