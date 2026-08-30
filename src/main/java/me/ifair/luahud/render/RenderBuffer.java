@@ -18,8 +18,8 @@ public class RenderBuffer {
     private static final int ROW_HEIGHT = 12;
     private static final int BASE_SIZE = 12;
 
-    private static final int PADDING_LEFT = 1;
-    private static final int PADDING_RIGHT = 1;
+    private static final int PADDING_LEFT = 2;
+    private static final int PADDING_RIGHT = 2;
 
     private enum ElementType {
         TEXT,
