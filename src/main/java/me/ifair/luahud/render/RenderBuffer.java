@@ -18,6 +18,9 @@ public class RenderBuffer {
     private static final int ROW_HEIGHT = 12;
     private static final int BASE_SIZE = 12;
 
+    private static final int PADDING_LEFT = 1;
+    private static final int PADDING_RIGHT = 1;
+
     private enum ElementType {
         TEXT,
         ITEM,
@@ -189,8 +192,10 @@ public class RenderBuffer {
 
 
             // Calc the absolute start position for the entire row
+            int totalRowWidth = rowWidth + PADDING_LEFT + PADDING_RIGHT;
+
             int startX = lastAnchor.right()
-                    ? screenWidth - lastBaseX - rowWidth
+                    ? screenWidth - lastBaseX - totalRowWidth
                     : lastBaseX;
 
             int startY = lastAnchor.bottom()
@@ -201,14 +206,17 @@ public class RenderBuffer {
 
             for (int k = i; k <= endIdx; k++) {
                 RenderElement e = ELEMENT_POOL.get(k);
+                int contentWidth = measureWidth(e, textRenderer);
 
-                int elementWidth = measureWidth(e, textRenderer);
+                int extraLeft = (k == i) ? PADDING_LEFT : 0;
+                int extraRight = (k == endIdx) ? PADDING_RIGHT : 0;
+                int elementBgWidth = contentWidth + extraLeft + extraRight;
 
-                drawBackground(context, e.backgroundColor, currentDrawX, startY, currentDrawX + elementWidth, startY + ROW_HEIGHT);
+                drawBackground(context, e.backgroundColor, currentDrawX, startY, currentDrawX + elementBgWidth, startY + ROW_HEIGHT);
 
-                renderContentAt(context, textRenderer, e, currentDrawX, startY);
+                renderContentAt(context, textRenderer, e, currentDrawX + extraLeft, startY);
 
-                currentDrawX += elementWidth;
+                currentDrawX += elementBgWidth;
             }
 
             currentYOffset += ROW_HEIGHT;
