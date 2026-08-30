@@ -206,6 +206,8 @@ public class RenderBuffer {
                 int extraRight = (k == endIdx) ? PADDING_RIGHT : 0;
                 int elementBgWidth = contentWidth + extraLeft + extraRight;
 
+                if (contentWidth == 0) continue;
+
                 drawBackground(context, e.backgroundColor, currentDrawX, startY, currentDrawX + elementBgWidth, startY + ROW_HEIGHT);
 
                 renderContentAt(context, textRenderer, e, currentDrawX + extraLeft, startY);
