@@ -16,7 +16,6 @@ public class RenderBuffer {
     private record Point(int x, int y) {}
 
     private static final int ROW_HEIGHT = 10;
-    private static final int LINE_SPACING = 2;
     private static final int BASE_SIZE = 12;
 
     private enum ElementType {
@@ -266,89 +265,10 @@ public class RenderBuffer {
         }
     }
 
-    private static Size renderText(
-            DrawContext context,
-            TextRenderer textRenderer,
-            RenderElement element,
-            int currentX,
-            int currentY,
-            int screenWidth,
-            int screenHeight
-    ) {
-        int textWidth = textRenderer.getWidth(element.text);
-        int textHeight = textRenderer.fontHeight;
-
-        Point pos = resolvePosition(element, textWidth, textHeight, currentX, currentY, screenWidth, screenHeight);
-
-        if (textWidth > 0) {
-            drawBackground(context, element.backgroundColor, pos.x(), pos.y() - 2, pos.x() + textWidth, pos.y() + textHeight);
-        }
-        context.drawText(textRenderer, element.text, pos.x(), pos.y(), element.textColor, element.shadow);
-
-        return new Size(textWidth, textHeight);
-    }
-
-    private static Size renderItem(DrawContext context, TextRenderer textRenderer, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
-        if (element.itemStack == null || element.itemStack.isEmpty()) return Size.ZERO;
-
-        float scale = element.scale > 0 ? element.scale : 1f;
-        int size = Math.round(BASE_SIZE * scale);
-
-        Point pos = resolvePosition(element, size, size, currentX, currentY - 3, screenWidth, screenHeight);
-
-        drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
-
-        float matrixScale = (BASE_SIZE / 16f) * scale;
-        context.getMatrices().push();
-        context.getMatrices().translate(pos.x(), pos.y(), 0);
-        context.getMatrices().scale(matrixScale, matrixScale, 1f);
-
-        context.drawItem(element.itemStack, 0, 0);
-        context.drawItemInSlot(textRenderer, element.itemStack, 0, 0);
-
-        context.getMatrices().pop();
-
-        return new Size(size, size);
-    }
-
-    private static Size renderTexture(DrawContext context, RenderElement element, int currentX, int currentY, int screenWidth, int screenHeight) {
-        float scale = element.scale > 0 ? element.scale : 1f;
-        int size = Math.round(BASE_SIZE * scale);
-
-        Point pos = resolvePosition(element, size, size, currentX, currentY - 3, screenWidth, screenHeight);
-
-        drawBackground(context, element.backgroundColor, pos.x(), pos.y(), pos.x() + size, pos.y() + size);
-        
-        context.drawTexture(element.texture, pos.x(), pos.y(), 0, 0, size, size, size, size);
-
-        return new Size(size, size);
-    }
-
     private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {
         if (isVisible(color)) {
             context.fill(x1, y1, x2, y2, color);
         }
-    }
-
-
-    private static Point resolvePosition(
-            RenderElement element,
-            int width,
-            int height,
-            int cursorX,
-            int cursorY,
-            int screenWidth,
-            int screenHeight
-    ) {
-        int finalX = element.anchor.right()
-                ? screenWidth - element.baseX - cursorX - width
-                : element.baseX + cursorX;
-
-        int finalY = element.anchor.bottom()
-                ? screenHeight - element.baseY - cursorY - height
-                : element.baseY + cursorY;
-
-        return new Point(finalX, finalY);
     }
 
     private static boolean isVisible(int color) {
