@@ -15,6 +15,7 @@ public class RenderBuffer {
 
     private record Point(int x, int y) {}
 
+    private static final int ROW_HEIGHT = 10;
     private static final int LINE_SPACING = 2;
     private static final int BASE_SIZE = 12;
 
@@ -60,7 +61,7 @@ public class RenderBuffer {
 
     private static RenderElement obtain() {
         RenderElement element;
-        if(activeElements < ELEMENT_POOL.size()) {
+        if (activeElements < ELEMENT_POOL.size()) {
             element = ELEMENT_POOL.get(activeElements);
             element.clearReferences();
         } else {
@@ -149,36 +150,118 @@ public class RenderBuffer {
     }
 
     public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
-        int currentX = 0;
-        int currentY = 0;
+        int currentYOffset = 0;
 
         Anchor lastAnchor = null;
         int lastBaseX = Integer.MIN_VALUE;
         int lastBaseY = Integer.MIN_VALUE;
 
-        for (int i = 0; i < activeElements; i++) {
-            RenderElement element = ELEMENT_POOL.get(i);
+        int i = 0;
+        while (i < activeElements) {
+            RenderElement firstInRow = ELEMENT_POOL.get(i);
 
-            if (element.anchor != lastAnchor || element.baseX != lastBaseX || element.baseY != lastBaseY) {
-                currentX = 0;
-                currentY = 0;
-                lastAnchor = element.anchor;
-                lastBaseX = element.baseX;
-                lastBaseY = element.baseY;
+            if (firstInRow.anchor != lastAnchor || firstInRow.baseX != lastBaseX || firstInRow.baseY != lastBaseY) {
+                currentYOffset = 0;
+                lastAnchor = firstInRow.anchor;
+                lastBaseX = firstInRow.baseX;
+                lastBaseY = firstInRow.baseY;
             }
 
+            int rowWidth = 0;
+            int j = i;
+            while (j < activeElements) {
+                RenderElement e = ELEMENT_POOL.get(j);
 
-            Size size = switch (element.type) {
-                case TEXT -> renderText(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
-                case STACK, ITEM -> renderItem(context, textRenderer, element, currentX, currentY, screenWidth, screenHeight);
-                case TEXTURE -> renderTexture(context, element, currentX, currentY, screenWidth, screenHeight);
-            };
+                // If somehow stupid user decides to change the section mid-row, break the row calculation
+                if (e.anchor != lastAnchor || e.baseX != lastBaseX || e.baseY != lastBaseY) {
+                    j--;
+                    break;
+                }
 
-            if (element.newLine) {
-                currentX = 0;
-                currentY += size.height() + LINE_SPACING;
-            } else {
-                currentX += size.width();
+                rowWidth += measureWidth(e, textRenderer);
+
+                if (e.newLine) {
+                    break; // End of row
+                }
+                j++;
+            }
+
+            int endIdx = Math.min(j, activeElements - 1);
+
+
+            // Calc the absolute start position for the entire row
+            int startX = lastAnchor.right()
+                    ? screenWidth - lastBaseX - rowWidth
+                    : lastBaseX;
+
+            int startY = lastAnchor.bottom()
+                    ? screenHeight - lastBaseY - currentYOffset - ROW_HEIGHT
+                    : lastBaseY + currentYOffset;
+
+            int currentDrawX = startX;
+
+            for (int k = i; k <= endIdx; k++) {
+                RenderElement e = ELEMENT_POOL.get(k);
+
+                int elementWidth = measureWidth(e, textRenderer);
+
+                drawBackground(context, e.backgroundColor, currentDrawX, startY, currentDrawX + elementWidth, startY + ROW_HEIGHT);
+
+                renderContentAt(context, textRenderer, e, currentDrawX, startY);
+
+                currentDrawX += elementWidth;
+            }
+
+            currentYOffset += ROW_HEIGHT;
+            i = endIdx + 1;
+        }
+    }
+
+    private static int measureWidth(RenderElement element, TextRenderer textRenderer) {
+        return switch (element.type) {
+            case TEXT -> textRenderer.getWidth(element.text);
+            case STACK, ITEM -> {
+                if (element.itemStack == null || element.itemStack.isEmpty()) yield 0;
+                float scale = element.scale > 0 ? element.scale : 1f;
+                yield Math.round(BASE_SIZE * scale);
+            }
+            case TEXTURE -> {
+                float scale = element.scale > 0 ? element.scale : 1f;
+                yield Math.round(BASE_SIZE * scale);
+            }
+        };
+    }
+
+    private static void renderContentAt(DrawContext context, TextRenderer textRenderer, RenderElement element, int x, int y) {
+        switch (element.type) {
+            case TEXT -> {
+                int textY = y + (ROW_HEIGHT - textRenderer.fontHeight) / 2;
+                context.drawText(textRenderer, element.text, x, textY, element.textColor, element.shadow);
+            }
+            case STACK, ITEM -> {
+                if (element.itemStack == null || element.itemStack.isEmpty()) return;
+
+                float scale = element.scale > 0 ? element.scale : 1f;
+                int size = Math.round(BASE_SIZE * scale);
+                float matrixScale = (BASE_SIZE / 16f) * scale;
+
+                int itemY = y + (ROW_HEIGHT - size) / 2;
+
+                context.getMatrices().push();
+                context.getMatrices().translate(x, itemY, 0);
+                context.getMatrices().scale(matrixScale, matrixScale, 1f);
+
+                context.drawItem(element.itemStack, 0, 0);
+                context.drawItemInSlot(textRenderer, element.itemStack, 0, 0);
+
+                context.getMatrices().pop();
+            }
+            case TEXTURE -> {
+                float scale = element.scale > 0 ? element.scale : 1f;
+                int size = Math.round(BASE_SIZE * scale);
+                int textY = y + (ROW_HEIGHT - size) / 2;
+
+                context.drawTexture(element.texture, x, textY, 0, 0, size, size, size, size);
             }
         }
     }
