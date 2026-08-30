@@ -15,7 +15,7 @@ public class RenderBuffer {
 
     private record Point(int x, int y) {}
 
-    private static final int ROW_HEIGHT = 10;
+    private static final int ROW_HEIGHT = 12;
     private static final int BASE_SIZE = 12;
 
     private enum ElementType {
@@ -244,7 +244,7 @@ public class RenderBuffer {
                 int size = Math.round(BASE_SIZE * scale);
                 float matrixScale = (BASE_SIZE / 16f) * scale;
 
-                int itemY = y + (ROW_HEIGHT - size) / 2;
+                int itemY = y + (ROW_HEIGHT - size) / 2 - 1;
 
                 context.getMatrices().push();
                 context.getMatrices().translate(x, itemY, 0);
@@ -258,16 +258,16 @@ public class RenderBuffer {
             case TEXTURE -> {
                 float scale = element.scale > 0 ? element.scale : 1f;
                 int size = Math.round(BASE_SIZE * scale);
-                int textY = y + (ROW_HEIGHT - size) / 2;
+                int textureY = y + (ROW_HEIGHT - size) / 2 - 1;
 
-                context.drawTexture(element.texture, x, textY, 0, 0, size, size, size, size);
+                context.drawTexture(element.texture, x, textureY, 0, 0, size, size, size, size);
             }
         }
     }
 
     private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {
         if (isVisible(color)) {
-            context.fill(x1, y1, x2, y2, color);
+            context.fill(x1, y1 - 1, x2, y2 - 1, color);
         }
     }
 
