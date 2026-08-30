@@ -9,12 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RenderBuffer {
-    private record Size(int width, int height) {
-        static final Size ZERO = new Size(0, 0);
-    }
-
-    private record Point(int x, int y) {}
-
     private static final int ROW_HEIGHT = 12;
     private static final int BASE_SIZE = 12;
 
