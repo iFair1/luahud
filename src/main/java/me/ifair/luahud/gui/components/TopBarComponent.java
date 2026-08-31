@@ -1,4 +1,4 @@
-package me.ifair.luahud.gui;
+package me.ifair.luahud.gui.components;
 
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.container.Containers;
