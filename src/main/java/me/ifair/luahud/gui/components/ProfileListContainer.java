@@ -28,6 +28,8 @@ public class ProfileListContainer {
                 scrollContent
         );
 
+        panel.child(scrollContainer);
+
         return panel;
     }
 }
