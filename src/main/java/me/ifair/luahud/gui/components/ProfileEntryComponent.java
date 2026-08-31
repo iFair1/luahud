@@ -79,13 +79,13 @@ public class ProfileEntryComponent {
         editBtn.sizing(Sizing.fixed(ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
         row.child(editBtn);
 
-        if (hasError) {
-            var errorBtn = Components.button(Text.literal("!"), button -> {
-                // TODO
-            });
-            errorBtn.sizing(Sizing.fixed(ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
-            row.child(errorBtn);
-        }
+        var errorBtn = Components.button(Text.literal("!"), button -> {
+            // TODO
+        });
+        errorBtn.sizing(Sizing.fixed(ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
+        errorBtn.visible = hasError;
+        errorBtn.margins(Insets.right(-PADDING));
+        row.child(errorBtn);
 
         return row;
     }
