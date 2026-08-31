@@ -35,6 +35,7 @@ public class ProfileEntryComponent {
 
         var nameLabel = Components.label(Text.literal(profileName));
         nameLabel.shadow(true);
+        nameLabel.margins(Insets.of(1, 0, 5, 0));
 
         var nameInput = Components.textBox(Sizing.fill(100));
         nameInput.text(profileName);
