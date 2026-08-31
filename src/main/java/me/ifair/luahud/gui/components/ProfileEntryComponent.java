@@ -9,7 +9,7 @@ import net.minecraft.text.Text;
 
 public class ProfileEntryComponent {
     final static int PADDING = 50;
-    final static int ROW_HEIGHT = 16;
+    final static int ROW_HEIGHT = 18;
     final static int GAP = 2;
 
     public static FlowLayout create(String profileName, boolean isSelected, boolean isHidden, boolean hasError) {
