@@ -24,18 +24,18 @@ public class BottomBarComponent {
         bottomBar.horizontalAlignment(HorizontalAlignment.CENTER);
         bottomBar.verticalAlignment(VerticalAlignment.CENTER);
         bottomBar.margins(Insets.top(6));
-        bottomBar.gap(15);
+        bottomBar.gap(10);
 
         var openFolderBtn = Components.button(Text.literal("Open Folder"), button -> {
             if (!PROFILES_DIRECTORY.exists()) PROFILES_DIRECTORY.mkdirs();
             Util.getOperatingSystem().open(PROFILES_DIRECTORY);
         });
-        openFolderBtn.sizing(Sizing.fixed(120), Sizing.fixed(20));
+        openFolderBtn.sizing(Sizing.fixed(150), Sizing.fixed(20));
 
         var doneBtn = Components.button(Text.literal("Done"), button -> {
             parentScreen.close();
         });
-        doneBtn.sizing(Sizing.fixed(100), Sizing.fixed(20));
+        doneBtn.sizing(Sizing.fixed(150), Sizing.fixed(20));
 
         bottomBar.child(openFolderBtn);
         bottomBar.child(doneBtn);

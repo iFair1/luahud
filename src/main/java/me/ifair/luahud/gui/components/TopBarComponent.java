@@ -19,13 +19,13 @@ public class TopBarComponent {
     // dont have discord yet
 
     public static FlowLayout create() {
-        FlowLayout topBar = Containers.horizontalFlow(Sizing.fill(85), Sizing.content());
+        FlowLayout topBar = Containers.horizontalFlow(Sizing.fill(100), Sizing.fixed(25));
         topBar.verticalAlignment(VerticalAlignment.CENTER);
-        topBar.margins(Insets.bottom(5));
 
         // Links (left)
-        FlowLayout linksLayout = Containers.horizontalFlow(Sizing.content(),Sizing.content());
-        linksLayout.gap(5);
+        FlowLayout linksLayout = Containers.horizontalFlow(Sizing.fill(33),Sizing.content());
+        linksLayout.gap(2);
+        linksLayout.padding(Insets.left(2));
         linksLayout.child(Components.button(Text.literal("Gh"), button -> {
             openInBrowser(GITHUB_URL);
         }));
@@ -36,16 +36,22 @@ public class TopBarComponent {
             // TODO: open a discord server :)
         }));
 
+        FlowLayout centerLayout = Containers.horizontalFlow(Sizing.fill(34), Sizing.content());
+        centerLayout.verticalAlignment(VerticalAlignment.CENTER);
+        centerLayout.horizontalAlignment(HorizontalAlignment.CENTER);
+        centerLayout.child(Components.label(Text.literal("LuaHUD")));
+
         // Other buttons (right)
-        FlowLayout rightLayout = Containers.horizontalFlow(Sizing.fill(100), Sizing.content());
+        FlowLayout rightLayout = Containers.horizontalFlow(Sizing.fill(33), Sizing.content());
         rightLayout.horizontalAlignment(HorizontalAlignment.RIGHT);
         rightLayout.verticalAlignment(VerticalAlignment.CENTER);
-
+        rightLayout.padding(Insets.right(2));
         rightLayout.child(Components.button(Text.literal("SH"), buttonComponent -> {
             // TODO
         }));
 
         topBar.child(linksLayout);
+        topBar.child(centerLayout);
         topBar.child(rightLayout);
 
         return topBar;

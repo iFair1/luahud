@@ -9,7 +9,7 @@ import io.wispforest.owo.ui.core.Surface;
 
 public class ProfileListContainer {
     public static FlowLayout create() {
-        FlowLayout panel = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(70));
+        FlowLayout panel = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(75));
         panel.surface(Surface.VANILLA_TRANSLUCENT);
         panel.padding(Insets.of(8));
 
