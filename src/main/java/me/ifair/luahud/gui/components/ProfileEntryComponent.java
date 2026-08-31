@@ -27,7 +27,6 @@ public class ProfileEntryComponent {
         row.child(checkbox);
 
 
-
         // Name of the profile (Label/Input box)
         StackLayout profileContainer = Containers.stack(Sizing.expand(100), Sizing.fill(100));
         profileContainer.horizontalAlignment(HorizontalAlignment.LEFT);
@@ -36,30 +35,9 @@ public class ProfileEntryComponent {
         var nameLabel = Components.label(Text.literal(profileName));
         nameLabel.shadow(true);
         nameLabel.margins(Insets.of(1, 0, 5, 0));
-
-        var nameInput = Components.textBox(Sizing.fill(100));
-        nameInput.text(profileName);
-        nameInput.sizing(Sizing.fill(100), Sizing.fixed(ROW_HEIGHT));
-
-        // Change the label text when input box changes
-        nameInput.onChanged().subscribe(newValue -> nameLabel.text(Text.literal(newValue)));
-
         profileContainer.child(nameLabel);
 
-        profileContainer.mouseEnter().subscribe(() -> {
-            profileContainer.clearChildren();
-            profileContainer.child(nameInput);
-        });
-
-        profileContainer.mouseLeave().subscribe(() -> {
-            if (!nameInput.isActive()) {
-                profileContainer.clearChildren();
-                profileContainer.child(nameLabel);
-            }
-        });
-
         row.child(profileContainer);
-
 
 
         // Other buttons
