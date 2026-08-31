@@ -28,7 +28,7 @@ public class ProfileEntryComponent {
 
 
         // Name of the profile (Label/Input box)
-        StackLayout profileContainer = Containers.stack(Sizing.fill(100), Sizing.fill(100));
+        StackLayout profileContainer = Containers.stack(Sizing.expand(100), Sizing.fill(100));
         profileContainer.horizontalAlignment(HorizontalAlignment.LEFT);
         profileContainer.verticalAlignment(VerticalAlignment.CENTER);
 
