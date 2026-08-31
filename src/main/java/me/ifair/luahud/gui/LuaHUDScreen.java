@@ -36,7 +36,7 @@ public class LuaHUDScreen extends BaseOwoScreen<FlowLayout> {
     @Override
     protected void build(FlowLayout rootComponent) {
         rootComponent.
-                surface(Surface.VANILLA_TRANSLUCENT)
+                surface(Surface.OPTIONS_BACKGROUND)
                 .horizontalAlignment(HorizontalAlignment.CENTER)
                 .verticalAlignment(VerticalAlignment.CENTER);
 

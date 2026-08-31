@@ -8,8 +8,8 @@ import io.wispforest.owo.ui.core.*;
 import net.minecraft.text.Text;
 
 public class ProfileEntryComponent {
-    final static int PADDING = 8;
-    final static int ROW_HEIGHT = 20;
+    final static int PADDING = 50;
+    final static int ROW_HEIGHT = 16;
     final static int GAP = 2;
 
     public static FlowLayout create(String profileName, boolean isSelected, boolean isHidden, boolean hasError) {
@@ -20,8 +20,9 @@ public class ProfileEntryComponent {
         row.gap(GAP);
 
         // checkbox
-        var checkbox = Components.checkbox(Text.empty());
-        checkbox.checked(isSelected);
+        var checkbox = Components.button(Text.literal(isSelected ? "S" : "U"), button -> {
+            // TODO
+        });
         checkbox.sizing(Sizing.fixed(ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
         row.child(checkbox);
 
@@ -64,13 +65,13 @@ public class ProfileEntryComponent {
         var hideBtn = Components.button(Text.literal(isHidden ? "Show" : "Hide"), button -> {
             // TODO
         });
-        hideBtn.sizing(Sizing.fixed(3 * ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
+        hideBtn.sizing(Sizing.fixed(2 * ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
         row.child(hideBtn);
 
         var keybindBtn = Components.button(Text.literal("Keybindddd"), button -> {
             // TODO
         });
-        keybindBtn.sizing(Sizing.fixed(6 * ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
+        keybindBtn.sizing(Sizing.fixed(4 * ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
         row.child(keybindBtn);
 
         var editBtn = Components.button(Text.literal("E"), button -> {
@@ -84,7 +85,7 @@ public class ProfileEntryComponent {
         });
         errorBtn.sizing(Sizing.fixed(ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
         errorBtn.visible = hasError;
-        errorBtn.margins(Insets.right(-PADDING));
+        // errorBtn.margins(Insets.right(-PADDING));
         row.child(errorBtn);
 
         return row;
