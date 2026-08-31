@@ -64,6 +64,7 @@ public class ProfileEntryComponent {
         });
         errorBtn.sizing(Sizing.fixed(ROW_HEIGHT), Sizing.fixed(ROW_HEIGHT));
         errorBtn.visible = hasError;
+        errorBtn.active = hasError;
         // errorBtn.margins(Insets.right(-PADDING));
         row.child(errorBtn);
 
