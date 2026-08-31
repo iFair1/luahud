@@ -18,9 +18,9 @@ public class ProfileListContainer {
         scrollContent.gap(4);
 
         // schizophrenia placeholders
-        scrollContent.child(ProfileEntryComponent.create("I'm a placeholder", true, false));
-        scrollContent.child(ProfileEntryComponent.create("I am too! We should be friends", false, false));
-        scrollContent.child(ProfileEntryComponent.create("Hey! That's my friend >:(", false, true));
+        scrollContent.child(ProfileEntryComponent.create("I'm a placeholder", true, false, true));
+        scrollContent.child(ProfileEntryComponent.create("I am too! We should be friends", false, false, false));
+        scrollContent.child(ProfileEntryComponent.create("Hey! That's my friend >:(", false, true, true));
 
         ScrollContainer<FlowLayout> scrollContainer = Containers.verticalScroll(
                 Sizing.fill(100),
