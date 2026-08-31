@@ -10,6 +10,11 @@ repositories {
 	maven { url 'https://maven.wispforest.io/releases/' }
 
 	maven { url 'https://jitpack.io' }
+
+	maven {
+		name = "Terraformers"
+		url = "https://maven.terraformersmc.com/"
+	}
 }
 
 fabricApi {
@@ -33,6 +38,8 @@ dependencies {
 
 	modImplementation "io.wispforest:owo-lib:${project.owo_version}"
 	include "io.wispforest:owo-sentinel:${project.owo_version}"
+
+	modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
 }
 
 processResources {

@@ -20,6 +20,9 @@
 		],
 		"client": [
 			"me.ifair.luahud.LuaHUDClient"
+		],
+		"modmenu": [
+			"me.ifair.luahud.ModMenuIntegration"
 		]
 	},
 	"mixins": [
