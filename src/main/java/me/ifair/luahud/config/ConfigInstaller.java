@@ -30,6 +30,8 @@ public class ConfigInstaller {
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
             copyFromResource(defaultSource + "luahud/Example Profile.lua", MOD_CONFIG_DIR);
             // other default profiles will come here
+
+            ConfigManager.setGenerateExampleProfiles(false);
         }
 
         // Generate lua files no matter what
