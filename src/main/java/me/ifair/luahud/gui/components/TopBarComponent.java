@@ -39,7 +39,7 @@ public class TopBarComponent {
         FlowLayout centerLayout = Containers.horizontalFlow(Sizing.fill(34), Sizing.content());
         centerLayout.verticalAlignment(VerticalAlignment.CENTER);
         centerLayout.horizontalAlignment(HorizontalAlignment.CENTER);
-        centerLayout.child(Components.label(Text.literal("LuaHUD")));
+        centerLayout.child(Components.label(Text.literal("LuaHUD")).shadow(true));
 
         // Other buttons (right)
         FlowLayout rightLayout = Containers.horizontalFlow(Sizing.fill(33), Sizing.content());
