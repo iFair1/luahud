@@ -8,6 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,9 +16,6 @@ public class ConfigManager {
     private static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir();
     private static final Path MOD_CONFIG_DIR = CONFIG_DIR.resolve("luahud/");
     private static final Path JSON_CONFIG = CONFIG_DIR.resolve("luahud.json");
-
-    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    public static ConfigData config = new ConfigData();
 
     public static class ConfigData {
         public boolean showHiddenFiles;
@@ -29,6 +27,15 @@ public class ConfigManager {
             public String keybind = "key.keyboard.unknown";
         }
     }
+
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static ConfigData config = new ConfigData();
+
+    public static boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
+    public static boolean isGenerateExampleProfilesEnabled() { return config.generateExampleProfiles; }
+    public static Map<String, ConfigData.ProfileData> getProfiles() { return Collections.unmodifiableMap(config.profiles); }
+
+
 
     public static void load() {
         if (!Files.exists(JSON_CONFIG)) {
@@ -68,7 +75,7 @@ public class ConfigManager {
             }
         }
 
-        if (FileHelper.isGenerateExampleProfilesEnabled()) {
+        if (ConfigManager.isGenerateExampleProfilesEnabled()) {
             FileHelper.copyFromResource(defaultSource + "luahud/Example Profile.lua", MOD_CONFIG_DIR);
             // other default profiles will come here
         }
