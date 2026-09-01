@@ -50,9 +50,23 @@ public class ConfigManager {
     public static boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
     public static boolean isGenerateExampleProfilesEnabled() { return config.generateExampleProfiles; }
     public static Map<String, ConfigData.ProfileData> getProfiles() { return Collections.unmodifiableMap(config.profiles); }
-    public static void setShowHiddenFiles(boolean value) { config.showHiddenFiles = value; }
-    public static void setGenerateExampleProfiles(boolean value) { config.generateExampleProfiles = value; }
-    public static void addProfile(String name, ConfigData.ProfileData profile) { config.profiles.put(name, profile); }
-    public static void addProfile(String name) { config.profiles.put(name, new ConfigData.ProfileData()); }
-    public static boolean removeProfile(String name) { return config.profiles.remove(name) != null; }
+
+    public static void setShowHiddenFiles(boolean value) {
+        config.showHiddenFiles = value;
+        save();
+    }
+    public static void setGenerateExampleProfiles(boolean value) {
+        config.generateExampleProfiles = value; save();
+    }
+    public static void addProfile(String name, ConfigData.ProfileData profile) {
+        config.profiles.put(name, profile); save();
+    }
+    public static void addProfile(String name) {
+        config.profiles.put(name, new ConfigData.ProfileData());
+        save();
+    }
+    public static void removeProfile(String name) {
+        config.profiles.remove(name);
+        save();
+    }
 }
