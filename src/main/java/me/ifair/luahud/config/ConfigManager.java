@@ -56,10 +56,12 @@ public class ConfigManager {
         save();
     }
     public static void setGenerateExampleProfiles(boolean value) {
-        config.generateExampleProfiles = value; save();
+        config.generateExampleProfiles = value;
+        save();
     }
     public static void addProfile(String name, ConfigData.ProfileData profile) {
-        config.profiles.put(name, profile); save();
+        config.profiles.put(name, profile);
+        save();
     }
     public static void addProfile(String name) {
         config.profiles.put(name, new ConfigData.ProfileData());
