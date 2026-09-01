@@ -17,7 +17,7 @@ public class ConfigManager {
         final String defaultSource = "/assets/luahud/default-config/";
 
         if (!Files.exists(JSON_CONFIG)) {
-            FileHelper.copyFromResource(defaultSource + "luahud.json", JSON_CONFIG);
+            FileHelper.copyFromResource(defaultSource + "luahud.json", CONFIG_DIR);
         }
 
         if (!Files.exists(MOD_CONFIG_DIR) || !Files.isDirectory(MOD_CONFIG_DIR)) {
