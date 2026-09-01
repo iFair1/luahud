@@ -8,10 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class ConfigManager {
-    // write
-    // read
-    // generate default
-
     private static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir();
     private static final Path MOD_CONFIG_DIR = CONFIG_DIR.resolve("luahud/");
     private static final Path JSON_CONFIG = CONFIG_DIR.resolve("luahud.json");
