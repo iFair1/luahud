@@ -36,12 +36,10 @@ public class ConfigInstaller {
 
         // Generate lua files no matter what
         final Path luaDir = MOD_CONFIG_DIR.resolve("api");
-        if (Files.notExists(luaDir) || !Files.isDirectory(luaDir)) {
-            try {
-                Files.createDirectories(MOD_CONFIG_DIR);
-            } catch (IOException e) {
-                LuaHUD.LOGGER.error("There was an error while creating luahud/api directory: {}", e.getMessage());
-            }
+        try {
+            Files.createDirectories(luaDir);
+        } catch (IOException e) {
+            LuaHUD.LOGGER.error("There was an error while creating luahud/api directory: {}", e.getMessage());
         }
         copyFromResource(defaultSource + "luahud/api/.luarc.json", luaDir);
         copyFromResource(defaultSource + "luahud/api/lh.lua", luaDir);
