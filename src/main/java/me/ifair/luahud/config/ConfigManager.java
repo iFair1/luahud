@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class ConfigManager {
     private static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir();
-    private static final Path MOD_CONFIG_DIR = CONFIG_DIR.resolve("luahud/");
+    private static final Path MOD_CONFIG_DIR = CONFIG_DIR.resolve("luahud");
     private static final Path JSON_CONFIG = CONFIG_DIR.resolve("luahud.json");
 
     public static class ConfigData {
@@ -81,7 +81,7 @@ public class ConfigManager {
         }
 
         // Generate lua files no matter what
-        final Path luaDir = MOD_CONFIG_DIR.resolve("api/");
+        final Path luaDir = MOD_CONFIG_DIR.resolve("api");
         FileHelper.copyFromResource(defaultSource + "luahud/api/.luarc.json", luaDir);
         FileHelper.copyFromResource(defaultSource + "luahud/api/lh.lua", luaDir);
 
