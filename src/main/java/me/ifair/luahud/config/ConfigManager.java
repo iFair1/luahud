@@ -2,6 +2,7 @@ package me.ifair.luahud.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import me.ifair.luahud.LuaHUD;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -28,6 +29,9 @@ public class ConfigManager {
             config = gson.fromJson(reader, ConfigData.class);
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while reading the config file: {}", e.getMessage());
+        } catch (JsonSyntaxException e) {
+            LuaHUD.LOGGER.error("Config JSON is invalid. Loading defaults: {}", e.getMessage());
+            config = new ConfigData();
         }
     }
 
