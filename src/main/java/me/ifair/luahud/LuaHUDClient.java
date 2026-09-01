@@ -1,6 +1,8 @@
 package me.ifair.luahud;
 
 import me.ifair.luahud.api.modules.RenderModule;
+import me.ifair.luahud.config.ConfigInstaller;
+import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.core.Engine;
 import me.ifair.luahud.core.EventDispatcher;
 import me.ifair.luahud.core.TimerManager;
@@ -16,6 +18,8 @@ public class LuaHUDClient implements ClientModInitializer {
     public void onInitializeClient() {
         Engine engine = new Engine();
         engine.init();
+        ConfigInstaller.generateDefaults();
+        ConfigManager.load();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || Engine.getLhTable() == null) return;
