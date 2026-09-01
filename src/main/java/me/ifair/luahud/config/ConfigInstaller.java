@@ -36,8 +36,6 @@ public class ConfigInstaller {
         final Path luaDir = MOD_CONFIG_DIR.resolve("api");
         copyFromResource(defaultSource + "luahud/api/.luarc.json", luaDir);
         copyFromResource(defaultSource + "luahud/api/lh.lua", luaDir);
-
-        save();
     }
 
     private static void copyFromResource(String resourcePath, Path targetDir) {
