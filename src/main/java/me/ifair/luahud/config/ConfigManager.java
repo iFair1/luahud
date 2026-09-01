@@ -37,7 +37,7 @@ public class ConfigManager {
         // Generate lua files no matter what
         final Path luaDir = MOD_CONFIG_DIR.resolve("api/");
         FileHelper.copyFromResource(defaultSource + "luahud/api/.luarc.json", luaDir);
-        FileHelper.copyFromResource(defaultSource + "/assets/luahud/api/lh.lua", luaDir);
+        FileHelper.copyFromResource(defaultSource + "luahud/api/lh.lua", luaDir);
     }
 
 }
