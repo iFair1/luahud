@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
   "Lua.runtime.version": "Lua 5.2",
   "Lua.workspace.library": [
-    "./api/lh.lua"
+    "./lh.lua"
   ],
   "Lua.workspace.checkThirdParty": false,
   "Lua.diagnostics.globals": [

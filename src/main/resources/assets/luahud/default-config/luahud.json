@@ -1,0 +1,10 @@
+{
+  "showHiddenFiles": false,
+  "profiles": {
+    "Example Profile": {
+      "active": true,
+      "keybind": "key.keyboard.unknown"
+    }
+  },
+  "generateExampleProfiles": true
+}
