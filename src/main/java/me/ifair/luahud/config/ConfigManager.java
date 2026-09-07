@@ -80,17 +80,4 @@ public class ConfigManager {
         config.profiles.remove(name);
         save();
     }
-
-    public static boolean isProfileActive(String name) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
-        return profile != null && profile.active;
-    }
-    public static boolean isProfileHidden(String name) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
-        return profile != null && profile.hidden;
-    }
-    public static String getProfileKeybind(String name) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
-        return profile != null ? profile.keybind : "key.keyboard.unknown";
-    }
 }
