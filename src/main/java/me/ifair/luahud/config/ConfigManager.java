@@ -48,7 +48,7 @@ public class ConfigManager {
     }
 
     // This is where the profiles live
-    public static Path getScriptDir() {
+    public static Path getScriptsDir() {
         return MOD_CONFIG_DIR;
     }
 

@@ -5,12 +5,10 @@ import me.ifair.luahud.api.core.ApiRegistry;
 import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.config.FileWatcher;
-import net.fabricmc.loader.api.FabricLoader;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.jse.JsePlatform;
-import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
 
 import java.io.InputStream;
 import java.nio.file.*;
@@ -56,7 +54,7 @@ public class Engine {
     }
 
     public void runProfile(String profileName) {
-        runScript(ConfigManager.getScriptDir().resolve(profileName + ".lua"));
+        runScript(ConfigManager.getScriptsDir().resolve(profileName + ".lua"));
     }
 
     public void runScript(Path scriptFile) {
