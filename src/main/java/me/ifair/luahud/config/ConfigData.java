@@ -11,6 +11,7 @@ public class ConfigData {
     public static class ProfileData {
         public boolean active = false;
         public String keybind = "key.keyboard.unknown";
+        public boolean hidden = false;
     }
 
 }

@@ -71,4 +71,14 @@ public class ConfigManager {
         config.profiles.remove(name);
         save();
     }
+
+    public static boolean isProfileActive(String name) {
+        return config.profiles.get(name).active;
+    }
+    public static boolean isProfileHidden(String name) {
+        return config.profiles.get(name).hidden;
+    }
+    public static String getProfileKeybind(String name) {
+        return config.profiles.get(name).keybind;
+    }
 }
