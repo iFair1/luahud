@@ -20,13 +20,16 @@ public class ConfigManager {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static ConfigData config = new ConfigData();
 
-    public static void load() {
-        if (!Files.exists(JSON_CONFIG)) {
+    public static synchronized void load() {
+        if (Files.notExists(JSON_CONFIG)) {
             ConfigInstaller.generateDefaults();
         }
 
         try (BufferedReader reader = Files.newBufferedReader(JSON_CONFIG)) {
-            config = gson.fromJson(reader, ConfigData.class);
+            ConfigData loaded = gson.fromJson(reader, ConfigData.class);
+            config = (loaded != null) ? loaded : new ConfigData();
+            if (config.profiles == null) config.profiles = new ConfigData().profiles;
+
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while reading the config file: {}", e.getMessage());
         } catch (JsonSyntaxException e) {
@@ -35,7 +38,7 @@ public class ConfigManager {
         }
     }
 
-    public static void save() {
+    public static synchronized void save() {
         try (BufferedWriter writer = Files.newBufferedWriter(JSON_CONFIG)) {
             gson.toJson(config, writer);
         } catch (IOException e) {
@@ -44,7 +47,10 @@ public class ConfigManager {
 
     }
 
-
+    // This is where the profiles live
+    public static Path getScriptDir() {
+        return MOD_CONFIG_DIR;
+    }
 
 
     public static boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
@@ -59,7 +65,10 @@ public class ConfigManager {
         config.generateExampleProfiles = value;
         save();
     }
-    public static void addProfile(String name, ConfigData.ProfileData profile) {
+    public static boolean hasProfile(String name) {
+        return config.profiles.containsKey(name);
+    }
+    public static synchronized void addProfile(String name, ConfigData.ProfileData profile) {
         config.profiles.put(name, profile);
         save();
     }
@@ -73,12 +82,15 @@ public class ConfigManager {
     }
 
     public static boolean isProfileActive(String name) {
-        return config.profiles.get(name).active;
+        ConfigData.ProfileData profile = config.profiles.get(name);
+        return profile != null && profile.active;
     }
     public static boolean isProfileHidden(String name) {
-        return config.profiles.get(name).hidden;
+        ConfigData.ProfileData profile = config.profiles.get(name);
+        return profile != null && profile.hidden;
     }
     public static String getProfileKeybind(String name) {
-        return config.profiles.get(name).keybind;
+        ConfigData.ProfileData profile = config.profiles.get(name);
+        return profile != null ? profile.keybind : "key.keyboard.unknown";
     }
 }

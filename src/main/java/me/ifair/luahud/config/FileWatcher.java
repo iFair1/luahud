@@ -7,6 +7,8 @@ import java.nio.file.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileWatcher {
+    private static final String LUA_EXTENSION = ".lua";
+
     private final AtomicBoolean reloadNeeded = new AtomicBoolean(false);
     private WatchService watchService;
     private Thread watchThread;
@@ -16,6 +18,12 @@ public class FileWatcher {
         stop(); // stop if already running
 
         try {
+            if (Files.notExists(ConfigManager.MOD_CONFIG_DIR)) {
+                Files.createDirectories(ConfigManager.MOD_CONFIG_DIR);
+            }
+
+            syncExistingFiles();
+
             watchService = FileSystems.getDefault().newWatchService();
             ConfigManager.MOD_CONFIG_DIR.register(
                     watchService,
@@ -28,8 +36,28 @@ public class FileWatcher {
             watchThread = new Thread(this::runWatcher, "LuaHUD-FileWatcher");
             watchThread.setDaemon(true);
             watchThread.start();
+
         } catch (IOException e) {
             LuaHUD.LOGGER.error("Could not start File-Watcher: {}", e.getMessage());
+        }
+    }
+
+    // Make sure every .lua file in the MOD_CONFIG_DIR matches someone in the luahud.json
+    private void syncExistingFiles() {
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(ConfigManager.MOD_CONFIG_DIR, "*" + LUA_EXTENSION)) {
+            for (Path file : files) {
+                String profileName = stripExtension(file.getFileName().toString());
+                if (!ConfigManager.hasProfile(profileName)) ConfigManager.addProfile(profileName);
+            }
+        } catch (IOException e) {
+            LuaHUD.LOGGER.error("Could not sync existing files with config: {}", e.getMessage());
+        }
+
+        for (String profileName : ConfigManager.getProfiles().keySet()) {
+            Path expectedFile = ConfigManager.MOD_CONFIG_DIR.resolve(profileName + LUA_EXTENSION);
+            if (Files.notExists(expectedFile)) {
+                ConfigManager.removeProfile(profileName);
+            }
         }
     }
 
@@ -43,7 +71,20 @@ public class FileWatcher {
                     Path changedFile = (Path) event.context();
                     String fileName = changedFile.toString();
 
-                    if (fileName.endsWith(".lua")) reloadNeeded.set(true);
+                    if (!fileName.endsWith(LUA_EXTENSION)) continue;
+                    String profileName = stripExtension(fileName);
+
+                    if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE) {
+                        if (!ConfigManager.hasProfile(profileName)) {
+                            ConfigManager.addProfile(profileName);
+                        }
+                        reloadNeeded.set(true);
+                    } else if (event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
+                        ConfigManager.removeProfile(profileName);
+                        reloadNeeded.set(true);
+                    } else if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+                        reloadNeeded.set(true);
+                    }
                 }
                 boolean valid = key.reset();
 
@@ -52,8 +93,12 @@ public class FileWatcher {
         } catch (ClosedWatchServiceException e) {
             // Here will trigger when the watcher is closed. No problem, just skip
         } catch (Exception e) {
-            LuaHUD.LOGGER.error("FileWatcher Error: {}", e.getMessage());
+            LuaHUD.LOGGER.error("FileWatcher error: {}", e.getMessage());
         }
+    }
+
+    private static String stripExtension(String fileName) {
+        return fileName.substring(0, fileName.length() - LUA_EXTENSION.length());
     }
 
     // This should be called by main thread to see if needsReload

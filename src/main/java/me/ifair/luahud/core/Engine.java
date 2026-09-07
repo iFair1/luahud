@@ -2,14 +2,19 @@ package me.ifair.luahud.core;
 
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.core.ApiRegistry;
+import me.ifair.luahud.config.ConfigData;
+import me.ifair.luahud.config.ConfigManager;
+import me.ifair.luahud.config.FileWatcher;
 import net.fabricmc.loader.api.FabricLoader;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.jse.JsePlatform;
+import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
 
 import java.io.InputStream;
 import java.nio.file.*;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Engine {
@@ -19,11 +24,14 @@ public class Engine {
     private final AtomicBoolean needsReload = new AtomicBoolean(false);
     private WatchService watchService;
 
-    public void init() {
-        // Clear the watcher and the old thread while reload
-        stopWatcher();
+    private final FileWatcher fileWatcher = new FileWatcher();
 
-        // Reset old states
+    public void init() {
+        fileWatcher.start();
+        reloadAll();
+    }
+
+    public void reloadAll() {
         globals = JsePlatform.standardGlobals();
         lh = new LuaTable();
 
@@ -37,86 +45,47 @@ public class Engine {
 
         globals.set("lh", lh);
 
-        try {
-            Path configDir = FabricLoader.getInstance().getConfigDir().resolve("luahud");
-            Path scriptFile = configDir.resolve("main.lua");
+        for (Map.Entry<String, ConfigData.ProfileData> entry : ConfigManager.getProfiles().entrySet()) {
+            ConfigData.ProfileData profile = entry.getValue();
+            if (!profile.active || profile.hidden) continue;
 
-            if (!Files.exists(configDir)) {
-                Files.createDirectories(configDir);
-            }
+            runProfile(entry.getKey());
+        }
 
-            // Start file listener in the background
-            startWatcher(configDir);
+        EventDispatcher.fireEvent("init");
+    }
 
-            if (!Files.exists(scriptFile)) {
-                LuaHUD.LOGGER.error("Couldn't find the main.lua file at {}", scriptFile.toAbsolutePath());
-                return;
-            }
+    public void runProfile(String profileName) {
+        runScript(ConfigManager.getScriptDir().resolve(profileName + ".lua"));
+    }
 
-            try (InputStream stream = Files.newInputStream(scriptFile)) {
-                LuaValue chunk = globals.load(stream, "@main.lua", "bt", globals);
-                chunk.call();
+    public void runScript(Path scriptFile) {
+        if (Files.notExists(scriptFile)) {
+            LuaHUD.LOGGER.error("Couldn't find the main.lua file at {}", scriptFile.toAbsolutePath());
+            return;
+        }
 
-                EventDispatcher.fireEvent("init");
-                LuaHUD.LOGGER.info("Script loaded successfully at {}", scriptFile.toAbsolutePath());
-            }
-
-
+        try (InputStream stream = Files.newInputStream(scriptFile)) {
+            LuaValue chunk = globals.load(stream, "@" + scriptFile.getFileName(), "bt", globals);
+            chunk.call();
+            LuaHUD.LOGGER.info("Script loaded successfully at {}", scriptFile.toAbsolutePath());
         } catch (Exception e) {
-            LuaHUD.LOGGER.error("There was an error while loading the script: {}", e.getMessage());
+            LuaHUD.LOGGER.error("There was an error while loading the script {}: {}", scriptFile.getFileName(), e.getMessage());
         }
     }
-
-
-    // async thread that listens the configDir
-    private void startWatcher(Path configDir) {
-        try {
-            watchService = FileSystems.getDefault().newWatchService();
-            configDir.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-
-            Thread watchThread = new Thread(() -> {
-                try {
-                    WatchKey key;
-                    while ((key = watchService.take()) != null) {
-                        for (WatchEvent<?> event : key.pollEvents()) {
-                            Path changed = (Path) event.context();
-                            if (changed.toString().equals("main.lua")) {
-                                needsReload.set(true); // send reload signal to the main thread
-                            }
-                        }
-                        key.reset();
-                    }
-                } catch (ClosedWatchServiceException e) {
-                    // Here will trigger when the watcher is closed. No problem, just skip
-                } catch (Exception e) {
-                    LuaHUD.LOGGER.error("Error in file watcher thread: {}", e.getMessage());
-                }
-            }, "LuaHUD-FileWatcher");
-
-            watchThread.setDaemon(true); // Make the thread automatically die when the game closes
-            watchThread.start();
-
-        } catch (Exception e) {
-            LuaHUD.LOGGER.error("Failed to initialize File Watcher: {}", e.getMessage());
-        }
-    }
-
-    private void stopWatcher() {
-        try {
-            if (watchService != null) {
-                watchService.close();
-            }
-        } catch (Exception ignored) {}
-    }
-
 
     // This should be called only by the main thread every tick. It doesn't read/write anything, only checks a boolean
     public void checkForUpdates() {
-        if (needsReload.compareAndSet(true, false)) {
-            LuaHUD.LOGGER.info("A change was detected at main.lua. HUD is reloading...");
-            init(); // Reload the script.
+        if (fileWatcher.consumeReloadSignal()) {
+            LuaHUD.LOGGER.info("A change was detected in the scripts directory. HUD is reloading...");
+            reloadAll();
         }
     }
+
+    public void shutdown() {
+        fileWatcher.stop();
+    }
+
 
     public static LuaTable getLhTable() {
         return lh;
