@@ -76,7 +76,7 @@ public class ConfigManager {
         config.profiles.put(name, new ConfigData.ProfileData());
         save();
     }
-    public static void removeProfile(String name) {
+    public static synchronized void removeProfile(String name) {
         config.profiles.remove(name);
         save();
     }
