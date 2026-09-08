@@ -19,8 +19,9 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
     private final LuaHUDScreen screen;
     private final ButtonWidget activeButton;
     private final ProfileNameField nameField;
-    private final ButtonWidget keybindButton;
     private final ButtonWidget hideButton;
+    private final ButtonWidget keybindButton;
+    private final ButtonWidget editButton;
 
     ProfileEntryWidget(ProfileEntry profile, MinecraftClient client, TextRenderer textRenderer, LuaHUDScreen screen) {
         this.profile = profile;
@@ -40,14 +41,19 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
         this.nameField.setSelectionEnd(0);
         this.nameField.setVisible(false);
 
-        this.keybindButton = ButtonWidget.builder(Text.literal("Keybind"), button -> {
-        }).dimensions(0, 0, LuaHUDScreen.KEYBIND_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
-        this.keybindButton.active = false;
-
         this.hideButton = ButtonWidget.builder(
                 Text.literal(profile.data().isHidden() ? "Show" : "Hide"),
                 button -> this.toggleHidden()
         ).dimensions(0, 0, LuaHUDScreen.HIDE_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
+
+        this.keybindButton = ButtonWidget.builder(Text.literal("Keybind"), button -> {
+        }).dimensions(0, 0, LuaHUDScreen.KEYBIND_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
+        this.keybindButton.active = false;
+
+        this.editButton = ButtonWidget.builder(
+                Text.literal("Edit"),
+                button -> LuaHUDScreen.editProfile(this.profile.name())
+        ).dimensions(0, 0, LuaHUDScreen.EDIT_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
     }
 
     @Override
@@ -67,15 +73,17 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
         context.fill(x, y, x + entryWidth, y + entryHeight, background);
 
         int activeButtonX = x;
-        int hideButtonX = x + entryWidth - LuaHUDScreen.HIDE_BUTTON_WIDTH;
-        int keybindButtonX = hideButtonX - LuaHUDScreen.ROW_CONTROL_GAP - LuaHUDScreen.KEYBIND_BUTTON_WIDTH;
+        int editButtonX = x + entryWidth - LuaHUDScreen.EDIT_BUTTON_WIDTH;
+        int keybindButtonX = editButtonX - LuaHUDScreen.ROW_CONTROL_GAP - LuaHUDScreen.KEYBIND_BUTTON_WIDTH;
+        int hideButtonX = keybindButtonX - LuaHUDScreen.ROW_CONTROL_GAP - LuaHUDScreen.HIDE_BUTTON_WIDTH;
         int nameFieldX = activeButtonX + LuaHUDScreen.ACTIVE_BUTTON_WIDTH + LuaHUDScreen.ROW_CONTROL_GAP;
-        int nameFieldWidth = Math.max(20, keybindButtonX - LuaHUDScreen.ROW_CONTROL_GAP - nameFieldX);
+        int nameFieldWidth = Math.max(20, hideButtonX - LuaHUDScreen.ROW_CONTROL_GAP - nameFieldX);
 
         this.activeButton.setPosition(activeButtonX, y);
         this.nameField.setDimensionsAndPosition(nameFieldWidth, entryHeight, nameFieldX, y);
-        this.keybindButton.setPosition(keybindButtonX, y);
         this.hideButton.setPosition(hideButtonX, y);
+        this.keybindButton.setPosition(keybindButtonX, y);
+        this.editButton.setPosition(editButtonX, y);
 
         if (!this.nameField.isFocused()) {
             this.nameField.setCursorToStart(false);
@@ -98,18 +106,19 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
             context.drawTextWithShadow(this.textRenderer, profileName, this.nameField.getX() + 4, textY, 0xFFFFFF);
         }
 
-        this.keybindButton.render(context, mouseX, mouseY, tickDelta);
         this.hideButton.render(context, mouseX, mouseY, tickDelta);
+        this.keybindButton.render(context, mouseX, mouseY, tickDelta);
+        this.editButton.render(context, mouseX, mouseY, tickDelta);
     }
 
     @Override
     public List<? extends Element> children() {
-        return List.of(this.activeButton, this.nameField, this.keybindButton, this.hideButton);
+        return List.of(this.activeButton, this.nameField, this.hideButton, this.keybindButton, this.editButton);
     }
 
     @Override
     public List<? extends Selectable> selectableChildren() {
-        return List.of(this.activeButton, this.nameField, this.keybindButton, this.hideButton);
+        return List.of(this.activeButton, this.nameField, this.hideButton, this.keybindButton, this.editButton);
     }
 
     void cancelEditing() {

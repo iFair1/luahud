@@ -30,6 +30,7 @@ public class LuaHUDScreen extends Screen {
     static final int ACTIVE_BUTTON_WIDTH = 36;
     static final int KEYBIND_BUTTON_WIDTH = 72;
     static final int HIDE_BUTTON_WIDTH = 44;
+    static final int EDIT_BUTTON_WIDTH = 44;
 
     private final Screen parent;
     private List<ProfileEntry> profiles = List.of();
@@ -156,6 +157,16 @@ public class LuaHUDScreen extends Screen {
         } catch (IOException e) {
             LuaHUD.LOGGER.error("Error while opening profiles directory at {}: {}", PROFILES_DIR, e.getMessage());
         }
+    }
+
+    static void editProfile(String profileName) {
+        Path profilePath = PROFILES_DIR.resolve(profileName + ".lua").normalize();
+        if (!PROFILES_DIR.equals(profilePath.getParent())) {
+            LuaHUD.LOGGER.error("Refusing to open profile outside the profiles directory: {}", profileName);
+            return;
+        }
+
+        Util.getOperatingSystem().open(profilePath);
     }
 
     private static void openInBrowser(String url) {
