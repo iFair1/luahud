@@ -84,14 +84,13 @@ public class LuaHUDScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
 
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 26, 0xFFFFFF);
         context.fill(this.contentLeft, this.listTop, this.contentLeft + this.contentWidth, this.listBottom, 0x88000000);
         context.drawBorder(this.contentLeft, this.listTop, this.contentWidth, this.listBottom - this.listTop, 0xFF555555);
 
         renderProfiles(context);
-        super.render(context, mouseX, mouseY, delta);
     }
 
     private void renderProfiles(DrawContext context) {
