@@ -14,6 +14,7 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,6 +34,7 @@ public class LuaHUDScreen extends Screen {
 
     private final Screen parent;
     private List<ProfileEntry> profiles = List.of();
+    private ProfileEntryWidget focusedProfile;
     private int contentLeft;
     private int contentWidth;
     private int listTop;
@@ -96,6 +98,31 @@ public class LuaHUDScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
 
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 26, 0xFFFFFF);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (this.focusedProfile != null && !this.focusedProfile.nameField.isMouseOver(mouseX, mouseY)) {
+            this.focusedProfile.cancelEditing();
+            return true;
+        }
+        return handled;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.focusedProfile != null) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                this.focusedProfile.cancelEditing();
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                this.focusedProfile.commitRename();
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -171,11 +198,11 @@ public class LuaHUDScreen extends Screen {
 
     private class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidget> {
         private final ProfileEntry profile;
-        private final TextFieldWidget nameField;
+        private final ProfileNameField nameField;
 
         private ProfileEntryWidget(ProfileEntry profile) {
             this.profile = profile;
-            this.nameField = new TextFieldWidget(textRenderer, 0, 0, Text.literal("Profile name"));
+            this.nameField = new ProfileNameField(this);
             this.nameField.setMaxLength(128);
             this.nameField.setEditableColor(0xFFFFFF);
             this.nameField.setText(profile.name());
@@ -237,6 +264,52 @@ public class LuaHUDScreen extends Screen {
         @Override
         public List<? extends Selectable> selectableChildren() {
             return List.of(this.nameField);
+        }
+
+        private void cancelEditing() {
+            this.nameField.setText(this.profile.name());
+            this.nameField.setFocused(false);
+        }
+
+        private void commitRename() {
+            String newName = this.nameField.getText().trim();
+            boolean changed = !this.profile.name().equals(newName);
+            boolean renamed = ConfigManager.renameProfile(this.profile.name(), newName);
+
+            this.nameField.setFocused(false);
+            if (renamed && changed) {
+                LuaHUDScreen.this.clearAndInit();
+            } else if (!renamed) {
+                this.nameField.setText(this.profile.name());
+            }
+        }
+    }
+
+    private class ProfileNameField extends TextFieldWidget {
+        private final ProfileEntryWidget owner;
+
+        private ProfileNameField(ProfileEntryWidget owner) {
+            super(textRenderer, 0, 0, Text.literal("Profile name"));
+            this.owner = owner;
+        }
+
+        @Override
+        public void setFocused(boolean focused) {
+            if (focused && focusedProfile != null && focusedProfile != this.owner) {
+                focusedProfile.cancelEditing();
+            }
+
+            boolean wasFocused = this.isFocused();
+            super.setFocused(focused);
+
+            if (this.isFocused()) {
+                focusedProfile = this.owner;
+            } else if (wasFocused) {
+                this.setText(this.owner.profile.name());
+                if (focusedProfile == this.owner) {
+                    focusedProfile = null;
+                }
+            }
         }
     }
 }

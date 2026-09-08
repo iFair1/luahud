@@ -80,4 +80,32 @@ public class ConfigManager {
         config.profiles.remove(name);
         save();
     }
+
+    public static synchronized boolean renameProfile(String oldName, String newName) {
+        String trimmedName = newName.trim();
+        if (oldName.equals(trimmedName)) return true;
+        if (trimmedName.isEmpty() || !config.profiles.containsKey(oldName)) return false;
+
+        Path oldFile = MOD_CONFIG_DIR.resolve(oldName + ".lua").normalize();
+        Path newFile = MOD_CONFIG_DIR.resolve(trimmedName + ".lua").normalize();
+        if (!MOD_CONFIG_DIR.equals(newFile.getParent())
+                || config.profiles.containsKey(trimmedName)
+                || Files.exists(newFile)) {
+            return false;
+        }
+
+        ConfigData.ProfileData profile = config.profiles.remove(oldName);
+        config.profiles.put(trimmedName, profile);
+
+        try {
+            Files.move(oldFile, newFile);
+            save();
+            return true;
+        } catch (IOException e) {
+            config.profiles.remove(trimmedName);
+            config.profiles.put(oldName, profile);
+            LuaHUD.LOGGER.error("There was an error while renaming profile '{}' to '{}': {}", oldName, trimmedName, e.getMessage());
+            return false;
+        }
+    }
 }
