@@ -3,14 +3,9 @@ package me.ifair.luahud.gui;
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ElementListWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
@@ -28,16 +23,17 @@ public class LuaHUDScreen extends Screen {
     private static final String MODRINTH_URL = "https://modrinth.com/mod/luahud";
     private static final Path PROFILES_DIR = ConfigManager.getScriptsDir();
 
-    private static final int CONTENT_MAX_WIDTH = 540;
-    private static final int BUTTON_HEIGHT = 20;
-    private static final int ROW_HEIGHT = 20;
-    private static final int ROW_CONTROL_GAP = 4;
-    private static final int ACTIVE_BUTTON_WIDTH = 36;
-    private static final int KEYBIND_BUTTON_WIDTH = 72;
-    private static final int HIDE_BUTTON_WIDTH = 44;
+    static final int CONTENT_MAX_WIDTH = 540;
+    static final int BUTTON_HEIGHT = 20;
+    static final int ROW_HEIGHT = 20;
+    static final int ROW_CONTROL_GAP = 4;
+    static final int ACTIVE_BUTTON_WIDTH = 36;
+    static final int KEYBIND_BUTTON_WIDTH = 72;
+    static final int HIDE_BUTTON_WIDTH = 44;
 
     private final Screen parent;
     private List<ProfileEntry> profiles = List.of();
+    @Nullable
     private ProfileEntryWidget focusedProfile;
     private int contentLeft;
     private int contentWidth;
@@ -66,7 +62,10 @@ public class LuaHUDScreen extends Screen {
                 this.width,
                 this.listBottom - this.listTop,
                 this.listTop,
-                ROW_HEIGHT
+                ROW_HEIGHT,
+                this.profiles,
+                this.textRenderer,
+                this
         ));
 
         int topY = 20;
@@ -107,7 +106,7 @@ public class LuaHUDScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
-        if (this.focusedProfile != null && !this.focusedProfile.nameField.isMouseOver(mouseX, mouseY)) {
+        if (this.focusedProfile != null && !this.focusedProfile.isNameFieldMouseOver(mouseX, mouseY)) {
             this.focusedProfile.cancelEditing();
             return true;
         }
@@ -167,189 +166,16 @@ public class LuaHUDScreen extends Screen {
         }
     }
 
-    private record ProfileEntry(String name, ConfigData.ProfileData data) {
+    @Nullable
+    ProfileEntryWidget getFocusedProfile() {
+        return this.focusedProfile;
     }
 
-    private class ProfileListWidget extends ElementListWidget<ProfileEntryWidget> {
-        private ProfileListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
-            super(client, width, height, y, itemHeight);
-            profiles.forEach(profile -> this.addEntry(new ProfileEntryWidget(profile)));
-        }
-
-        @Override
-        public int getRowWidth() {
-            return Math.min(CONTENT_MAX_WIDTH, this.getWidth() - 32);
-        }
-
-        @Override
-        protected int getScrollbarX() {
-            return this.getRight() - 8;
-        }
-
-        @Override
-        protected void renderDecorations(DrawContext context, int mouseX, int mouseY) {
-            if (this.getEntryCount() == 0) {
-                context.drawCenteredTextWithShadow(
-                        textRenderer,
-                        Text.literal("No Lua profiles found"),
-                        width / 2,
-                        this.getY() + (this.getHeight() - textRenderer.fontHeight) / 2,
-                        0xAAAAAA
-                );
-            }
-        }
+    void setFocusedProfile(@Nullable ProfileEntryWidget focusedProfile) {
+        this.focusedProfile = focusedProfile;
     }
 
-    private class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidget> {
-        private final ProfileEntry profile;
-        private final ButtonWidget activeButton;
-        private final ProfileNameField nameField;
-        private final ButtonWidget keybindButton;
-        private final ButtonWidget hideButton;
-
-        private ProfileEntryWidget(ProfileEntry profile) {
-            this.profile = profile;
-            this.activeButton = ButtonWidget.builder(
-                    Text.literal(profile.data().isActive() ? "On" : "Off"),
-                    button -> this.toggleActive()
-            ).dimensions(0, 0, ACTIVE_BUTTON_WIDTH, ROW_HEIGHT - 4).build();
-
-            this.nameField = new ProfileNameField(this);
-            this.nameField.setMaxLength(128);
-            this.nameField.setEditableColor(0xFFFFFF);
-            this.nameField.setText(profile.name());
-            this.nameField.setCursorToStart(false);
-            this.nameField.setSelectionEnd(0);
-            this.nameField.setVisible(false);
-
-            this.keybindButton = ButtonWidget.builder(Text.literal("Keybind"), button -> {
-            }).dimensions(0, 0, KEYBIND_BUTTON_WIDTH, ROW_HEIGHT - 4).build();
-            this.keybindButton.active = false;
-
-            this.hideButton = ButtonWidget.builder(
-                    Text.literal(profile.data().isHidden() ? "Show" : "Hide"),
-                    button -> this.toggleHidden()
-            ).dimensions(0, 0, HIDE_BUTTON_WIDTH, ROW_HEIGHT - 4).build();
-        }
-
-        @Override
-        public void render(
-                DrawContext context,
-                int index,
-                int y,
-                int x,
-                int entryWidth,
-                int entryHeight,
-                int mouseX,
-                int mouseY,
-                boolean hovered,
-                float tickDelta
-        ) {
-            int background = index % 2 == 0 ? 0x44000000 : 0x22000000;
-            context.fill(x, y, x + entryWidth, y + entryHeight, background);
-
-            int activeButtonX = x;
-            int hideButtonX = x + entryWidth - HIDE_BUTTON_WIDTH;
-            int keybindButtonX = hideButtonX - ROW_CONTROL_GAP - KEYBIND_BUTTON_WIDTH;
-            int nameFieldX = activeButtonX + ACTIVE_BUTTON_WIDTH + ROW_CONTROL_GAP;
-            int nameFieldWidth = Math.max(20, keybindButtonX - ROW_CONTROL_GAP - nameFieldX);
-
-            this.activeButton.setPosition(activeButtonX, y);
-            this.nameField.setDimensionsAndPosition(nameFieldWidth, entryHeight, nameFieldX, y);
-            this.keybindButton.setPosition(keybindButtonX, y);
-            this.hideButton.setPosition(hideButtonX, y);
-
-            if (!this.nameField.isFocused()) {
-                this.nameField.setCursorToStart(false);
-                this.nameField.setSelectionEnd(0);
-            }
-
-            boolean hoveringName = mouseX >= this.nameField.getX()
-                    && mouseX < this.nameField.getRight()
-                    && mouseY >= this.nameField.getY()
-                    && mouseY < this.nameField.getBottom();
-            this.nameField.setVisible(hoveringName || this.nameField.isFocused());
-
-            int textY = this.nameField.getY() + (this.nameField.getHeight() - 8) / 2;
-            this.activeButton.render(context, mouseX, mouseY, tickDelta);
-
-            if (this.nameField.isVisible()) {
-                this.nameField.render(context, mouseX, mouseY, tickDelta);
-            } else {
-                String profileName = textRenderer.trimToWidth(this.nameField.getText(), this.nameField.getInnerWidth());
-                context.drawTextWithShadow(textRenderer, profileName, this.nameField.getX() + 4, textY, 0xFFFFFF);
-            }
-
-            this.keybindButton.render(context, mouseX, mouseY, tickDelta);
-            this.hideButton.render(context, mouseX, mouseY, tickDelta);
-        }
-
-        @Override
-        public List<? extends Element> children() {
-            return List.of(this.activeButton, this.nameField, this.keybindButton, this.hideButton);
-        }
-
-        @Override
-        public List<? extends Selectable> selectableChildren() {
-            return List.of(this.activeButton, this.nameField, this.keybindButton, this.hideButton);
-        }
-
-        private void toggleActive() {
-            if (ConfigManager.setProfileActive(this.profile.name(), !this.profile.data().isActive())) {
-                client.execute(LuaHUDScreen.this::clearAndInit);
-            }
-        }
-
-        private void toggleHidden() {
-            if (ConfigManager.setProfileHidden(this.profile.name(), !this.profile.data().isHidden())) {
-                client.execute(LuaHUDScreen.this::clearAndInit);
-            }
-        }
-
-        private void cancelEditing() {
-            this.nameField.setText(this.profile.name());
-            this.nameField.setFocused(false);
-        }
-
-        private void commitRename() {
-            String newName = this.nameField.getText().trim();
-            boolean changed = !this.profile.name().equals(newName);
-            boolean renamed = ConfigManager.renameProfile(this.profile.name(), newName);
-
-            this.nameField.setFocused(false);
-            if (renamed && changed) {
-                LuaHUDScreen.this.clearAndInit();
-            } else if (!renamed) {
-                this.nameField.setText(this.profile.name());
-            }
-        }
-    }
-
-    private class ProfileNameField extends TextFieldWidget {
-        private final ProfileEntryWidget owner;
-
-        private ProfileNameField(ProfileEntryWidget owner) {
-            super(textRenderer, 0, 0, Text.literal("Profile name"));
-            this.owner = owner;
-        }
-
-        @Override
-        public void setFocused(boolean focused) {
-            if (focused && focusedProfile != null && focusedProfile != this.owner) {
-                focusedProfile.cancelEditing();
-            }
-
-            boolean wasFocused = this.isFocused();
-            super.setFocused(focused);
-
-            if (this.isFocused()) {
-                focusedProfile = this.owner;
-            } else if (wasFocused) {
-                this.setText(this.owner.profile.name());
-                if (focusedProfile == this.owner) {
-                    focusedProfile = null;
-                }
-            }
-        }
+    void refreshProfiles() {
+        this.clearAndInit();
     }
 }
