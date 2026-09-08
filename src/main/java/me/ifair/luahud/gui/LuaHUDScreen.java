@@ -5,9 +5,12 @@ import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ElementListWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
@@ -136,7 +139,7 @@ public class LuaHUDScreen extends Screen {
     private record ProfileEntry(String name, ConfigData.ProfileData data) {
     }
 
-    private class ProfileListWidget extends AlwaysSelectedEntryListWidget<ProfileEntryWidget> {
+    private class ProfileListWidget extends ElementListWidget<ProfileEntryWidget> {
         private ProfileListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
             super(client, width, height, y, itemHeight);
             profiles.forEach(profile -> this.addEntry(new ProfileEntryWidget(profile)));
@@ -166,11 +169,19 @@ public class LuaHUDScreen extends Screen {
         }
     }
 
-    private class ProfileEntryWidget extends AlwaysSelectedEntryListWidget.Entry<ProfileEntryWidget> {
+    private class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidget> {
         private final ProfileEntry profile;
+        private final TextFieldWidget nameField;
 
         private ProfileEntryWidget(ProfileEntry profile) {
             this.profile = profile;
+            this.nameField = new TextFieldWidget(textRenderer, 0, 0, Text.literal("Profile name"));
+            this.nameField.setMaxLength(128);
+            this.nameField.setEditableColor(0xFFFFFF);
+            this.nameField.setText(profile.name());
+            this.nameField.setCursorToStart(false);
+            this.nameField.setSelectionEnd(0);
+            this.nameField.setVisible(false);
         }
 
         @Override
@@ -187,23 +198,45 @@ public class LuaHUDScreen extends Screen {
                 float tickDelta
         ) {
             int background = index % 2 == 0 ? 0x44000000 : 0x22000000;
-            context.fill(x, y, x + entryWidth, y + entryHeight - 2, background);
+            context.fill(x, y, x + entryWidth, y + entryHeight, background);
 
-            int textY = y + (entryHeight - 2 - textRenderer.fontHeight) / 2;
+            int nameFieldWidth = Math.max(20, entryWidth - 92);
+            this.nameField.setDimensionsAndPosition(nameFieldWidth, entryHeight, x + 31, y);
+            if (!this.nameField.isFocused()) {
+                this.nameField.setCursorToStart(false);
+                this.nameField.setSelectionEnd(0);
+            }
+
+            boolean hoveringName = mouseX >= this.nameField.getX()
+                    && mouseX < this.nameField.getRight()
+                    && mouseY >= this.nameField.getY()
+                    && mouseY < this.nameField.getBottom();
+            this.nameField.setVisible(hoveringName || this.nameField.isFocused());
+
+            int textY = this.nameField.getY() + (this.nameField.getHeight() - 8) / 2;
             int statusColor = this.profile.data().active ? 0x55FF55 : 0xFF5555;
             context.drawTextWithShadow(textRenderer, this.profile.data().active ? "On" : "Off", x + 5, textY, statusColor);
 
-            int profileNameWidth = Math.max(20, entryWidth - 100);
-            String profileName = textRenderer.trimToWidth(this.profile.name(), profileNameWidth);
-            context.drawTextWithShadow(textRenderer, profileName, x + 35, textY, 0xFFFFFF);
+            if (this.nameField.isVisible()) {
+                this.nameField.render(context, mouseX, mouseY, tickDelta);
+            } else {
+                String profileName = textRenderer.trimToWidth(this.nameField.getText(), this.nameField.getInnerWidth());
+                context.drawTextWithShadow(textRenderer, profileName, this.nameField.getX() + 4, textY, 0xFFFFFF);
+            }
+
             if (this.profile.data().hidden) {
                 context.drawTextWithShadow(textRenderer, "Hidden", x + entryWidth - 45, textY, 0xAAAAAA);
             }
         }
 
         @Override
-        public Text getNarration() {
-            return Text.literal(this.profile.name());
+        public List<? extends Element> children() {
+            return List.of(this.nameField);
+        }
+
+        @Override
+        public List<? extends Selectable> selectableChildren() {
+            return List.of(this.nameField);
         }
     }
 }
