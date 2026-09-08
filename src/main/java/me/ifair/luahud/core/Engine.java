@@ -11,16 +11,13 @@ import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.jse.JsePlatform;
 
 import java.io.InputStream;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Engine {
     public static Globals globals;
     public static LuaTable lh;
-
-    private final AtomicBoolean needsReload = new AtomicBoolean(false);
-    private WatchService watchService;
 
     private final FileWatcher fileWatcher = new FileWatcher();
 
@@ -45,7 +42,7 @@ public class Engine {
 
         for (Map.Entry<String, ConfigData.ProfileData> entry : ConfigManager.getProfiles().entrySet()) {
             ConfigData.ProfileData profile = entry.getValue();
-            if (!profile.active || profile.hidden) continue;
+            if (!profile.isActive()) continue;
 
             runProfile(entry.getKey());
         }
@@ -74,8 +71,10 @@ public class Engine {
 
     // This should be called only by the main thread every tick. It doesn't read/write anything, only checks a boolean
     public void checkForUpdates() {
-        if (fileWatcher.consumeReloadSignal()) {
-            LuaHUD.LOGGER.info("A change was detected in the scripts directory. HUD is reloading...");
+        boolean scriptsChanged = fileWatcher.consumeReloadSignal();
+        boolean profileConfigChanged = ConfigManager.consumeProfileReloadSignal();
+        if (scriptsChanged || profileConfigChanged) {
+            LuaHUD.LOGGER.info("A profile or script change was detected. HUD is reloading...");
             reloadAll();
         }
     }

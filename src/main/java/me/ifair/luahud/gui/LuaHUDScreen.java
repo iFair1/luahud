@@ -140,7 +140,7 @@ public class LuaHUDScreen extends Screen {
     private void reloadProfiles() {
         boolean showHidden = ConfigManager.isShowHiddenFilesEnabled();
         this.profiles = ConfigManager.getProfiles().entrySet().stream()
-                .filter(entry -> showHidden || !entry.getValue().hidden)
+                .filter(entry -> showHidden || !entry.getValue().isHidden())
                 .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
                 .map(entry -> new ProfileEntry(entry.getKey(), entry.getValue()))
                 .toList();
@@ -241,8 +241,8 @@ public class LuaHUDScreen extends Screen {
             this.nameField.setVisible(hoveringName || this.nameField.isFocused());
 
             int textY = this.nameField.getY() + (this.nameField.getHeight() - 8) / 2;
-            int statusColor = this.profile.data().active ? 0x55FF55 : 0xFF5555;
-            context.drawTextWithShadow(textRenderer, this.profile.data().active ? "On" : "Off", x + 5, textY, statusColor);
+            int statusColor = this.profile.data().isActive() ? 0x55FF55 : 0xFF5555;
+            context.drawTextWithShadow(textRenderer, this.profile.data().isActive() ? "On" : "Off", x + 5, textY, statusColor);
 
             if (this.nameField.isVisible()) {
                 this.nameField.render(context, mouseX, mouseY, tickDelta);
@@ -251,7 +251,7 @@ public class LuaHUDScreen extends Screen {
                 context.drawTextWithShadow(textRenderer, profileName, this.nameField.getX() + 4, textY, 0xFFFFFF);
             }
 
-            if (this.profile.data().hidden) {
+            if (this.profile.data().isHidden()) {
                 context.drawTextWithShadow(textRenderer, "Hidden", x + entryWidth - 45, textY, 0xAAAAAA);
             }
         }
