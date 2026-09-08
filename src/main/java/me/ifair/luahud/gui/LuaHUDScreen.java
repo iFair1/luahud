@@ -31,6 +31,10 @@ public class LuaHUDScreen extends Screen {
     private static final int CONTENT_MAX_WIDTH = 540;
     private static final int BUTTON_HEIGHT = 20;
     private static final int ROW_HEIGHT = 20;
+    private static final int ROW_CONTROL_GAP = 4;
+    private static final int ACTIVE_BUTTON_WIDTH = 36;
+    private static final int KEYBIND_BUTTON_WIDTH = 72;
+    private static final int HIDE_BUTTON_WIDTH = 44;
 
     private final Screen parent;
     private List<ProfileEntry> profiles = List.of();
@@ -198,10 +202,18 @@ public class LuaHUDScreen extends Screen {
 
     private class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidget> {
         private final ProfileEntry profile;
+        private final ButtonWidget activeButton;
         private final ProfileNameField nameField;
+        private final ButtonWidget keybindButton;
+        private final ButtonWidget hideButton;
 
         private ProfileEntryWidget(ProfileEntry profile) {
             this.profile = profile;
+            this.activeButton = ButtonWidget.builder(
+                    Text.literal(profile.data().isActive() ? "On" : "Off"),
+                    button -> this.toggleActive()
+            ).dimensions(0, 0, ACTIVE_BUTTON_WIDTH, ROW_HEIGHT - 4).build();
+
             this.nameField = new ProfileNameField(this);
             this.nameField.setMaxLength(128);
             this.nameField.setEditableColor(0xFFFFFF);
@@ -209,6 +221,15 @@ public class LuaHUDScreen extends Screen {
             this.nameField.setCursorToStart(false);
             this.nameField.setSelectionEnd(0);
             this.nameField.setVisible(false);
+
+            this.keybindButton = ButtonWidget.builder(Text.literal("Keybind"), button -> {
+            }).dimensions(0, 0, KEYBIND_BUTTON_WIDTH, ROW_HEIGHT - 4).build();
+            this.keybindButton.active = false;
+
+            this.hideButton = ButtonWidget.builder(
+                    Text.literal(profile.data().isHidden() ? "Show" : "Hide"),
+                    button -> this.toggleHidden()
+            ).dimensions(0, 0, HIDE_BUTTON_WIDTH, ROW_HEIGHT - 4).build();
         }
 
         @Override
@@ -227,8 +248,17 @@ public class LuaHUDScreen extends Screen {
             int background = index % 2 == 0 ? 0x44000000 : 0x22000000;
             context.fill(x, y, x + entryWidth, y + entryHeight, background);
 
-            int nameFieldWidth = Math.max(20, entryWidth - 92);
-            this.nameField.setDimensionsAndPosition(nameFieldWidth, entryHeight, x + 31, y);
+            int activeButtonX = x;
+            int hideButtonX = x + entryWidth - HIDE_BUTTON_WIDTH;
+            int keybindButtonX = hideButtonX - ROW_CONTROL_GAP - KEYBIND_BUTTON_WIDTH;
+            int nameFieldX = activeButtonX + ACTIVE_BUTTON_WIDTH + ROW_CONTROL_GAP;
+            int nameFieldWidth = Math.max(20, keybindButtonX - ROW_CONTROL_GAP - nameFieldX);
+
+            this.activeButton.setPosition(activeButtonX, y);
+            this.nameField.setDimensionsAndPosition(nameFieldWidth, entryHeight, nameFieldX, y);
+            this.keybindButton.setPosition(keybindButtonX, y);
+            this.hideButton.setPosition(hideButtonX, y);
+
             if (!this.nameField.isFocused()) {
                 this.nameField.setCursorToStart(false);
                 this.nameField.setSelectionEnd(0);
@@ -241,8 +271,7 @@ public class LuaHUDScreen extends Screen {
             this.nameField.setVisible(hoveringName || this.nameField.isFocused());
 
             int textY = this.nameField.getY() + (this.nameField.getHeight() - 8) / 2;
-            int statusColor = this.profile.data().isActive() ? 0x55FF55 : 0xFF5555;
-            context.drawTextWithShadow(textRenderer, this.profile.data().isActive() ? "On" : "Off", x + 5, textY, statusColor);
+            this.activeButton.render(context, mouseX, mouseY, tickDelta);
 
             if (this.nameField.isVisible()) {
                 this.nameField.render(context, mouseX, mouseY, tickDelta);
@@ -251,19 +280,30 @@ public class LuaHUDScreen extends Screen {
                 context.drawTextWithShadow(textRenderer, profileName, this.nameField.getX() + 4, textY, 0xFFFFFF);
             }
 
-            if (this.profile.data().isHidden()) {
-                context.drawTextWithShadow(textRenderer, "Hidden", x + entryWidth - 45, textY, 0xAAAAAA);
-            }
+            this.keybindButton.render(context, mouseX, mouseY, tickDelta);
+            this.hideButton.render(context, mouseX, mouseY, tickDelta);
         }
 
         @Override
         public List<? extends Element> children() {
-            return List.of(this.nameField);
+            return List.of(this.activeButton, this.nameField, this.keybindButton, this.hideButton);
         }
 
         @Override
         public List<? extends Selectable> selectableChildren() {
-            return List.of(this.nameField);
+            return List.of(this.activeButton, this.nameField, this.keybindButton, this.hideButton);
+        }
+
+        private void toggleActive() {
+            if (ConfigManager.setProfileActive(this.profile.name(), !this.profile.data().isActive())) {
+                client.execute(LuaHUDScreen.this::clearAndInit);
+            }
+        }
+
+        private void toggleHidden() {
+            if (ConfigManager.setProfileHidden(this.profile.name(), !this.profile.data().isHidden())) {
+                client.execute(LuaHUDScreen.this::clearAndInit);
+            }
         }
 
         private void cancelEditing() {
