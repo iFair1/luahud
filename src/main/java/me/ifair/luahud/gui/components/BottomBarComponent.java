@@ -7,17 +7,18 @@ import io.wispforest.owo.ui.core.HorizontalAlignment;
 import io.wispforest.owo.ui.core.Insets;
 import io.wispforest.owo.ui.core.Sizing;
 import io.wispforest.owo.ui.core.VerticalAlignment;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import me.ifair.luahud.LuaHUD;
+import me.ifair.luahud.config.ConfigManager;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class BottomBarComponent {
-    // Move this to file handler or some similar class because I'll use this path in other places
-    private static final File PROFILES_DIRECTORY = FabricLoader.getInstance().getConfigDir().resolve("luahud/profiles/").toFile();
+    private static final Path PROFILES_DIR = ConfigManager.getScriptsDir();
 
     public static FlowLayout create(Screen parentScreen) {
         FlowLayout bottomBar = Containers.horizontalFlow(Sizing.fill(85), Sizing.content());
@@ -27,8 +28,12 @@ public class BottomBarComponent {
         bottomBar.gap(10);
 
         var openFolderBtn = Components.button(Text.literal("Open Folder"), button -> {
-            if (!PROFILES_DIRECTORY.exists()) PROFILES_DIRECTORY.mkdirs();
-            Util.getOperatingSystem().open(PROFILES_DIRECTORY);
+            try {
+                if (Files.notExists(PROFILES_DIR)) Files.createDirectories(PROFILES_DIR);
+            } catch (IOException e) {
+                LuaHUD.LOGGER.error("Error while creating profiles directory at {}: {}", PROFILES_DIR, e.getMessage());
+            }
+            Util.getOperatingSystem().open(PROFILES_DIR);
         });
         openFolderBtn.sizing(Sizing.fixed(150), Sizing.fixed(20));
 
