@@ -3,8 +3,10 @@ package me.ifair.luahud.gui;
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
@@ -28,12 +30,10 @@ public class LuaHUDScreen extends Screen {
 
     private final Screen parent;
     private List<ProfileEntry> profiles = List.of();
-    private int scrollOffset;
     private int contentLeft;
     private int contentWidth;
     private int listTop;
     private int listBottom;
-    private int visibleRows;
 
     public LuaHUDScreen(@Nullable Screen parent) {
         super(Text.literal("LuaHUD"));
@@ -50,9 +50,15 @@ public class LuaHUDScreen extends Screen {
         this.contentLeft = (this.width - this.contentWidth) / 2;
         this.listTop = 52;
         this.listBottom = Math.max(this.listTop + ROW_HEIGHT, this.height - 40);
-        this.visibleRows = Math.max(1, (this.listBottom - this.listTop - 8) / ROW_HEIGHT);
 
         reloadProfiles();
+        this.addDrawableChild(new ProfileListWidget(
+                this.client,
+                this.width,
+                this.listBottom - this.listTop,
+                this.listTop,
+                ROW_HEIGHT
+        ));
 
         int topY = 20;
         this.addDrawableChild(ButtonWidget.builder(Text.literal("GitHub"), button -> openInBrowser(GITHUB_URL))
@@ -87,73 +93,6 @@ public class LuaHUDScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
 
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 26, 0xFFFFFF);
-        context.fill(this.contentLeft, this.listTop, this.contentLeft + this.contentWidth, this.listBottom, 0x88000000);
-        context.drawBorder(this.contentLeft, this.listTop, this.contentWidth, this.listBottom - this.listTop, 0xFF555555);
-
-        renderProfiles(context);
-    }
-
-    private void renderProfiles(DrawContext context) {
-        if (this.profiles.isEmpty()) {
-            context.drawCenteredTextWithShadow(
-                    this.textRenderer,
-                    Text.literal("No Lua profiles found"),
-                    this.width / 2,
-                    this.listTop + (this.listBottom - this.listTop - this.textRenderer.fontHeight) / 2,
-                    0xAAAAAA
-            );
-            return;
-        }
-
-        int rowLeft = this.contentLeft + 5;
-        int rowWidth = this.contentWidth - 10;
-        int rowTextWidth = Math.max(20, rowWidth - 100);
-
-        context.enableScissor(this.contentLeft + 1, this.listTop + 1, this.contentLeft + this.contentWidth - 1, this.listBottom - 1);
-        for (int row = 0; row < this.visibleRows; row++) {
-            int profileIndex = this.scrollOffset + row;
-            if (profileIndex >= this.profiles.size()) break;
-
-            ProfileEntry profile = this.profiles.get(profileIndex);
-            int rowTop = this.listTop + 4 + row * ROW_HEIGHT;
-            int background = row % 2 == 0 ? 0x44000000 : 0x22000000;
-            context.fill(rowLeft, rowTop, rowLeft + rowWidth, rowTop + ROW_HEIGHT - 2, background);
-
-            int textY = rowTop + (ROW_HEIGHT - 2 - this.textRenderer.fontHeight) / 2;
-            int statusColor = profile.data().active ? 0x55FF55 : 0xFF5555;
-            context.drawTextWithShadow(this.textRenderer, profile.data().active ? "On" : "Off", rowLeft + 5, textY, statusColor);
-
-            String profileName = this.textRenderer.trimToWidth(profile.name(), rowTextWidth);
-            context.drawTextWithShadow(this.textRenderer, profileName, rowLeft + 35, textY, 0xFFFFFF);
-            if (profile.data().hidden) {
-                context.drawTextWithShadow(this.textRenderer, "Hidden", rowLeft + rowWidth - 45, textY, 0xAAAAAA);
-            }
-        }
-        context.disableScissor();
-
-        if (this.profiles.size() > this.visibleRows) {
-            int trackTop = this.listTop + 4;
-            int trackHeight = this.listBottom - this.listTop - 8;
-            int thumbHeight = Math.max(12, trackHeight * this.visibleRows / this.profiles.size());
-            int maxOffset = this.profiles.size() - this.visibleRows;
-            int thumbTravel = trackHeight - thumbHeight;
-            int thumbTop = trackTop + thumbTravel * this.scrollOffset / maxOffset;
-            int scrollbarX = this.contentLeft + this.contentWidth - 4;
-            context.fill(scrollbarX, trackTop, scrollbarX + 2, trackTop + trackHeight, 0xFF333333);
-            context.fill(scrollbarX, thumbTop, scrollbarX + 2, thumbTop + thumbHeight, 0xFFAAAAAA);
-        }
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (mouseX >= this.contentLeft && mouseX < this.contentLeft + this.contentWidth
-                && mouseY >= this.listTop && mouseY < this.listBottom
-                && this.profiles.size() > this.visibleRows) {
-            int maxOffset = this.profiles.size() - this.visibleRows;
-            this.scrollOffset = Math.clamp(this.scrollOffset - (int) Math.signum(verticalAmount), 0, maxOffset);
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
@@ -175,7 +114,6 @@ public class LuaHUDScreen extends Screen {
                 .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
                 .map(entry -> new ProfileEntry(entry.getKey(), entry.getValue()))
                 .toList();
-        this.scrollOffset = Math.clamp(this.scrollOffset, 0, Math.max(0, this.profiles.size() - this.visibleRows));
     }
 
     private static void openProfilesFolder() {
@@ -196,5 +134,76 @@ public class LuaHUDScreen extends Screen {
     }
 
     private record ProfileEntry(String name, ConfigData.ProfileData data) {
+    }
+
+    private class ProfileListWidget extends AlwaysSelectedEntryListWidget<ProfileEntryWidget> {
+        private ProfileListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
+            super(client, width, height, y, itemHeight);
+            profiles.forEach(profile -> this.addEntry(new ProfileEntryWidget(profile)));
+        }
+
+        @Override
+        public int getRowWidth() {
+            return Math.min(CONTENT_MAX_WIDTH, this.getWidth() - 32);
+        }
+
+        @Override
+        protected int getScrollbarX() {
+            return this.getRight() - 8;
+        }
+
+        @Override
+        protected void renderDecorations(DrawContext context, int mouseX, int mouseY) {
+            if (this.getEntryCount() == 0) {
+                context.drawCenteredTextWithShadow(
+                        textRenderer,
+                        Text.literal("No Lua profiles found"),
+                        width / 2,
+                        this.getY() + (this.getHeight() - textRenderer.fontHeight) / 2,
+                        0xAAAAAA
+                );
+            }
+        }
+    }
+
+    private class ProfileEntryWidget extends AlwaysSelectedEntryListWidget.Entry<ProfileEntryWidget> {
+        private final ProfileEntry profile;
+
+        private ProfileEntryWidget(ProfileEntry profile) {
+            this.profile = profile;
+        }
+
+        @Override
+        public void render(
+                DrawContext context,
+                int index,
+                int y,
+                int x,
+                int entryWidth,
+                int entryHeight,
+                int mouseX,
+                int mouseY,
+                boolean hovered,
+                float tickDelta
+        ) {
+            int background = index % 2 == 0 ? 0x44000000 : 0x22000000;
+            context.fill(x, y, x + entryWidth, y + entryHeight - 2, background);
+
+            int textY = y + (entryHeight - 2 - textRenderer.fontHeight) / 2;
+            int statusColor = this.profile.data().active ? 0x55FF55 : 0xFF5555;
+            context.drawTextWithShadow(textRenderer, this.profile.data().active ? "On" : "Off", x + 5, textY, statusColor);
+
+            int profileNameWidth = Math.max(20, entryWidth - 100);
+            String profileName = textRenderer.trimToWidth(this.profile.name(), profileNameWidth);
+            context.drawTextWithShadow(textRenderer, profileName, x + 35, textY, 0xFFFFFF);
+            if (this.profile.data().hidden) {
+                context.drawTextWithShadow(textRenderer, "Hidden", x + entryWidth - 45, textY, 0xAAAAAA);
+            }
+        }
+
+        @Override
+        public Text getNarration() {
+            return Text.literal(this.profile.name());
+        }
     }
 }
