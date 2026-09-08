@@ -16,10 +16,11 @@ public class LuaHUDClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ConfigManager.load();
+        ConfigInstaller.generateDefaults();
+
         Engine engine = new Engine();
         engine.init();
-        ConfigInstaller.generateDefaults();
-        ConfigManager.load();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || Engine.getLhTable() == null) return;
