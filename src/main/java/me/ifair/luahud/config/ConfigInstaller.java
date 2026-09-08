@@ -14,10 +14,6 @@ public class ConfigInstaller {
     public static void generateDefaults() {
         final String defaultSource = "/assets/luahud/default-config/";
 
-        if (Files.notExists(JSON_CONFIG)) {
-            copyFromResource(defaultSource + "luahud.json", CONFIG_DIR);
-        }
-
         if (Files.notExists(MOD_CONFIG_DIR) || !Files.isDirectory(MOD_CONFIG_DIR)) {
             try {
                 Files.createDirectory(MOD_CONFIG_DIR);
@@ -28,7 +24,7 @@ public class ConfigInstaller {
         }
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
-            copyFromResource(defaultSource + "luahud/Example Profile.lua", MOD_CONFIG_DIR);
+            copyFromResource(defaultSource + "profiles/Example Profile.lua", MOD_CONFIG_DIR);
             // other default profiles will come here
 
             ConfigManager.setGenerateExampleProfiles(false);
@@ -41,8 +37,8 @@ public class ConfigInstaller {
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while creating luahud/api directory: {}", e.getMessage());
         }
-        copyFromResource(defaultSource + "luahud/api/.luarc.json", luaDir);
-        copyFromResource(defaultSource + "luahud/api/lh.lua", luaDir);
+        copyFromResource(defaultSource + "lua/.luarc.json", luaDir);
+        copyFromResource(defaultSource + "lua/lh.lua", luaDir);
     }
 
     private static void copyFromResource(String resourcePath, Path targetDir) {
