@@ -83,7 +83,7 @@
 
 ---@class LHXp
 ---@field total integer Total points
----@field level integer 
+---@field level integer
 ---@field progress number 0-1f range for the next level
 
 ---@class LHHunger
