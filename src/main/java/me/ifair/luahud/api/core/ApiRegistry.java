@@ -49,7 +49,7 @@ public final class ApiRegistry {
     private final Consumer<String> warnings;
     private boolean frozen;
 
-    public ApiRegistry() { this(message -> LuaHUD.LOGGER.warn(message)); }
+    public ApiRegistry() { this(LuaHUD.LOGGER::warn); }
     public ApiRegistry(Consumer<String> warnings) { this.warnings = Objects.requireNonNull(warnings); }
     public LuaApiRegistrar registrar(String providerId) { mutable(); return new Registrar(providerId); }
 
