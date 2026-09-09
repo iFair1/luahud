@@ -1,7 +1,10 @@
 package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.api.LuaApiRegistrar;
+import me.ifair.luahud.api.LuaDoc;
+import me.ifair.luahud.api.LuaType;
 import me.ifair.luahud.api.ModelBuilder;
+import me.ifair.luahud.api.models.CoreModels;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.attribute.EntityAttribute;
@@ -12,11 +15,13 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.GameMode;
 
 import java.util.Locale;
+import java.util.Map;
 
 public final class PlayerModule {
     private PlayerModule() {}
 
-    public static void register(LuaApiRegistrar api, MinecraftClient client, ModelBuilder<ItemStack> stack) {
+    public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models) {
+        ModelBuilder<ItemStack> stack = models.itemStack();
         api.root().namespace("player", player -> {
             player.string("id", "Namespaced player entity type", () -> client.player == null ? "" : Registries.ENTITY_TYPE.getId(client.player.getType()).toString())
                     .string("name", "Player display name", () -> client.player == null ? "" : client.player.getDisplayName().getString())
@@ -29,7 +34,9 @@ public final class PlayerModule {
                     .string("username", "Account username", () -> client.player == null ? "" : client.player.getGameProfile().getName())
                     .bool("sprinting", "Whether the character is sprinting", () -> client.player != null && client.player.isSprinting())
                     .bool("sprintHeld", "Whether the sprint key is held", () -> client.options.sprintKey.isPressed())
-                    .string("gamemode", "Current game mode", () -> gameMode(client));
+                    .string("gamemode", "Current game mode", () -> gameMode(client))
+                    .value("effects", LuaType.map(models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
+                            () -> client.player == null ? Map.of() : CoreModels.statusEffects(client.player));
             player.namespace("hunger", hunger -> hunger
                     .number("food", "Food level", () -> client.player == null ? 0.0 : (double) client.player.getHungerManager().getFoodLevel())
                     .number("saturation", "Saturation level", () -> client.player == null ? 0.0 : (double) client.player.getHungerManager().getSaturationLevel()));

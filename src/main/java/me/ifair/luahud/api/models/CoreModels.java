@@ -9,6 +9,7 @@ import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -21,11 +22,17 @@ import java.util.Map;
 public record CoreModels(
         ModelBuilder<BlockView> block,
         ModelBuilder<Entity> entity,
-        ModelBuilder<ItemStack> itemStack
+        ModelBuilder<ItemStack> itemStack,
+        ModelBuilder<StatusEffectInstance> statusEffect
 ) {
     public record BlockView(ClientWorld world, BlockPos pos) {}
 
     public static CoreModels register(LuaApiRegistrar api) {
+        ModelBuilder<StatusEffectInstance> statusEffect = api.model("StatusEffect", StatusEffectInstance.class)
+                .string("name", "Localized effect name", value -> value.getEffectType().value().getName().getString())
+                .integer("level", "Effect level", value -> value.getAmplifier() + 1)
+                .integer("duration", "Remaining duration in ticks (-1 if infinite)", StatusEffectInstance::getDuration);
+
         ModelBuilder<Entity> entity = api.model("Entity", Entity.class)
                 .number("x", "X coordinate", Entity::getX)
                 .number("y", "Y coordinate", Entity::getY)
@@ -34,7 +41,8 @@ public record CoreModels(
                 .string("name", "Localized display name", value -> value.getDisplayName() == null ? "" : value.getDisplayName().getString())
                 .string("uuid", "World entity UUID", Entity::getUuidAsString)
                 .number("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (double) living.getHealth() : 0.0)
-                .number("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (double) living.getMaxHealth() : 0.0);
+                .number("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (double) living.getMaxHealth() : 0.0)
+                .field("effects", LuaType.map(statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects);
 
         ModelBuilder<BlockView> block = api.model("PlacedBlock", BlockView.class)
                 .string("id", "Namespaced block ID", CoreModels::blockId)
@@ -52,7 +60,7 @@ public record CoreModels(
                 .integer("maxDamage", "Maximum durability", ItemStack::getMaxDamage)
                 .field("enchantments", LuaType.optional(LuaType.map(LuaType.integer())), "Enchantments keyed by namespaced ID", CoreModels::enchantments);
 
-        return new CoreModels(block, entity, itemStack);
+        return new CoreModels(block, entity, itemStack, statusEffect);
     }
 
     private static String blockId(BlockView value) {
@@ -72,6 +80,16 @@ public record CoreModels(
         Map<String, Integer> result = new LinkedHashMap<>();
         for (Object2IntMap.Entry<RegistryEntry<Enchantment>> entry : component.getEnchantmentEntries()) {
             entry.getKey().getKey().ifPresent(key -> result.put(key.getValue().toString(), entry.getIntValue()));
+        }
+        return result;
+    }
+
+    public static Map<String, StatusEffectInstance> statusEffects(Entity entity) {
+        Map<String, StatusEffectInstance> result = new LinkedHashMap<>();
+        if (!(entity instanceof LivingEntity living)) return result;
+
+        for (StatusEffectInstance effect : living.getStatusEffects()) {
+            result.put(Registries.STATUS_EFFECT.getId(effect.getEffectType().value()).toString(), effect);
         }
         return result;
     }

@@ -29,7 +29,7 @@ public final class CoreApi {
         FacingModule.register(api, client, models);
         WeatherModule.register(api, client);
         PositionModule.register(api, client);
-        PlayerModule.register(api, client, models.itemStack());
+        PlayerModule.register(api, client, models);
         FunctionsModule.register(api, client, models);
         registry.addEventFunctions();
     }
