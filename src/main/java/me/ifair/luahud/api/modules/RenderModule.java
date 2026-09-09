@@ -165,11 +165,9 @@ public final class RenderModule {
         return options != null && options.contains(key) ? color(options.get(key)) : fallback;
     }
 
-    private static int color(Object value) {
+    static int color(Object value) {
         if (value instanceof Number number) {
-            long color = number.longValue();
-            if ((color & 0xFF000000L) == 0 && color <= 0xFFFFFF) color |= 0xFF000000L;
-            return (int) color;
+            return number.intValue();
         }
         String hex = String.valueOf(value);
         if (hex.startsWith("#")) hex = hex.substring(1);
