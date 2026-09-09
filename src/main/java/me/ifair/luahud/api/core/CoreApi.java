@@ -22,7 +22,7 @@ public final class CoreApi {
         MinecraftClient client = MinecraftClient.getInstance();
         CoreModels models = CoreModels.register(api);
 
-        RenderModule.register(api);
+        RenderModule.register(api, models);
         PcModule.register(api, client);
         PerformanceModule.register(api, client);
         TimeModule.register(api, client);

@@ -2,6 +2,7 @@ package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.*;
+import me.ifair.luahud.api.models.CoreModels;
 import me.ifair.luahud.render.Anchor;
 import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.SectionState;
@@ -21,7 +22,7 @@ public final class RenderModule {
         currentState = new SectionState();
     }
 
-    public static void register(LuaApiRegistrar api) {
+    public static void register(LuaApiRegistrar api, CoreModels models) {
         LuaType<Object> color = LuaType.union(LuaType.string(), LuaType.integer());
         LuaType<LuaTableValue> sectionOptions = optionsType("SectionOptions", color, true, true, false);
         LuaType<LuaTableValue> textOptions = optionsType("TextOptions", color, false, true, false);
@@ -39,7 +40,7 @@ public final class RenderModule {
         registerDraw(api, "drawln", true, textOptions);
 
         FunctionBuilder<Void> drawStack = api.root().function("drawStack", LuaType.nil(), "Draw an item stack.");
-        LuaParameter<LuaTableValue> stackArg = drawStack.parameter("stack", itemStackInput(), "Stack data");
+        LuaParameter<ItemStack> stackArg = drawStack.parameter("stack", models.itemStack().type(), "Item stack");
         LuaParameter<LuaTableValue> stackOpts = drawStack.optionalParameter("options", stackOptions, "Rendering options");
         drawStack.call(arguments -> {
             drawStack(arguments.get(stackArg), arguments.get(stackOpts));
@@ -97,14 +98,6 @@ public final class RenderModule {
         });
     }
 
-    private static LuaType<LuaTableValue> itemStackInput() {
-        return LuaType.inputTable("ItemStackInput", fields -> fields
-                .field("id", LuaType.string(), "Namespaced item ID")
-                .optional("count", LuaType.integer(), "Stack count")
-                .optional("damage", LuaType.integer(), "Item damage")
-                .optional("enchantments", LuaType.map(LuaType.integer()), "Enchantments"));
-    }
-
     private static void applySection(LuaTableValue options) {
         currentState = new SectionState();
         if (options == null) return;
@@ -126,16 +119,15 @@ public final class RenderModule {
                 currentState.anchor, currentState.offsetX, currentState.offsetY, newline);
     }
 
-    private static void drawStack(LuaTableValue stack, LuaTableValue options) {
+    private static void drawStack(ItemStack stack, LuaTableValue options) {
         boolean showCount = options == null || options.bool("showCount", true);
         boolean showDurability = options == null || options.bool("showDurabilityBar", true);
-        boolean showGlint = options == null
-                ? stack.contains("enchantments") : options.bool("showGlint", stack.contains("enchantments"));
-        Identifier id = Identifier.tryParse(stack.string("id", ""));
-        Item item = id == null ? Items.AIR : Registries.ITEM.get(id);
-        ItemStack value = new ItemStack(item, showCount ? stack.integer("count", 1) : 1);
-        if (showDurability && stack.contains("damage")) value.setDamage(stack.integer("damage", 0));
-        if (showGlint) value.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+        ItemStack value = stack.copy();
+        if (!showCount) value.setCount(1);
+        if (!showDurability) value.setDamage(0);
+        if (options != null && options.contains("showGlint")) {
+            value.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, options.bool("showGlint", true));
+        }
         RenderBuffer.addStack(value, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor),
                 currentState.anchor, currentState.offsetX, currentState.offsetY, false);
     }

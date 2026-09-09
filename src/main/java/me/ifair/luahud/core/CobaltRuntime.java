@@ -24,7 +24,10 @@ public final class CobaltRuntime {
     private final Map<String, List<LuaFunction>> listeners = new HashMap<>();
     private final Map<String, Long> errorCooldowns = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
+    private final Map<LuaTable, ModelValue> modelValues = new IdentityHashMap<>();
     private LuaState state;
+
+    private record ModelValue(Supplier<Object> supplier, ModelBuilder<Object> model) {}
 
     public CobaltRuntime(ApiRegistry registry) {
         if (!registry.isFrozen()) throw new IllegalArgumentException("Lua API registry must be frozen before starting Cobalt");
@@ -32,7 +35,7 @@ public final class CobaltRuntime {
     }
 
     public void start() throws LuaError {
-        listeners.clear(); timers.clear(); errorCooldowns.clear();
+        listeners.clear(); timers.clear(); errorCooldowns.clear(); modelValues.clear();
         state = new LuaState();
         CoreLibraries.standardGlobals(state);
         state.globals().rawset("lh", namespace(registry.rootNode(), "lh"));
@@ -187,6 +190,7 @@ public final class CobaltRuntime {
 
     private LuaTable modelTable(Supplier<Object> object, ModelBuilder<Object> model, String path, String provider) throws LuaError {
         LuaTable table = new LuaTable();
+        modelValues.put(table, new ModelValue(object, model));
         Map<String, ModelBuilder.Field<? super Object, ?>> fields = new HashMap<>();
         for (ModelBuilder.Field<? super Object, ?> field : model.fields()) fields.put(field.name(), field);
         LuaTable metatable = new LuaTable();
@@ -250,9 +254,20 @@ public final class CobaltRuntime {
             case LIST -> listFromLua(value.checkTable(), type.elementType());
             case MAP -> mapFromLua(value.checkTable(), type.elementType());
             case INPUT_TABLE -> inputTable(value.checkTable(), type);
-            case MODEL -> throw new LuaError("models are output-only; use a documented input table");
+            case MODEL -> modelFromLua(value, type);
             case FUNCTION -> throw new LuaError("callbacks cannot cross the public addon API");
         };
+    }
+
+    private Object modelFromLua(LuaValue value, LuaType<?> type) throws LuaError {
+        LuaTable table = value.checkTable();
+        ModelValue model = modelValues.get(table);
+        if (model == null || model.model() != type.model()) {
+            throw new LuaError("expected " + type.displayName() + " model");
+        }
+        Object result = model.supplier().get();
+        if (result == null) throw new LuaError(type.displayName() + " model is unavailable");
+        return result;
     }
 
     private Object unionFromLua(LuaValue value, LuaType<?> type) throws LuaError {
