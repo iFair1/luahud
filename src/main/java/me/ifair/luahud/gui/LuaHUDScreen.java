@@ -136,11 +136,6 @@ public class LuaHUDScreen extends Screen {
         }
     }
 
-    @Override
-    public boolean shouldPause() {
-        return false;
-    }
-
     private void reloadProfiles() {
         boolean showHidden = ConfigManager.isShowHiddenFilesEnabled();
         this.profiles = ConfigManager.getProfiles().entrySet().stream()
