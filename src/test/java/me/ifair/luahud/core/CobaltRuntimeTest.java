@@ -27,6 +27,7 @@ class CobaltRuntimeTest {
                 .value("nullable", LuaType.optional(LuaType.string()), LuaDoc.NONE, () -> null)
                 .value("model", model.type(), LuaDoc.NONE, () -> new Data("ok", modelSequence.incrementAndGet()))
                 .value("list", LuaType.list(LuaType.integer()), LuaDoc.NONE, () -> List.of(2, 3))
+                .value("modelList", LuaType.list(model.type()), LuaDoc.NONE, () -> List.of(new Data("listed", 8)))
                 .value("map", LuaType.map(LuaType.bool()), LuaDoc.NONE, () -> Map.of("yes", true))
                 .value("modelMap", LuaType.map(model.type()), LuaDoc.NONE, () -> Map.of("entry", new Data("mapped", 9))));
         FunctionBuilder<Integer> add = api.root().function("add", LuaType.integer(), "");
@@ -39,7 +40,7 @@ class CobaltRuntimeTest {
         capture.call(args -> { captured.set(args.get(data)); return null; });
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
-        runtime.execute("a=lh.nested.next; b=lh.nested.next; held=lh.nested.model; label=held.label; count=held.count; lh.capture(held); sum=lh.add(5,7); nullable=lh.nested.nullable; listv=lh.nested.list[2]; mapv=lh.nested.map.yes; mapped=lh.nested.modelMap.entry.label", "test");
+        runtime.execute("a=lh.nested.next; b=lh.nested.next; held=lh.nested.model; label=held.label; count=held.count; lh.capture(held); sum=lh.add(5,7); nullable=lh.nested.nullable; listv=lh.nested.list[2]; listed=lh.nested.modelList[1].label; zeroNil=lh.nested.modelList[0]==nil; mapv=lh.nested.map.yes; mapped=lh.nested.modelMap.entry.label", "test");
         assertEquals(1, runtime.global("a").checkInteger());
         assertEquals(2, runtime.global("b").checkInteger());
         assertEquals("ok", runtime.global("label").checkString());
@@ -48,6 +49,8 @@ class CobaltRuntimeTest {
         assertEquals(12, runtime.global("sum").checkInteger());
         assertTrue(runtime.global("nullable").isNil());
         assertEquals(3, runtime.global("listv").checkInteger());
+        assertEquals("listed", runtime.global("listed").checkString());
+        assertTrue(runtime.global("zeroNil").checkBoolean());
         assertTrue(runtime.global("mapv").checkBoolean());
         assertEquals("mapped", runtime.global("mapped").checkString());
     }

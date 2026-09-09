@@ -9,11 +9,14 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.GameMode;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -54,7 +57,11 @@ public final class PlayerModule {
                     .model("legs", stack, "Leg armor stack", () -> inventoryStack(client, 37))
                     .model("feet", stack, "Feet armor stack", () -> inventoryStack(client, 36))
                     .model("mainHand", stack, "Main-hand stack", () -> client.player == null ? ItemStack.EMPTY : client.player.getInventory().getMainHandStack())
-                    .model("offHand", stack, "Off-hand stack", () -> client.player == null ? ItemStack.EMPTY : client.player.getOffHandStack()));
+                    .model("offHand", stack, "Off-hand stack", () -> client.player == null ? ItemStack.EMPTY : client.player.getOffHandStack())
+                    .value("hotbar", LuaType.list(stack.type()), LuaDoc.of("Hotbar stacks at Lua indices 1-9"),
+                            () -> inventoryStacks(client, 0, PlayerInventory.getHotbarSize()))
+                    .value("inventory", LuaType.list(stack.type()), LuaDoc.of("Main inventory stacks, excluding the hotbar, at Lua indices 1-27"),
+                            () -> inventoryStacks(client, PlayerInventory.getHotbarSize(), PlayerInventory.MAIN_SIZE)));
         });
     }
 
@@ -64,6 +71,16 @@ public final class PlayerModule {
 
     private static ItemStack inventoryStack(MinecraftClient client, int slot) {
         return client.player == null ? ItemStack.EMPTY : client.player.getInventory().getStack(slot);
+    }
+
+    private static List<ItemStack> inventoryStacks(MinecraftClient client, int fromIndex, int toIndex) {
+        if (client.player == null) return List.of();
+
+        List<ItemStack> stacks = new ArrayList<>(toIndex - fromIndex);
+        for (int slot = fromIndex; slot < toIndex; slot++) {
+            stacks.add(client.player.getInventory().getStack(slot));
+        }
+        return stacks;
     }
 
     private static String gameMode(MinecraftClient client) {

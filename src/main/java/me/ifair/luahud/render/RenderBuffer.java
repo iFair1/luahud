@@ -41,6 +41,7 @@ public class RenderBuffer {
         // item / stack / texture
         ItemStack itemStack;
         Identifier texture;
+        boolean drawAir;
 
         void clearReferences() {
             text = null;
@@ -99,13 +100,15 @@ public class RenderBuffer {
             int baseY,
             int offsetX,
             int offsetY,
-            boolean newLine
+            boolean newLine,
+            boolean drawAir
     ) {
         RenderElement e = obtain();
         e.type = ElementType.STACK;
         e.itemStack = itemStack;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
+        e.drawAir = drawAir;
         setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
     }
 
@@ -245,16 +248,22 @@ public class RenderBuffer {
     private static int measureWidth(RenderElement element, TextRenderer textRenderer) {
         return switch (element.type) {
             case TEXT -> textRenderer.getWidth(element.text);
-            case STACK, ITEM -> {
-                if (element.itemStack == null || element.itemStack.isEmpty()) yield 0;
-                float scale = element.scale > 0 ? element.scale : 1f;
-                yield Math.round(BASE_SIZE * scale);
-            }
+            case STACK -> measureStackWidth(element.itemStack, element.scale, element.drawAir);
+            case ITEM -> measureStackWidth(element.itemStack, element.scale, false);
             case TEXTURE -> {
                 float scale = element.scale > 0 ? element.scale : 1f;
                 yield Math.round(BASE_SIZE * scale);
             }
         };
+    }
+
+    static int measureStackWidth(ItemStack stack, float scale, boolean drawAir) {
+        return measureStackWidth(stack == null || stack.isEmpty(), scale, drawAir);
+    }
+
+    static int measureStackWidth(boolean empty, float scale, boolean drawAir) {
+        if (empty && !drawAir) return 0;
+        return Math.round(BASE_SIZE * (scale > 0 ? scale : 1f));
     }
 
     private static void renderContentAt(DrawContext context, TextRenderer textRenderer, RenderElement element, int x, int y) {

@@ -5,6 +5,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RenderBufferTest {
+    @Test void emptyStacksOnlyReserveWidthWhenDrawAirIsEnabled() {
+        assertEquals(0, RenderBuffer.measureStackWidth(true, 1f, false));
+        assertEquals(12, RenderBuffer.measureStackWidth(true, 1f, true));
+        assertEquals(24, RenderBuffer.measureStackWidth(true, 2f, true));
+    }
+
     @Test void topAnchorsKeepTheIconTopEdgeFixedWhileScaling() {
         assertEquals(19, RenderBuffer.anchoredIconY(Anchor.TOP_LEFT, 20, 12));
         assertEquals(19, RenderBuffer.anchoredIconY(Anchor.TOP_LEFT, 20, 24));

@@ -93,7 +93,8 @@ public final class RenderModule {
             if (stack) {
                 fields.optional("showDurabilityBar", LuaType.bool(), "Show durability bar")
                         .optional("showCount", LuaType.bool(), "Show stack count")
-                        .optional("showGlint", LuaType.bool(), "Show enchantment glint");
+                        .optional("showGlint", LuaType.bool(), "Show enchantment glint")
+                        .optional("drawAir", LuaType.bool(), "Reserve one item width for an empty stack");
             }
         });
     }
@@ -123,6 +124,7 @@ public final class RenderModule {
     private static void drawStack(ItemStack stack, LuaTableValue options) {
         boolean showCount = options == null || options.bool("showCount", true);
         boolean showDurability = options == null || options.bool("showDurabilityBar", true);
+        boolean drawAir = options != null && options.bool("drawAir", false);
         ItemStack value = stack.copy();
         if (!showCount) value.setCount(1);
         if (!showDurability) value.setDamage(0);
@@ -131,7 +133,7 @@ public final class RenderModule {
         }
         RenderBuffer.addStack(value, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor),
                 currentState.anchor, currentState.offsetX, currentState.offsetY,
-                offset(options, "offsetX"), offset(options, "offsetY"), false);
+                offset(options, "offsetX"), offset(options, "offsetY"), false, drawAir);
     }
 
     private static void drawItem(String id, LuaTableValue options) {
