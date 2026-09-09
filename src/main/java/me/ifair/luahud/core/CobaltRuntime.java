@@ -257,8 +257,30 @@ public final class CobaltRuntime {
 
     private Object unionFromLua(LuaValue value, LuaType<?> type) throws LuaError {
         LuaError last = null;
-        for (LuaType<?> alternative : type.alternatives()) try { return fromLua(value, alternative); } catch (LuaError error) { last = error; }
+        for (LuaType<?> alternative : type.alternatives()) {
+            if (!matchesLua(value, alternative)) continue;
+            try { return fromLua(value, alternative); } catch (LuaError error) { last = error; }
+        }
         throw new LuaError("expected " + type.luaName() + (last == null ? "" : ", got " + value.typeName()));
+    }
+
+    /**
+     * Check a value's Lua type before attempting a union conversion. Cobalt's
+     * {@code checkString()} accepts numbers, so trying a string alternative
+     * first would otherwise turn numeric values into decimal strings.
+     */
+    private boolean matchesLua(LuaValue value, LuaType<?> type) {
+        return switch (type.kind()) {
+            case NIL -> value.isNil();
+            case STRING, LITERAL -> value.type() == Constants.TSTRING;
+            case INTEGER, NUMBER -> value.type() == Constants.TNUMBER;
+            case BOOLEAN -> value.type() == Constants.TBOOLEAN;
+            case LIST, MAP, INPUT_TABLE -> value.type() == Constants.TTABLE;
+            case FUNCTION -> value.type() == Constants.TFUNCTION;
+            case OPTIONAL -> value.isNil() || matchesLua(value, type.elementType());
+            case UNION -> type.alternatives().stream().anyMatch(alternative -> matchesLua(value, alternative));
+            case ANY, MODEL -> true;
+        };
     }
 
     private List<Object> listFromLua(LuaTable table, LuaType<?> element) throws LuaError {

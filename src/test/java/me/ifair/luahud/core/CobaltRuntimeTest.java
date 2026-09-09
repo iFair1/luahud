@@ -8,6 +8,7 @@ import org.squiddev.cobalt.LuaError;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,6 +62,24 @@ class CobaltRuntimeTest {
         LuaError provider = assertThrows(LuaError.class, () -> runtime.execute("return lh.boom", "boom"));
         assertTrue(provider.getMessage().contains("fixture_mod"));
         assertTrue(provider.getMessage().contains("lh.boom"));
+    }
+
+    @Test void unionKeepsNumericValuesNumericWhenStringIsListedFirst() throws Exception {
+        AtomicReference<Object> captured = new AtomicReference<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        LuaApiRegistrar api = registry.registrar("fixture");
+        FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
+        LuaParameter<Object> value = capture.parameter("value", LuaType.union(LuaType.string(), LuaType.integer()), "");
+        capture.call(arguments -> {
+            captured.set(arguments.get(value));
+            return null;
+        });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+
+        runtime.execute("lh.capture(0xFF00FF00)", "numeric-color");
+
+        assertEquals(0xFF00FF00, captured.get());
     }
 
     @Test void eventsTimersReloadAndSafeLibrariesWork() throws Exception {
