@@ -10,125 +10,110 @@
 ---@alias BlockHalf "top" | "bottom" | "upper" | "lower"
 ---@alias TimeUnit "ticks" | "seconds" | "milliseconds"
 ---@alias Direction "north" | "south" | "east" | "west"
----@alias Gamemode "survival" | "creative" | "adventure" | "spectator"
 
----@class LHStatusEffect
----@field id string Id of the effect. Example: "minecraft:strength"
----@field name string Name of the effect depending on your language (Strength, Kuvvet)
----@field level integer Level of the effect 1-256
----@field duration number How many seconds will the effect last
+---@class StatusEffect
+---@field name string
+---@field level integer
+---@field duration number
 
----@class LHItemStack
----@field id string The id of the item. Example: "minecraft:diamond"
----@field name string The name of the item depending on naming and your language. ("My Pretty Sword", "Diamond Sword", "Elmas Kılıç")
----@field count integer Count of the item
----@field enchantments? table<string, integer> A list of enchantments of the item
----@field damage? integer How much the item is damaged
+---@class ItemStack
+---@field id string
+---@field name string
+---@field count integer
+---@field enchantments? table<string, integer>
+---@field damage? integer
 ---@field damageLeft? integer
----@field maxDamage? integer How much durability does the item have total
+---@field maxDamage? integer
 
---- Position with x, y and z
----@class LHPosition
----@field x number X coordinate
----@field y number Y coordinate
----@field z number Z coordinate
-
---- Not every single one of them, but most common ones
----@class LHBlockStates
----@field facing? BlockFacing
----@field half? BlockHalf
----@field axis? "x" | "y" | "z"
----@field shape? string
----@field powered? boolean
----@field waterlogged? boolean
----@field lit? boolean
----@field open? boolean
----@field power? integer
----@field [string] string | boolean | integer Any other properties
-
-
---- This is a class for placed blocks, not for blocks in inventory/any container (ItemStack)
----@class LHBlock
----@field id string Id of the block. Example: "minecraft:stone"
----@field name string Name of the block depending on your language. ("Stone", "Taş")
----@field states LHBlockStates
+---@class PlacedBlock
+---@field id string
+---@field name string
 ---@field nbt? table<string, any> Only for block entities
 ---@field x integer
 ---@field y integer
 ---@field z integer
 
---- This is a class for living entities, not static ones.
----@class LHEntity : LHPosition
+---@class EntityPosition
+---@field x number
+---@field y number
+---@field z number
+
+---@class Entity : EntityPosition
 ---@field id string Id of the Entity. Example: "minecraft:creeper"
 ---@field name string Name of the entity depending on naming and your language ("Creeper", "Good Creeper")
+---@field x number
+---@field y number
+---@field z number
 ---@field uuid string Exact id of the entity in the minecraft world
 ---@field health number Health of the entity
 ---@field maxHealth number The max health the entity can have
 -- TODO: Add attributes to here
 
----@class LHPlayerSlots
----@field head LHItemStack
----@field chest LHItemStack
----@field legs LHItemStack
----@field feet LHItemStack
----@field mainHand LHItemStack
----@field offHand LHItemStack
----@field hotbar LHItemStack[] 1-9
----@field inventory LHItemStack[] 1-27
+---@class PlayerSlots
+---@field head ItemStack
+---@field chest ItemStack
+---@field legs ItemStack
+---@field feet ItemStack
+---@field mainHand ItemStack
+---@field offHand ItemStack
+---@field hotbar ItemStack[] 1-9
+---@field inventory ItemStack[] 1-27
 
----@class LHArmor
+---@class Armor
 ---@field armor number
 ---@field toughness number
 ---@field knockbackResistance number
 
----@class LHXp
+---@class Xp
 ---@field total integer Total points
 ---@field level integer
 ---@field progress number 0-1f range for the next level
 
----@class LHHunger
+---@class Hunger
 ---@field food integer
 ---@field saturation number
 ---@field exhaustion number 0-4f range
 
----@class LHCPU
+---@class CPU
 ---@field name string
----@field usage integer Usage percentage
+---@field usage integer
 ---@field cores integer Core count
 ---@field threads integer Threads count
 
----@class LHGPU
----@field name string Do NOT use this on Tick! unless you want to blow up your pc
----@field usage integer Usage percentage
+---@class GPU
+---@field name string
+---@field usage integer
 
----@class LHMemory
+---@class Memory
 ---@field allocated integer Memory allocated in MiBs
 ---@field free integer Memory free to use in MiBs
 ---@field used integer Memory used in MiBs
 ---@field max integer Maximum memory Minecraft can access in MiBs
 
----@class LHDisplay
+---@class Display
 ---@field width integer Screen width
 ---@field height integer Screen height
 ---@field scale integer GUI Scale (1,2,3,4 ...)
 ---@field hz integer Refresh rate of the monitor
 
----@class LHChunk
+---@class Chunk
 ---@field isSlimeChunk boolean
 ---@field icx integer In Chunk x
 ---@field icy integer In Chunk y
 ---@field icz integer In Chunk z
 
----@class LHBiome
+---@class Biome
 ---@field id string
 ---@field name string
 ---@field temperature number
 ---@field posTemperature number
 
----@class LHDimension
+---@class MusicDisc
 ---@field id string
--- There are no translation keys for for dimensions
-
+---@field name string
+---@field length integer
+---@field remaining integer
+---@field elapsed integer
 
 ---@class GeneralOptions
 ---@field backgroundColor? string | integer
@@ -155,81 +140,92 @@
 -- Groups
 --------------------------------------
 
----@class LHPerformance
+---@class Performance
 ---@field fps integer
 ---@field ping integer
 ---@field tps number
 
----@class LHPC
----@field display LHDisplay
----@field cpu LHCPU
----@field gpu LHGPU
----@field memory LHMemory
+---@class PC
+---@field display Display
+---@field cpu CPU
+---@field gpu GPU
+---@field memory Memory
 
----@class LHPlayer : LHEntity
+---@class World
+---@field name string
+---@field ip string
+-- TODO: The Icon of the world (I currently don't know how am i going to implement this because drawTexture only works with assets)
+
+---@class Position : EntityPosition
+---@field biome Biome
+---@field dimension string
+---@field chunk Chunk
+
+---@class Facing
+---@field direction Direction
+---@field yaw number
+---@field pitch number
+---@field targetBlock PlacedBlock
+---@field targetEntity Entity
+
+---@class Player : Entity
 ---@field username string
 ---@field sprinting boolean Character sprinting
 ---@field sprintHeld boolean Sprint is toggled/held
----@field hunger LHHunger
----@field armor LHArmor
----@field xp LHXp
----@field gamemode Gamemode
----@field slots LHPlayerSlots
----@field effects LHStatusEffect[]
+---@field hunger Hunger
+---@field armor Armor
+---@field xp Xp
+---@field gamemode "survival" | "creative" | "adventure" | "spectator"
+---@field slots PlayerSlots
+---@field effects table<string, StatusEffect>
 
----@class LHPlayerPosition : LHPosition I inherit x, y & z so you just type lh.pos.x instead of something like lh.pos.pos.x
----@field biome LHBiome
----@field dimension LHDimension
----@field chunk LHChunk
-
----@class LHTime
+---@class Time
 ---@field tick integer Days Tick 0-24000
 ---@field day integer The number of days in MC Time since the world has created
 ---@field hour integer Hours in MC Time
 ---@field minute integer Minutes in MC Time
 ---@field seconds integer Seconds in MC Time
 
----@class LHWeather
+---@class Weather
 ---@field raining boolean This is true unless weather is clear. Yes, it rains even if it's snowing/thundering
 ---@field snowing boolean
 ---@field thundering boolean
 
----@class LHFacing
----@field direction Direction
----@field yaw number
----@field pitch number
----@field targetBlock LHBlock
----@field targetEntity LHEntity
+---@class sound
+---@field mood integer
+---@field record? MusicDisc
 
-
----@class LHAPI
----@field perf LHPerformance
----@field pc LHPC
----@field player LHPlayer
----@field pos LHPlayerPosition
----@field time LHTime
----@field weather LHWeather
----@field facing LHFacing
+---@class API
+---@field perf Performance
+---@field pc PC
+---@field world World
+---@field player Player
+---@field pos Position
+---@field time Time
+---@field weather Weather
+---@field facing Facing
 lh = {}
 
 --------------------------------------
 -- Useful functions
 --------------------------------------
 
----@param coordinate string This is a relative coordinate ~ and ^ is accepted, and processed
----@return LHBlock
+---@param coordinate string ~ & ^ is accepted
+---@return PlacedBlock
 function lh.getBlockAt(coordinate) end
+
+-- TODO: getStat()
+-- TODO: getOption()
 
 --------------------------------------
 -- Timer Functions
 --------------------------------------
 
----@param event string For now, only "tick" is supported
+---@param event "tick"
 ---@param callback function
 ---@return nil
 function lh.on(event, callback) end
 
---- Repeats the callback function every {number} {type} times. Example: lh.setInterval(20, "ticks" function() ... end)
 ---@param number integer
 ---@param type TimeUnit
 ---@param callback function
@@ -255,17 +251,17 @@ function lh.draw(text, options) end
 ---@return nil
 function lh.drawln(text, options) end
 
----@param id string Id of Item/Block that you want to draw to the screen
+---@param id string
 ---@param options? IconOptions
 ---@return nil
 function lh.drawItem(id, options) end
 
----@param path string Path of the texture you want to draw to the screen
+---@param path string
 ---@param options? IconOptions
 ---@return nil
 function lh.drawTexture(path, options) end
 
----@param stack LHItemStack
+---@param stack ItemStack
 ---@param options? StackOptions
 ---@return nil
 function lh.drawStack(stack, options) end
