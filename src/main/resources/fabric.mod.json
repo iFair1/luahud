@@ -13,11 +13,8 @@
 	},
 	"license": "GPLv3",
 	"icon": "assets/luahud/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
-		"main": [
-			"me.ifair.luahud.LuaHUD"
-		],
 		"client": [
 			"me.ifair.luahud.LuaHUDClient"
 		],
