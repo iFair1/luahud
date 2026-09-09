@@ -31,7 +31,8 @@ public record CoreModels(
         ModelBuilder<StatusEffectInstance> statusEffect = api.model("StatusEffect", StatusEffectInstance.class)
                 .string("name", "Localized effect name", value -> value.getEffectType().value().getName().getString())
                 .integer("level", "Effect level", value -> value.getAmplifier() + 1)
-                .integer("duration", "Remaining duration in ticks (-1 if infinite)", StatusEffectInstance::getDuration);
+                .integer("duration", "Remaining duration in seconds (-1 if infinite)", effect -> effect.getDuration() / 20)
+                .integer("durationInTick", "Remaining duration in ticks (-1 if infinite)", StatusEffectInstance::getDuration);
 
         ModelBuilder<Entity> entity = api.model("Entity", Entity.class)
                 .number("x", "X coordinate", Entity::getX)
