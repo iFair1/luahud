@@ -28,6 +28,7 @@ public class RenderBuffer {
         // common
         Anchor anchor;
         int baseX, baseY;
+        int offsetX, offsetY;
         boolean newLine;
         int backgroundColor;
         float scale;
@@ -76,6 +77,8 @@ public class RenderBuffer {
             Anchor anchor,
             int baseX,
             int baseY,
+            int offsetX,
+            int offsetY,
             boolean newLine
     ) {
         RenderElement e = obtain();
@@ -84,7 +87,7 @@ public class RenderBuffer {
         e.textColor = textColor;
         e.backgroundColor = backgroundColor;
         e.shadow = shadow;
-        setCommon(e, anchor, baseX, baseY, newLine);
+        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
     }
 
     public static void addStack(
@@ -94,6 +97,8 @@ public class RenderBuffer {
             Anchor anchor,
             int baseX,
             int baseY,
+            int offsetX,
+            int offsetY,
             boolean newLine
     ) {
         RenderElement e = obtain();
@@ -101,7 +106,7 @@ public class RenderBuffer {
         e.itemStack = itemStack;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
-        setCommon(e, anchor, baseX, baseY, newLine);
+        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
     }
 
     public static void addItem(
@@ -111,6 +116,8 @@ public class RenderBuffer {
             Anchor anchor,
             int baseX,
             int baseY,
+            int offsetX,
+            int offsetY,
             boolean newLine
     ) {
         RenderElement e = obtain();
@@ -118,7 +125,7 @@ public class RenderBuffer {
         e.itemStack = itemStack;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
-        setCommon(e, anchor, baseX, baseY, newLine);
+        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
     }
 
     public static void addTexture(
@@ -128,6 +135,8 @@ public class RenderBuffer {
             Anchor anchor,
             int baseX,
             int baseY,
+            int offsetX,
+            int offsetY,
             boolean newLine
     ) {
         RenderElement e = obtain();
@@ -135,13 +144,23 @@ public class RenderBuffer {
         e.texture = texture;
         e.scale = scale;
         e.backgroundColor = backgroundColor;
-        setCommon(e, anchor, baseX, baseY, newLine);
+        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
     }
 
-    private static void setCommon(RenderElement e, Anchor anchor, int baseX, int baseY, boolean newLine) {
+    private static void setCommon(
+            RenderElement e,
+            Anchor anchor,
+            int baseX,
+            int baseY,
+            int offsetX,
+            int offsetY,
+            boolean newLine
+    ) {
         e.anchor = anchor;
         e.baseX = baseX;
         e.baseY = baseY;
+        e.offsetX = offsetX;
+        e.offsetY = offsetY;
         e.newLine = newLine;
     }
 
@@ -208,9 +227,12 @@ public class RenderBuffer {
 
                 if (contentWidth == 0) continue;
 
-                drawBackground(context, e.backgroundColor, currentDrawX, startY, currentDrawX + elementBgWidth, startY + ROW_HEIGHT);
+                int elementX = currentDrawX + e.offsetX;
+                int elementY = startY + e.offsetY;
 
-                renderContentAt(context, textRenderer, e, currentDrawX + extraLeft, startY);
+                drawBackground(context, e.backgroundColor, elementX, elementY, elementX + elementBgWidth, elementY + ROW_HEIGHT);
+
+                renderContentAt(context, textRenderer, e, elementX + extraLeft, elementY);
 
                 currentDrawX += elementBgWidth;
             }
@@ -248,7 +270,7 @@ public class RenderBuffer {
                 int size = Math.round(BASE_SIZE * scale);
                 float matrixScale = (BASE_SIZE / 16f) * scale;
 
-                int itemY = y + (ROW_HEIGHT - size) / 2 - 1;
+                int itemY = anchoredIconY(element.anchor, y, size);
 
                 context.getMatrices().push();
                 context.getMatrices().translate(x, itemY, 0);
@@ -262,11 +284,15 @@ public class RenderBuffer {
             case TEXTURE -> {
                 float scale = element.scale > 0 ? element.scale : 1f;
                 int size = Math.round(BASE_SIZE * scale);
-                int textureY = y + (ROW_HEIGHT - size) / 2 - 1;
+                int textureY = anchoredIconY(element.anchor, y, size);
 
                 context.drawTexture(element.texture, x, textureY, 0, 0, size, size, size, size);
             }
         }
+    }
+
+    static int anchoredIconY(Anchor anchor, int rowY, int size) {
+        return anchor.bottom() ? rowY + ROW_HEIGHT - size - 1 : rowY - 1;
     }
 
     private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {
