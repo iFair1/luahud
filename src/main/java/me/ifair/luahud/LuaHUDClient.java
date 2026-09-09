@@ -1,6 +1,8 @@
 package me.ifair.luahud;
 
-import me.ifair.luahud.api.modules.RenderModule;
+import me.ifair.luahud.api.core.ApiRegistry;
+import me.ifair.luahud.api.core.CoreApi;
+import me.ifair.luahud.api.core.StubGenerator;
 import me.ifair.luahud.config.ConfigInstaller;
 import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.core.Engine;
@@ -19,24 +21,36 @@ public class LuaHUDClient implements ClientModInitializer {
         ConfigManager.load();
         ConfigInstaller.generateDefaults();
 
-        Engine engine = new Engine();
+        ApiRegistry api = new ApiRegistry();
+        CoreApi.register(api);
+        api.discoverAddons();
+        api.freeze();
+        try {
+            StubGenerator.writeIfChanged(ConfigManager.getScriptsDir().resolve("api/lh.lua"), StubGenerator.generate(api));
+        } catch (Exception error) {
+            LuaHUD.LOGGER.error("Could not generate config/luahud/api/lh.lua; retaining the previous file", error);
+        }
+
+        Engine engine = new Engine(api);
+        EventDispatcher.attach(engine);
+        TimerManager.attach(engine);
         engine.init();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || Engine.getLhTable() == null) return;
+            if (client.player == null || !engine.isReady()) return;
 
             engine.checkForUpdates();
             TimerManager.tick();
 
             RenderBuffer.clear();
-            RenderModule.resetSection();
+            CoreApi.resetSection();
             EventDispatcher.fireEvent("tick");
         });
 
         HudRenderCallback.EVENT.register(((drawContext, tickCounter) -> {
             MinecraftClient client = MinecraftClient.getInstance();
 
-            if (client.player == null || Engine.getLhTable() == null) return; // Return if not in a world
+            if (client.player == null || !engine.isReady()) return; // Return if not in a world
 
             // Java does the drawing
             int width = client.getWindow().getScaledWidth();

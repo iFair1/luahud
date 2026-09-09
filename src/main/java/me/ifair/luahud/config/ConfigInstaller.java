@@ -30,15 +30,14 @@ public class ConfigInstaller {
             ConfigManager.setGenerateExampleProfiles(false);
         }
 
-        // Generate lua files no matter what
+        // The API stub is generated from the frozen registry. Only install LuaLS settings here.
         final Path luaDir = MOD_CONFIG_DIR.resolve("api");
         try {
             Files.createDirectories(luaDir);
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while creating luahud/api directory: {}", e.getMessage());
         }
-        copyFromResource(defaultSource + "lua/.luarc.json", luaDir);
-        copyFromResource(defaultSource + "lua/lh.lua", luaDir);
+        copyFromResourceIfAbsent(defaultSource + "lua/.luarc.json", luaDir);
     }
 
     private static void copyFromResource(String resourcePath, Path targetDir) {
@@ -55,5 +54,10 @@ public class ConfigInstaller {
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while generating files. source: '{}' destination: '{}' error: {}", resourcePath, targetDir.toString(), e.getMessage());
         }
+    }
+
+    private static void copyFromResourceIfAbsent(String resourcePath, Path targetDir) {
+        String fileName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
+        if (Files.notExists(targetDir.resolve(fileName))) copyFromResource(resourcePath, targetDir);
     }
 }

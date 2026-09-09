@@ -5,86 +5,33 @@ import me.ifair.luahud.api.core.ApiRegistry;
 import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.config.FileWatcher;
-import org.luaj.vm2.Globals;
-import org.luaj.vm2.LuaTable;
-import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.lib.jse.JsePlatform;
 
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-public class Engine {
-    public static Globals globals;
-    public static LuaTable lh;
-
+public final class Engine {
+    private final ApiRegistry registry;
     private final FileWatcher fileWatcher = new FileWatcher();
-
-    public void init() {
-        fileWatcher.start();
-        reloadAll();
-    }
-
+    private CobaltRuntime runtime;
+    public Engine(ApiRegistry registry) { this.registry = registry; }
+    public void init() { fileWatcher.start(); reloadAll(); }
     public void reloadAll() {
-        globals = JsePlatform.standardGlobals();
-        lh = new LuaTable();
-
-        EventDispatcher.clearAll();
-        TimerManager.clearAll();
-
-        EventDispatcher.registerToLua(lh);
-        TimerManager.registerToLua(lh);
-
-        ApiRegistry.registerAll(lh);
-
-        globals.set("lh", lh);
-
-        for (Map.Entry<String, ConfigData.ProfileData> entry : ConfigManager.getProfiles().entrySet()) {
-            ConfigData.ProfileData profile = entry.getValue();
-            if (!profile.isActive()) continue;
-
-            runProfile(entry.getKey());
-        }
-
-        EventDispatcher.fireEvent("init");
+        try { CobaltRuntime replacement = new CobaltRuntime(registry); replacement.start(); runtime = replacement; }
+        catch (Exception error) { runtime = null; LuaHUD.LOGGER.error("Could not start the Cobalt runtime", error); return; }
+        for (Map.Entry<String, ConfigData.ProfileData> entry : ConfigManager.getProfiles().entrySet()) if (entry.getValue().isActive()) runProfile(entry.getKey());
+        fireEvent("init");
     }
-
-    public void runProfile(String profileName) {
-        runScript(ConfigManager.getScriptsDir().resolve(profileName + ".lua"));
+    public void runProfile(String name) { runScript(ConfigManager.getScriptsDir().resolve(name + ".lua")); }
+    public void runScript(Path file) {
+        if (Files.notExists(file)) { LuaHUD.LOGGER.error("Couldn't find the Lua profile at {}", file.toAbsolutePath()); return; }
+        try (InputStream stream = Files.newInputStream(file)) { runtime.execute(stream, "@" + file.getFileName()); LuaHUD.LOGGER.info("Script loaded successfully at {}", file.toAbsolutePath()); }
+        catch (Exception error) { LuaHUD.LOGGER.error("There was an error while loading the script {}: {}", file.getFileName(), error.getMessage()); }
     }
-
-    public void runScript(Path scriptFile) {
-        if (Files.notExists(scriptFile)) {
-            LuaHUD.LOGGER.error("Couldn't find the main.lua file at {}", scriptFile.toAbsolutePath());
-            return;
-        }
-
-        try (InputStream stream = Files.newInputStream(scriptFile)) {
-            LuaValue chunk = globals.load(stream, "@" + scriptFile.getFileName(), "bt", globals);
-            chunk.call();
-            LuaHUD.LOGGER.info("Script loaded successfully at {}", scriptFile.toAbsolutePath());
-        } catch (Exception e) {
-            LuaHUD.LOGGER.error("There was an error while loading the script {}: {}", scriptFile.getFileName(), e.getMessage());
-        }
-    }
-
-    // This should be called only by the main thread every tick. It doesn't read/write anything, only checks a boolean
-    public void checkForUpdates() {
-        boolean scriptsChanged = fileWatcher.consumeReloadSignal();
-        boolean profileConfigChanged = ConfigManager.consumeProfileReloadSignal();
-        if (scriptsChanged || profileConfigChanged) {
-            LuaHUD.LOGGER.info("A profile or script change was detected. HUD is reloading...");
-            reloadAll();
-        }
-    }
-
-    public void shutdown() {
-        fileWatcher.stop();
-    }
-
-
-    public static LuaTable getLhTable() {
-        return lh;
-    }
+    public void checkForUpdates() { if (fileWatcher.consumeReloadSignal() || ConfigManager.consumeProfileReloadSignal()) { LuaHUD.LOGGER.info("A profile or script change was detected. HUD is reloading..."); reloadAll(); } }
+    public boolean isReady() { return runtime != null && runtime.isReady(); }
+    public void fireEvent(String event) { if (isReady()) runtime.fireEvent(event); }
+    public void tickTimers() { if (isReady()) runtime.tickTimers(); }
+    public void shutdown() { fileWatcher.stop(); }
 }

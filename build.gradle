@@ -8,6 +8,11 @@ group = project.maven_group
 
 repositories {
 	maven { url 'https://jitpack.io' }
+	maven {
+		name = "SquidDev"
+		url = "https://maven.squiddev.cc"
+		content { includeGroup "cc.tweaked" }
+	}
 
 	maven {
 		name = "Terraformers"
@@ -30,11 +35,18 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// TODO: Switch to cobalt
-	implementation "org.luaj:luaj-jse:3.0.1"
-	include "org.luaj:luaj-jse:3.0.1"
+	implementation "cc.tweaked:cobalt:0.9.9"
+	include "cc.tweaked:cobalt:0.9.9"
+
+	testImplementation platform("org.junit:junit-bom:5.11.4")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 
 	modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {
