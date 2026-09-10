@@ -46,7 +46,7 @@ public class ConfigInstaller {
 
     private static void copyFromResource(String resourcePath, Path targetDir) {
         try (InputStream stream = ConfigInstaller.class.getResourceAsStream(resourcePath)) {
-            if (stream == null) throw new IllegalStateException("Resource not found: " + resourcePath); // If it's null, then me (the developer) made the mistake so I should fail-fast
+            if (stream == null) throw new IllegalStateException("Resource not found: " + resourcePath); // If it's null, then me (the developer) made the mistake, so I should fail-fast
 
             String fileName = resourcePath.contains("/")
                     ? resourcePath.substring(resourcePath.lastIndexOf("/") + 1)
