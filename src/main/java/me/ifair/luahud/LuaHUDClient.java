@@ -8,22 +8,34 @@ import me.ifair.luahud.config.ConfigInstaller;
 import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.core.Engine;
 import me.ifair.luahud.core.EventDispatcher;
+import me.ifair.luahud.core.ProfileKeybindManager;
 import me.ifair.luahud.core.TimerManager;
 import me.ifair.luahud.error.ErrorManager;
 import me.ifair.luahud.error.ErrorNotifications;
 import me.ifair.luahud.gui.LuaHUDErrorsScreen;
+import me.ifair.luahud.gui.LuaHUDScreen;
 import me.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import org.lwjgl.glfw.GLFW;
 
 import static com.mojang.brigadier.arguments.LongArgumentType.getLong;
 import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
 public class LuaHUDClient implements ClientModInitializer {
+    private static final KeyBinding OPEN_SCREEN_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+            "Open Config Screen", // These are translation keys but I'm very lazy now so ill put literal text like this
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_H,
+            "LuaHUDt"
+    ));
 
     @Override
     public void onInitializeClient() {
@@ -56,6 +68,7 @@ public class LuaHUDClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             ErrorNotifications.flush(client);
+            handleKeybinds(client);
             if (client.player == null || !engine.isReady()) return;
 
             engine.checkForUpdates();
@@ -76,6 +89,16 @@ public class LuaHUDClient implements ClientModInitializer {
             int height = client.getWindow().getScaledHeight();
             RenderBuffer.renderAll(drawContext, client.textRenderer, width, height);
         }));
+    }
+
+    private static void handleKeybinds(MinecraftClient client) {
+        boolean openScreen = false;
+        while (OPEN_SCREEN_KEY.wasPressed()) openScreen = true;
+        if (openScreen && client.currentScreen == null) {
+            client.setScreen(new LuaHUDScreen(null));
+        }
+
+        ProfileKeybindManager.tick(client);
     }
 
     private static int openErrorsScreen(Long entryId) {

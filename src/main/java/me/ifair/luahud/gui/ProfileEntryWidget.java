@@ -8,6 +8,7 @@ import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 
 import java.util.List;
@@ -22,12 +23,14 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
     private final ButtonWidget hideButton;
     private final ButtonWidget keybindButton;
     private final ButtonWidget editButton;
+    private String keybind;
 
     ProfileEntryWidget(ProfileEntry profile, MinecraftClient client, TextRenderer textRenderer, LuaHUDScreen screen) {
         this.profile = profile;
         this.client = client;
         this.textRenderer = textRenderer;
         this.screen = screen;
+        this.keybind = profile.data().getKeybind();
         this.activeButton = ButtonWidget.builder(
                 Text.literal(profile.data().isActive() ? "On" : "Off"),
                 button -> this.toggleActive()
@@ -46,9 +49,10 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
                 button -> this.toggleHidden()
         ).dimensions(0, 0, LuaHUDScreen.HIDE_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
 
-        this.keybindButton = ButtonWidget.builder(Text.literal("Keybind"), button -> {
-        }).dimensions(0, 0, LuaHUDScreen.KEYBIND_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
-        this.keybindButton.active = false;
+        this.keybindButton = ButtonWidget.builder(
+                keybindText(profile.data().getKeybind()),
+                button -> this.screen.selectKeybind(this)
+        ).dimensions(0, 0, LuaHUDScreen.KEYBIND_BUTTON_WIDTH, LuaHUDScreen.ROW_HEIGHT - 4).build();
 
         this.editButton = ButtonWidget.builder(
                 Text.literal("Edit"),
@@ -134,6 +138,16 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
         return this.nameField.isMouseOver(mouseX, mouseY);
     }
 
+    void setKeybind(InputUtil.Key key) {
+        this.keybind = key.getTranslationKey();
+        this.keybindButton.setMessage(key.getLocalizedText());
+    }
+
+    void setKeybindSelected(boolean selected) {
+        Text key = keybindText(this.keybind);
+        this.keybindButton.setMessage(selected ? Text.literal("> ").append(key).append(" <") : key);
+    }
+
     private void toggleActive() {
         if (ConfigManager.setProfileActive(this.profile.name(), !this.profile.data().isActive())) {
             this.client.execute(this.screen::refreshProfiles);
@@ -156,6 +170,14 @@ final class ProfileEntryWidget extends ElementListWidget.Entry<ProfileEntryWidge
             this.screen.refreshProfiles();
         } else if (!renamed) {
             this.nameField.setText(this.profile.name());
+        }
+    }
+
+    private static Text keybindText(String translationKey) {
+        try {
+            return InputUtil.fromTranslationKey(translationKey).getLocalizedText();
+        } catch (IllegalArgumentException ignored) {
+            return InputUtil.UNKNOWN_KEY.getLocalizedText();
         }
     }
 }

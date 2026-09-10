@@ -7,6 +7,7 @@ import me.ifair.luahud.error.ErrorManager;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
@@ -37,6 +38,8 @@ public class LuaHUDScreen extends Screen {
     private List<ProfileEntry> profiles = List.of();
     @Nullable
     private ProfileEntryWidget focusedProfile;
+    @Nullable
+    private ProfileEntryWidget keybindProfile;
     private int contentLeft;
     private int contentWidth;
     private int listTop;
@@ -121,6 +124,11 @@ public class LuaHUDScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (this.keybindProfile != null) {
+            setSelectedKeybind(InputUtil.Type.MOUSE.createFromCode(button));
+            return true;
+        }
+
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (this.focusedProfile != null && !this.focusedProfile.isNameFieldMouseOver(mouseX, mouseY)) {
             this.focusedProfile.cancelEditing();
@@ -131,6 +139,13 @@ public class LuaHUDScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.keybindProfile != null) {
+            setSelectedKeybind(keyCode == GLFW.GLFW_KEY_ESCAPE
+                    ? InputUtil.UNKNOWN_KEY
+                    : InputUtil.fromKeyCode(keyCode, scanCode));
+            return true;
+        }
+
         if (this.focusedProfile != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 this.focusedProfile.cancelEditing();
@@ -197,6 +212,26 @@ public class LuaHUDScreen extends Screen {
 
     void setFocusedProfile(@Nullable ProfileEntryWidget focusedProfile) {
         this.focusedProfile = focusedProfile;
+    }
+
+    void selectKeybind(ProfileEntryWidget profile) {
+        if (this.keybindProfile != null) this.keybindProfile.setKeybindSelected(false);
+        if (this.focusedProfile != null) this.focusedProfile.cancelEditing();
+
+        this.keybindProfile = profile;
+        this.keybindProfile.setKeybindSelected(true);
+    }
+
+    private void setSelectedKeybind(InputUtil.Key key) {
+        ProfileEntryWidget profile = this.keybindProfile;
+        if (profile == null) return;
+
+        if (ConfigManager.setProfileKeybind(profile.profileName(), key.getTranslationKey())) {
+            profile.setKeybind(key);
+        } else {
+            profile.setKeybindSelected(false);
+        }
+        this.keybindProfile = null;
     }
 
     void refreshProfiles() {

@@ -23,6 +23,7 @@ public class ConfigManager {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static final AtomicBoolean profileReloadNeeded = new AtomicBoolean(false);
     private static ConfigData config = new ConfigData();
+    private static long profileKeybindRevision;
 
     public static synchronized void load() {
         if (Files.notExists(JSON_CONFIG)) {
@@ -48,6 +49,7 @@ public class ConfigManager {
             ErrorManager.reportSystem("config read", e);
             config = new ConfigData();
         }
+        profileKeybindRevision++;
     }
 
     private static boolean save() {
@@ -107,6 +109,7 @@ public class ConfigManager {
         ConfigData.ProfileData previous = config.profiles.put(name, profile.copy());
         if (save()) {
             profileReloadNeeded.set(true);
+            profileKeybindRevision++;
             return true;
         }
 
@@ -124,6 +127,7 @@ public class ConfigManager {
 
         if (save()) {
             profileReloadNeeded.set(true);
+            profileKeybindRevision++;
             return true;
         }
 
@@ -147,6 +151,11 @@ public class ConfigManager {
         return false;
     }
 
+    public static synchronized boolean toggleProfileActive(String name) {
+        ConfigData.ProfileData profile = config.profiles.get(name);
+        return profile != null && setProfileActive(name, !profile.isActive());
+    }
+
     public static synchronized boolean setProfileHidden(String name, boolean hidden) {
         ConfigData.ProfileData profile = config.profiles.get(name);
         if (profile == null) return false;
@@ -167,7 +176,10 @@ public class ConfigManager {
 
         String previous = profile.getKeybind();
         profile.setKeybind(keybind);
-        if (save()) return true;
+        if (save()) {
+            profileKeybindRevision++;
+            return true;
+        }
 
         profile.setKeybind(previous);
         return false;
@@ -193,6 +205,7 @@ public class ConfigManager {
             Files.move(oldFile, newFile);
             if (save()) {
                 profileReloadNeeded.set(true);
+                profileKeybindRevision++;
                 return true;
             }
 
@@ -216,6 +229,10 @@ public class ConfigManager {
 
     public static boolean consumeProfileReloadSignal() {
         return profileReloadNeeded.compareAndSet(true, false);
+    }
+
+    public static synchronized long getProfileKeybindRevision() {
+        return profileKeybindRevision;
     }
 
     private static void restoreProfile(String name, ConfigData.ProfileData profile) {
