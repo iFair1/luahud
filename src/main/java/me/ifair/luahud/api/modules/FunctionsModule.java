@@ -1,7 +1,6 @@
 package me.ifair.luahud.api.modules;
 
 import com.mojang.brigadier.StringReader;
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.FunctionBuilder;
 import me.ifair.luahud.api.LuaApiRegistrar;
 import me.ifair.luahud.api.LuaParameter;
@@ -32,8 +31,7 @@ public final class FunctionsModule {
             PosArgument argument = Vec3ArgumentType.vec3().parse(new StringReader(value));
             return player == null ? null : argument.toAbsoluteBlockPos(player.getCommandSource());
         } catch (Exception error) {
-            LuaHUD.LOGGER.error("{} is not a valid position.", value);
-            return null;
+            throw new IllegalArgumentException(value + " is not a valid position", error);
         }
     }
 }

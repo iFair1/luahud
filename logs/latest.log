@@ -1,0 +1,9 @@
+[19:10:40] [Test worker/ERROR]: Lua error in event 'later': Nested.lua:1: nested
+stack traceback:
+	Nested.lua:1: in function <Nested.lua:1>
+[19:10:40] [Test worker/ERROR]: Lua error in event 'tick': Broken.lua:1: target is nil
+stack traceback:
+	Broken.lua:1: in function <Broken.lua:1>
+[19:10:40] [Test worker/ERROR]: Lua error in event 'tick': Example.lua:1: target is nil
+stack traceback:
+	Example.lua:1: in function <Example.lua:1>

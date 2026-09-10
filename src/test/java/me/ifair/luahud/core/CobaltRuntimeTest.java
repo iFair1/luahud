@@ -2,6 +2,8 @@ package me.ifair.luahud.core;
 
 import me.ifair.luahud.api.*;
 import me.ifair.luahud.api.core.ApiRegistry;
+import me.ifair.luahud.error.ErrorEntry;
+import me.ifair.luahud.error.ErrorManager;
 import org.junit.jupiter.api.Test;
 import org.squiddev.cobalt.LuaError;
 
@@ -104,5 +106,67 @@ class CobaltRuntimeTest {
         assertTrue(runtime.global("ticks").isNil());
         runtime.fireEvent("tick"); runtime.tickTimers(); runtime.tickTimers();
         assertTrue(runtime.global("intervals").isNil());
+    }
+
+    @Test void callbackErrorsKeepProfileProvenanceAndDeduplicate() throws Exception {
+        ErrorManager.beginProfileReload();
+        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+        runtime.execute(new java.io.ByteArrayInputStream(
+                        "lh.on('tick', function() error('target is nil') end)".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                "@Example.lua", "Example");
+
+        runtime.fireEvent("tick");
+        runtime.fireEvent("tick");
+
+        ErrorEntry error = ErrorManager.snapshot().stream()
+                .filter(entry -> entry.group().equals("Example"))
+                .findFirst().orElseThrow();
+        assertEquals("tick", error.phase());
+        assertEquals(2, error.count());
+        assertTrue(error.message().contains("target is nil"));
+        assertEquals(1, ErrorManager.drainNotifications().stream()
+                .filter(entry -> entry.group().equals("Example")).count());
+    }
+
+    @Test void callbacksRegisteredInsideCallbacksInheritProfile() throws Exception {
+        ErrorManager.beginProfileReload();
+        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+        runtime.execute(new java.io.ByteArrayInputStream(
+                        "lh.on('tick', function() lh.on('later', function() error('nested') end) end)"
+                                .getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                "@Nested.lua", "Nested");
+
+        runtime.fireEvent("tick");
+        runtime.fireEvent("later");
+
+        assertTrue(ErrorManager.snapshot().stream()
+                .anyMatch(entry -> entry.group().equals("Nested") && entry.message().contains("nested")));
+    }
+
+    @Test void repeatedCallbackErrorsDoNotPoisonOtherProfilesOrGrowTheTraceback() throws Exception {
+        ErrorManager.beginProfileReload();
+        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+        runtime.execute(new java.io.ByteArrayInputStream(
+                        "lh.on('tick', function() error('target is nil') end)"
+                                .getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                "@Broken.lua", "Broken");
+        runtime.execute(new java.io.ByteArrayInputStream(
+                        "healthy=0; lh.on('tick', function() healthy=healthy+1 end)"
+                                .getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                "@Healthy.lua", "Healthy");
+
+        for (int i = 0; i < 1000; i++) runtime.fireEvent("tick");
+
+        assertEquals(1000, runtime.global("healthy").checkInteger());
+        ErrorEntry error = ErrorManager.snapshot().stream()
+                .filter(entry -> entry.group().equals("Broken"))
+                .findFirst().orElseThrow();
+        assertEquals(1000, error.count());
+        assertFalse(error.message().contains("stack overflow"));
+        assertEquals(1, ErrorManager.snapshot().stream()
+                .filter(entry -> entry.group().equals("Broken")).count());
     }
 }

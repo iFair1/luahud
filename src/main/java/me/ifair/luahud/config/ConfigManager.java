@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import me.ifair.luahud.LuaHUD;
+import me.ifair.luahud.error.ErrorManager;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.*;
@@ -41,8 +42,10 @@ public class ConfigManager {
 
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while reading the config file: {}", e.getMessage());
+            ErrorManager.reportSystem("config read", e);
         } catch (JsonSyntaxException e) {
             LuaHUD.LOGGER.error("Config JSON is invalid. Loading defaults: {}", e.getMessage());
+            ErrorManager.reportSystem("config read", e);
             config = new ConfigData();
         }
     }
@@ -53,6 +56,7 @@ public class ConfigManager {
             return true;
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while saving config to disk: {}", e.getMessage());
+            ErrorManager.reportSystem("config write", e);
             return false;
         }
     }
@@ -198,12 +202,14 @@ public class ConfigManager {
                 Files.move(newFile, oldFile);
             } catch (IOException rollbackError) {
                 LuaHUD.LOGGER.error("Could not roll back profile file rename from '{}' to '{}': {}", trimmedName, oldName, rollbackError.getMessage());
+                ErrorManager.reportSystem("profile rename rollback", rollbackError);
             }
             return false;
         } catch (IOException e) {
             config.profiles.remove(trimmedName);
             config.profiles.put(oldName, profile);
             LuaHUD.LOGGER.error("There was an error while renaming profile '{}' to '{}': {}", oldName, trimmedName, e.getMessage());
+            ErrorManager.reportSystem("profile rename", e);
             return false;
         }
     }

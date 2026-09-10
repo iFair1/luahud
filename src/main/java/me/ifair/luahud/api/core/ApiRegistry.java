@@ -2,6 +2,7 @@ package me.ifair.luahud.api.core;
 
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.*;
+import me.ifair.luahud.error.ErrorManager;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.EntrypointContainer;
 
@@ -67,7 +68,10 @@ public final class ApiRegistry {
         for (EntrypointContainer<LuaHudApiEntrypoint> entry : FabricLoader.getInstance().getEntrypointContainers(ENTRYPOINT_KEY, LuaHudApiEntrypoint.class)) {
             String provider = entry.getProvider().getMetadata().getId();
             try { registerAddon(provider, entry.getEntrypoint()::register); }
-            catch (Throwable error) { LuaHUD.LOGGER.error("Discarding Lua API contribution from '{}' because its entrypoint failed", provider, error); }
+            catch (Throwable error) {
+                LuaHUD.LOGGER.error("Discarding Lua API contribution from '{}' because its entrypoint failed", provider, error);
+                ErrorManager.reportSystem("addon " + provider, error);
+            }
         }
     }
 

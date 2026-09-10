@@ -1,6 +1,5 @@
 package me.ifair.luahud.api.modules;
 
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.*;
 import me.ifair.luahud.api.models.CoreModels;
 import me.ifair.luahud.render.Anchor;
@@ -147,8 +146,7 @@ public final class RenderModule {
     private static void drawTexture(String path, LuaTableValue options) {
         Identifier texture = Identifier.tryParse(path);
         if (texture == null) {
-            LuaHUD.LOGGER.error("Invalid texture path! Skipping. ({})", path);
-            return;
+            throw new IllegalArgumentException("Invalid texture path: " + path);
         }
         RenderBuffer.addTexture(texture, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor),
                 currentState.anchor, currentState.offsetX, currentState.offsetY,

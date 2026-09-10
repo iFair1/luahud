@@ -3,6 +3,7 @@ package me.ifair.luahud.core;
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.*;
 import me.ifair.luahud.api.core.ApiRegistry;
+import me.ifair.luahud.error.ErrorManager;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.LoadState;
 import org.squiddev.cobalt.compiler.CompileException;
@@ -18,14 +19,16 @@ import java.util.function.Supplier;
 
 /** All Cobalt-specific binding and callback state lives behind this package-private adapter. */
 public final class CobaltRuntime {
-    private record Timer(int interval, LuaFunction callback, int[] elapsed) {}
+    private record Callback(LuaFunction function, String profile) {}
+    private record Timer(int interval, Callback callback, int[] elapsed) {}
 
     private final ApiRegistry registry;
-    private final Map<String, List<LuaFunction>> listeners = new HashMap<>();
+    private final Map<String, List<Callback>> listeners = new HashMap<>();
     private final Map<String, Long> errorCooldowns = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
     private final Map<LuaTable, ModelValue> modelValues = new IdentityHashMap<>();
     private LuaState state;
+    private String currentProfile;
 
     private record ModelValue(Supplier<Object> supplier, ModelBuilder<Object> model) {}
 
@@ -44,20 +47,30 @@ public final class CobaltRuntime {
     public boolean isReady() { return state != null; }
 
     public Varargs execute(String source, String name) throws LuaError, CompileException {
-        return execute(new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8)), name);
+        return execute(new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8)), name, name);
     }
 
     public Varargs execute(InputStream source, String name) throws LuaError, CompileException {
+        return execute(source, name, name);
+    }
+
+    Varargs execute(InputStream source, String name, String profile) throws LuaError, CompileException {
         ready();
-        return LuaThread.runMain(state, LoadState.load(state, source, name, state.globals()));
+        String previousProfile = currentProfile;
+        currentProfile = profile;
+        try {
+            return LuaThread.runMain(state, LoadState.load(state, source, name, state.globals()));
+        } finally {
+            currentProfile = previousProfile;
+        }
     }
 
     public LuaValue global(String name) { ready(); return state.globals().rawget(name); }
 
     public void fireEvent(String eventName) {
-        List<LuaFunction> callbacks = listeners.get(eventName);
+        List<Callback> callbacks = listeners.get(eventName);
         if (callbacks == null) return;
-        for (LuaFunction callback : List.copyOf(callbacks)) invokeCallback(callback, "event '" + eventName + "'", eventName);
+        for (Callback callback : List.copyOf(callbacks)) invokeCallback(callback, "event '" + eventName + "'", eventName);
     }
 
     public void tickTimers() {
@@ -69,15 +82,21 @@ public final class CobaltRuntime {
         }
     }
 
-    private void invokeCallback(LuaFunction callback, String label, String cooldownKey) {
+    private void invokeCallback(Callback callback, String label, String cooldownKey) {
+        String previousProfile = currentProfile;
+        currentProfile = callback.profile;
         try {
-            LuaThread.runMain(state, callback);
+            LuaThread.run(new LuaThread(state, callback.function), Constants.NONE);
         } catch (LuaError error) {
             long now = System.currentTimeMillis();
-            if (cooldownKey == null || now - errorCooldowns.getOrDefault(cooldownKey, 0L) > 5000) {
+            String scopedCooldownKey = callback.profile + "\u0000" + cooldownKey + "\u0000" + error.getMessage();
+            if (cooldownKey == null || now - errorCooldowns.getOrDefault(scopedCooldownKey, 0L) > 5000) {
                 LuaHUD.LOGGER.error("Lua error in {}: {}", label, error.getMessage());
-                if (cooldownKey != null) errorCooldowns.put(cooldownKey, now);
+                if (cooldownKey != null) errorCooldowns.put(scopedCooldownKey, now);
             }
+            ErrorManager.reportProfile(callback.profile, cooldownKey == null ? "timer" : cooldownKey, error);
+        } finally {
+            currentProfile = previousProfile;
         }
     }
 
@@ -107,14 +126,15 @@ public final class CobaltRuntime {
             try {
                 if (definition.special() == ApiRegistry.SpecialFunction.EVENT) {
                     String event = args.arg(1).checkString();
-                    listeners.computeIfAbsent(event, ignored -> new ArrayList<>()).add(args.arg(2).checkFunction());
+                    listeners.computeIfAbsent(event, ignored -> new ArrayList<>())
+                            .add(new Callback(args.arg(2).checkFunction(), currentProfile));
                     return Constants.NIL;
                 }
                 if (definition.special() == ApiRegistry.SpecialFunction.INTERVAL) {
                     int interval = args.arg(1).checkInteger();
                     String unit = args.arg(2).checkString();
                     if (!unit.equals("ticks")) throw new LuaError("bad argument #2 (expected 'ticks')");
-                    timers.add(new Timer(interval, args.arg(3).checkFunction(), new int[]{0}));
+                    timers.add(new Timer(interval, new Callback(args.arg(3).checkFunction(), currentProfile), new int[]{0}));
                     return Constants.NIL;
                 }
 

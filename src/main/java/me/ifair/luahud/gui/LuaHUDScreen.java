@@ -3,6 +3,7 @@ package me.ifair.luahud.gui;
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
+import me.ifair.luahud.error.ErrorManager;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -40,6 +41,7 @@ public class LuaHUDScreen extends Screen {
     private int contentWidth;
     private int listTop;
     private int listBottom;
+    private ButtonWidget errorsButton;
 
     public LuaHUDScreen(@Nullable Screen parent) {
         super(Text.literal("LuaHUD"));
@@ -86,15 +88,28 @@ public class LuaHUDScreen extends Screen {
                 .build());
 
         int footerY = this.height - 28;
-        int footerButtonWidth = Math.min(150, (this.contentWidth - 10) / 2);
-        int footerWidth = footerButtonWidth * 2 + 10;
+        int footerButtonWidth = Math.min(150, (this.contentWidth - 20) / 3);
+        int footerWidth = footerButtonWidth * 3 + 20;
         int footerX = (this.width - footerWidth) / 2;
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Open Folder"), button -> openProfilesFolder())
                 .dimensions(footerX, footerY, footerButtonWidth, BUTTON_HEIGHT)
                 .build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> this.close())
+        this.errorsButton = this.addDrawableChild(ButtonWidget.builder(
+                        Text.literal("Errors (" + ErrorManager.distinctCount() + ")"),
+                        button -> this.client.setScreen(new LuaHUDErrorsScreen(this, null)))
                 .dimensions(footerX + footerButtonWidth + 10, footerY, footerButtonWidth, BUTTON_HEIGHT)
                 .build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> this.close())
+                .dimensions(footerX + (footerButtonWidth + 10) * 2, footerY, footerButtonWidth, BUTTON_HEIGHT)
+                .build());
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.errorsButton != null) {
+            this.errorsButton.setMessage(Text.literal("Errors (" + ErrorManager.distinctCount() + ")"));
+        }
     }
 
     @Override
@@ -151,6 +166,7 @@ public class LuaHUDScreen extends Screen {
             Util.getOperatingSystem().open(PROFILES_DIR);
         } catch (IOException e) {
             LuaHUD.LOGGER.error("Error while opening profiles directory at {}: {}", PROFILES_DIR, e.getMessage());
+            ErrorManager.reportSystem("open profiles folder", e);
         }
     }
 
@@ -158,6 +174,7 @@ public class LuaHUDScreen extends Screen {
         Path profilePath = PROFILES_DIR.resolve(profileName + ".lua").normalize();
         if (!PROFILES_DIR.equals(profilePath.getParent())) {
             LuaHUD.LOGGER.error("Refusing to open profile outside the profiles directory: {}", profileName);
+            ErrorManager.reportSystem("open profile", "Refusing to open profile outside the profiles directory: " + profileName);
             return;
         }
 
@@ -169,6 +186,7 @@ public class LuaHUDScreen extends Screen {
             Util.getOperatingSystem().open(new URI(url));
         } catch (Exception e) {
             LuaHUD.LOGGER.error("There was an error while directing to url \"{}\": {}", url, e.getMessage());
+            ErrorManager.reportSystem("open URL", e);
         }
     }
 
