@@ -13,7 +13,7 @@ import static me.ifair.luahud.config.ConfigManager.*;
 
 public class ConfigInstaller {
     public static void generateDefaults() {
-        final String defaultSource = "/assets/luahud/default-config/";
+        final String source = "/assets/luahud/";
 
         if (Files.notExists(MOD_CONFIG_DIR) || !Files.isDirectory(MOD_CONFIG_DIR)) {
             try {
@@ -26,7 +26,8 @@ public class ConfigInstaller {
         }
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
-            copyFromResource(defaultSource + "profiles/Example Profile.lua", MOD_CONFIG_DIR);
+            final String profileDir = source + "lua/";
+            copyFromResource(profileDir + "Example Profile.lua", MOD_CONFIG_DIR);
             // other default profiles will come here
 
             ConfigManager.setGenerateExampleProfiles(false);
@@ -40,7 +41,7 @@ public class ConfigInstaller {
             LuaHUD.LOGGER.error("There was an error while creating luahud/api directory: {}", e.getMessage());
             ErrorManager.reportSystem("default config", e);
         }
-        copyFromResourceIfAbsent(defaultSource + "lua/.luarc.json", luaDir);
+        copyFromResourceIfAbsent(source + "lua/.luarc.json", luaDir);
     }
 
     private static void copyFromResource(String resourcePath, Path targetDir) {
