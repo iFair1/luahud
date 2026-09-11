@@ -12,7 +12,9 @@ public record SectionState(
         boolean shadow,
         int textColor,
         int backgroundColor,
-        float scale
+        float scale,
+        float iconScale,
+        int rowHeight
 ) {
     public SectionState {
         Objects.requireNonNull(anchor, "anchor");
@@ -22,6 +24,10 @@ public record SectionState(
         if (!Float.isFinite(scale) || scale <= 0) {
             throw new IllegalArgumentException("Scale must be finite and greater than zero");
         }
+        if (!Float.isFinite(iconScale) || iconScale <= 0) {
+            throw new IllegalArgumentException("Icon scale must be finite and greater than zero");
+        }
+        if (rowHeight <= 0) throw new IllegalArgumentException("Row height must be greater than zero");
     }
 
     public static SectionState defaults() {
@@ -36,11 +42,14 @@ public record SectionState(
                 true,
                 0xFFFFFFFF,
                 0x80000000,
-                1.0f
+                1.0f,
+                1.0f,
+                RenderDimensions.DEFAULT_ROW_HEIGHT
         );
     }
 
     public SectionLayout layout() {
-        return new SectionLayout(anchor, offsetX, offsetY, rowAlignment, inlineDirection, rowDirection);
+        return new SectionLayout(
+                anchor, offsetX, offsetY, rowAlignment, inlineDirection, rowDirection, scale, rowHeight);
     }
 }

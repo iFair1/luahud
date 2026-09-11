@@ -85,7 +85,10 @@ public final class RenderBuffer {
                 || cachedScreenWidth != screenWidth
                 || cachedScreenHeight != screenHeight) {
             cachedLayout = LAYOUT_ENGINE.layout(
-                    QUEUE.sections(), element -> RenderElementMeasurer.width(element, textRenderer), screenWidth, screenHeight);
+                    QUEUE.sections(),
+                    (element, sectionScale) -> RenderElementMeasurer.width(element, textRenderer, sectionScale),
+                    screenWidth,
+                    screenHeight);
             cachedTextRenderer = textRenderer;
             cachedScreenWidth = screenWidth;
             cachedScreenHeight = screenHeight;

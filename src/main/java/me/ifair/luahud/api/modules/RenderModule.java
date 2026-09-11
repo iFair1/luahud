@@ -98,7 +98,11 @@ public final class RenderModule {
                                 "Visual order of elements within a row; defaults to leftToRight")
                         .optional("rowDirection", LuaType.union(
                                 LuaType.literal("topToBottom"), LuaType.literal("bottomToTop")),
-                                "Visual order of rows within the section; defaults to topToBottom");
+                                "Visual order of rows within the section; defaults to topToBottom")
+                        .optional("iconScale", LuaType.number(),
+                                "Default item, stack, and texture scale relative to the section")
+                        .optional("rowHeight", LuaType.integer(),
+                                "Unscaled row height in pixels; affected by section scale");
             }
             if (section || text) {
                 fields.optional("textColor", color, "Text color")
@@ -106,7 +110,7 @@ public final class RenderModule {
             }
             if (section || !text) {
                 fields.optional("scale", LuaType.number(),
-                        section ? "Default item, stack, and texture scale" : "Drawing scale");
+                        section ? "Scale applied to the entire section" : "Scale relative to the section");
             }
             if (stack) {
                 fields.optional("showDurabilityBar", LuaType.bool(), "Show durability bar")
@@ -147,7 +151,9 @@ public final class RenderModule {
                 options != null && options.contains("textColor") ? color(options.get("textColor")) : defaults.textColor(),
                 options != null && options.contains("backgroundColor")
                         ? color(options.get("backgroundColor")) : defaults.backgroundColor(),
-                scale(options, defaults.scale())
+                scale(options, "scale", defaults.scale()),
+                scale(options, "iconScale", defaults.iconScale()),
+                options == null ? defaults.rowHeight() : options.integer("rowHeight", defaults.rowHeight())
         );
     }
 
@@ -174,14 +180,14 @@ public final class RenderModule {
         if (options != null && options.contains("showGlint")) {
             value.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, options.bool("showGlint", true));
         }
-        RenderBuffer.addStack(value, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+        RenderBuffer.addStack(value, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false, drawAir);
     }
 
     private static void drawItem(String id, LuaTableValue options) {
         Identifier identifier = Identifier.tryParse(id);
         Item item = identifier == null ? Items.AIR : Registries.ITEM.get(identifier);
-        RenderBuffer.addItem(new ItemStack(item), scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+        RenderBuffer.addItem(new ItemStack(item), iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
     }
 
@@ -190,16 +196,16 @@ public final class RenderModule {
         if (texture == null) {
             throw new IllegalArgumentException("Invalid texture path: " + path);
         }
-        RenderBuffer.addTexture(texture, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+        RenderBuffer.addTexture(texture, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
     }
 
-    private static float scale(LuaTableValue options) {
-        return scale(options, currentState.scale());
+    private static float iconScale(LuaTableValue options) {
+        return scale(options, "scale", currentState.iconScale());
     }
 
-    private static float scale(LuaTableValue options, float fallback) {
-        double requested = options == null ? fallback : options.number("scale", fallback);
+    private static float scale(LuaTableValue options, String key, float fallback) {
+        double requested = options == null ? fallback : options.number(key, fallback);
         if (!Double.isFinite(requested) || requested <= 0 || requested > Float.MAX_VALUE) {
             throw new IllegalArgumentException("Scale must be finite and greater than zero");
         }

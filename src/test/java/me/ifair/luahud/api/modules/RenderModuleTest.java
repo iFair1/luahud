@@ -59,4 +59,24 @@ class RenderModuleTest {
         assertThrows(IllegalArgumentException.class,
                 () -> RenderModule.sectionState(new LuaTableValue(Map.of("scale", Double.POSITIVE_INFINITY))));
     }
+
+    @Test void sectionScaleIconScaleAndRowHeightAreIndependentOptions() {
+        SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of(
+                "scale", 2,
+                "iconScale", 1.5,
+                "rowHeight", 10
+        )));
+
+        assertEquals(2f, state.scale());
+        assertEquals(1.5f, state.iconScale());
+        assertEquals(10, state.rowHeight());
+        assertEquals(20, state.layout().scaledRowHeight());
+    }
+
+    @Test void iconScaleAndRowHeightMustBePositive() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.sectionState(new LuaTableValue(Map.of("iconScale", 0))));
+        assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.sectionState(new LuaTableValue(Map.of("rowHeight", 0))));
+    }
 }

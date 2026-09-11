@@ -7,7 +7,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RenderLayoutEngineTest {
-    private static final ElementWidthProvider TEXT_WIDTH = element -> ((RenderElement.Text) element).value().length();
+    private static final ElementWidthProvider TEXT_WIDTH = (element, sectionScale) -> RenderDimensions.scaleLength(
+            ((RenderElement.Text) element).value().length(), sectionScale);
     private final RenderLayoutEngine engine = new RenderLayoutEngine();
 
     @Test void rightAnchorKeepsRowsInsideTheScreen() {
@@ -109,6 +110,35 @@ class RenderLayoutEngineTest {
         assertEquals(14, visible.rowY());
     }
 
+    @Test void sectionScaleAffectsWidthsPaddingAndRowHeight() {
+        RenderSection section = section(Anchor.TOP_CENTER, RowAlignment.CENTER,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 2f, 10);
+        section.add(text("123"), true);
+        section.add(text("1"), true);
+
+        List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
+
+        assertEquals(43, elements.get(0).backgroundX());
+        assertEquals(14, elements.get(0).backgroundWidth());
+        assertEquals(47, elements.get(0).contentX());
+        assertEquals(2, elements.get(0).rowY());
+        assertEquals(45, elements.get(1).backgroundX());
+        assertEquals(22, elements.get(1).rowY());
+        assertEquals(20, elements.get(1).rowHeight());
+    }
+
+    @Test void sectionScaleAffectsLocalElementOffsets() {
+        RenderSection section = section(Anchor.TOP_LEFT, RowAlignment.LEFT,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 2f, 12);
+        section.add(new RenderElement.Text("x", 0, 0, false, 3, 2), true);
+
+        RenderLayout.PositionedElement element = layout(section, 100, 60).getFirst();
+
+        assertEquals(8, element.backgroundX());
+        assertEquals(12, element.contentX());
+        assertEquals(6, element.rowY());
+    }
+
     private int shortRowX(RowAlignment alignment) {
         RenderSection section = section(Anchor.TOP_CENTER, alignment,
                 InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM);
@@ -127,8 +157,19 @@ class RenderLayoutEngineTest {
             InlineDirection inlineDirection,
             RowDirection rowDirection
     ) {
+        return section(anchor, alignment, inlineDirection, rowDirection, 1f, 12);
+    }
+
+    private static RenderSection section(
+            Anchor anchor,
+            RowAlignment alignment,
+            InlineDirection inlineDirection,
+            RowDirection rowDirection,
+            float scale,
+            int rowHeight
+    ) {
         return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
-                alignment, inlineDirection, rowDirection));
+                alignment, inlineDirection, rowDirection, scale, rowHeight));
     }
 
     private static RenderElement.Text text(String value) {
