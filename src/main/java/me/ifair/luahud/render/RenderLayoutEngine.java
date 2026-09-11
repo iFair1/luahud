@@ -90,7 +90,6 @@ final class RenderLayoutEngine {
                     backgroundX,
                     rowY + element.offsetY(),
                     backgroundX + leftPadding,
-                    measured.width(),
                     backgroundWidth
             ));
             if (options.inlineDirection() == InlineDirection.LEFT_TO_RIGHT) cursor += backgroundWidth;

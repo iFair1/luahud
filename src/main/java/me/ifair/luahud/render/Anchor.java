@@ -56,6 +56,5 @@ public enum Anchor {
         return vertical == Vertical.TOP ? offsetY : screenHeight - offsetY - contentHeight;
     }
 
-    boolean right() { return horizontal == Horizontal.RIGHT; }
     boolean bottom() { return vertical == Vertical.BOTTOM; }
 }

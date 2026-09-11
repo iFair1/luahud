@@ -98,15 +98,4 @@ public final class RenderBuffer {
         cachedTextRenderer = null;
     }
 
-    static int measureStackWidth(ItemStack stack, float scale, boolean drawAir) {
-        return RenderElementMeasurer.stackWidth(stack, scale, drawAir);
-    }
-
-    static int measureStackWidth(boolean empty, float scale, boolean drawAir) {
-        return RenderElementMeasurer.stackWidth(empty, scale, drawAir);
-    }
-
-    static int anchoredIconY(Anchor anchor, int rowY, int size) {
-        return RenderPainter.anchoredIconY(anchor, rowY, size);
-    }
 }

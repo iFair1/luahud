@@ -13,7 +13,6 @@ record RenderLayout(List<PositionedElement> elements) {
             int backgroundX,
             int rowY,
             int contentX,
-            int contentWidth,
             int backgroundWidth
     ) {}
 }

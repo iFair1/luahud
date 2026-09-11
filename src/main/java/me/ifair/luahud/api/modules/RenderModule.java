@@ -31,7 +31,8 @@ public final class RenderModule {
         LuaType<LuaTableValue> iconOptions = optionsType("IconOptions", color, false, false, false);
         LuaType<LuaTableValue> stackOptions = optionsType("StackOptions", color, false, false, true);
 
-        FunctionBuilder<Void> section = api.root().function("section", LuaType.nil(), "Reset drawing state and apply section options.");
+        FunctionBuilder<Void> section = api.root().function(
+                "section", LuaType.nil(), "Start an independent drawing section with fresh options.");
         LuaParameter<LuaTableValue> sectionArg = section.optionalParameter("options", sectionOptions, "Section options");
         section.call(arguments -> {
             applySection(arguments.get(sectionArg));
@@ -80,8 +81,10 @@ public final class RenderModule {
     private static LuaType<LuaTableValue> optionsType(String name, LuaType<Object> color, boolean section, boolean text, boolean stack) {
         return LuaType.inputTable(name, fields -> {
             fields.optional("backgroundColor", color, "ARGB integer or RGB/ARGB hex string")
-                    .optional("offsetX", LuaType.integer(), section ? "Horizontal screen-edge offset" : "Local horizontal offset")
-                    .optional("offsetY", LuaType.integer(), section ? "Vertical screen-edge offset" : "Local vertical offset");
+                    .optional("offsetX", LuaType.integer(), section
+                            ? "Horizontal inset for edge anchors or signed shift for center anchors"
+                            : "Local horizontal offset")
+                    .optional("offsetY", LuaType.integer(), section ? "Vertical screen-edge inset" : "Local vertical offset");
             if (section) {
                 fields.optional("anchor", LuaType.union(
                                 LuaType.literal("topLeft"), LuaType.literal("topCenter"), LuaType.literal("topRight"),
@@ -89,13 +92,13 @@ public final class RenderModule {
                                 "Screen anchor")
                         .optional("rowAlign", LuaType.union(
                                 LuaType.literal("left"), LuaType.literal("center"), LuaType.literal("right")),
-                                "Alignment of rows within the widest row")
+                                "Alignment of rows within the widest row; defaults from the anchor")
                         .optional("inlineDirection", LuaType.union(
                                 LuaType.literal("leftToRight"), LuaType.literal("rightToLeft")),
-                                "Visual order of elements within a row")
+                                "Visual order of elements within a row; defaults to leftToRight")
                         .optional("rowDirection", LuaType.union(
                                 LuaType.literal("topToBottom"), LuaType.literal("bottomToTop")),
-                                "Visual order of rows within the section");
+                                "Visual order of rows within the section; defaults to topToBottom");
             }
             if (section || text) {
                 fields.optional("textColor", color, "Text color")
