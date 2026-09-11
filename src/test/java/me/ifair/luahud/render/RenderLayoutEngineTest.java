@@ -84,14 +84,14 @@ class RenderLayoutEngineTest {
     }
 
     @Test void identicalSectionsRemainIndependentBlocks() {
-        RenderSection first = section(Anchor.TOP_LEFT, RowAlignment.LEFT,
-                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM);
-        first.add(text("first"), true);
-        RenderSection second = section(Anchor.TOP_LEFT, RowAlignment.LEFT,
-                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM);
-        second.add(text("second"), true);
+        SectionLayout options = SectionLayout.defaults(Anchor.TOP_LEFT, 2, 2);
+        RenderQueue queue = new RenderQueue();
+        queue.beginSection(options);
+        queue.add(text("first"), true);
+        queue.beginSection(options);
+        queue.add(text("second"), true);
 
-        RenderLayout layout = engine.layout(List.of(first, second), TEXT_WIDTH, 100, 60);
+        RenderLayout layout = engine.layout(queue.sections(), TEXT_WIDTH, 100, 60);
 
         assertEquals(2, layout.elements().size());
         assertEquals(2, layout.elements().get(0).rowY());

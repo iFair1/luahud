@@ -5,69 +5,18 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 
-import java.util.ArrayList;
-import java.util.List;
+public final class RenderBuffer {
+    private static final RenderQueue QUEUE = new RenderQueue();
+    private static final RenderLayoutEngine LAYOUT_ENGINE = new RenderLayoutEngine();
 
-public class RenderBuffer {
-    private static final int ROW_HEIGHT = 12;
-    private static final int BASE_SIZE = 12;
-
-    private static final int PADDING_LEFT = 2;
-    private static final int PADDING_RIGHT = 2;
-
-    private enum ElementType {
-        TEXT,
-        ITEM,
-        TEXTURE,
-        STACK,
-    }
-
-    private static class RenderElement {
-        ElementType type;
-
-        // common
-        Anchor anchor;
-        int baseX, baseY;
-        int offsetX, offsetY;
-        boolean newLine;
-        int backgroundColor;
-        float scale;
-
-        // text
-        String text;
-        int textColor;
-        boolean shadow;
-
-        // item / stack / texture
-        ItemStack itemStack;
-        Identifier texture;
-        boolean drawAir;
-
-        void clearReferences() {
-            text = null;
-            itemStack = null;
-            texture = null;
-        }
-    }
-
-    private static final List<RenderElement> ELEMENT_POOL = new ArrayList<>();
-    private static int activeElements = 0; // number of active elements in the pool
+    private RenderBuffer() {}
 
     public static void clear() {
-        activeElements = 0; // resetting index instead of deleting the whole pool because GC❤me
+        QUEUE.clear();
     }
 
-    private static RenderElement obtain() {
-        RenderElement element;
-        if (activeElements < ELEMENT_POOL.size()) {
-            element = ELEMENT_POOL.get(activeElements);
-            element.clearReferences();
-        } else {
-            element = new RenderElement();
-            ELEMENT_POOL.add(element);
-        }
-        activeElements++;
-        return element;
+    public static void beginSection(SectionLayout layout) {
+        QUEUE.beginSection(layout);
     }
 
     public static void addText(
@@ -75,242 +24,66 @@ public class RenderBuffer {
             int textColor,
             int backgroundColor,
             boolean shadow,
-            Anchor anchor,
-            int baseX,
-            int baseY,
             int offsetX,
             int offsetY,
             boolean newLine
     ) {
-        RenderElement e = obtain();
-        e.type = ElementType.TEXT;
-        e.text = text;
-        e.textColor = textColor;
-        e.backgroundColor = backgroundColor;
-        e.shadow = shadow;
-        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
+        QUEUE.add(new RenderElement.Text(
+                text, textColor, backgroundColor, shadow, offsetX, offsetY), newLine);
     }
 
     public static void addStack(
             ItemStack itemStack,
             float scale,
             int backgroundColor,
-            Anchor anchor,
-            int baseX,
-            int baseY,
             int offsetX,
             int offsetY,
             boolean newLine,
             boolean drawAir
     ) {
-        RenderElement e = obtain();
-        e.type = ElementType.STACK;
-        e.itemStack = itemStack;
-        e.scale = scale;
-        e.backgroundColor = backgroundColor;
-        e.drawAir = drawAir;
-        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
+        QUEUE.add(new RenderElement.Stack(
+                itemStack, scale, backgroundColor, offsetX, offsetY, drawAir), newLine);
     }
 
     public static void addItem(
             ItemStack itemStack,
             float scale,
             int backgroundColor,
-            Anchor anchor,
-            int baseX,
-            int baseY,
             int offsetX,
             int offsetY,
             boolean newLine
     ) {
-        RenderElement e = obtain();
-        e.type = ElementType.ITEM;
-        e.itemStack = itemStack;
-        e.scale = scale;
-        e.backgroundColor = backgroundColor;
-        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
+        QUEUE.add(new RenderElement.Item(
+                itemStack, scale, backgroundColor, offsetX, offsetY), newLine);
     }
 
     public static void addTexture(
             Identifier texture,
             float scale,
             int backgroundColor,
-            Anchor anchor,
-            int baseX,
-            int baseY,
             int offsetX,
             int offsetY,
             boolean newLine
     ) {
-        RenderElement e = obtain();
-        e.type = ElementType.TEXTURE;
-        e.texture = texture;
-        e.scale = scale;
-        e.backgroundColor = backgroundColor;
-        setCommon(e, anchor, baseX, baseY, offsetX, offsetY, newLine);
-    }
-
-    private static void setCommon(
-            RenderElement e,
-            Anchor anchor,
-            int baseX,
-            int baseY,
-            int offsetX,
-            int offsetY,
-            boolean newLine
-    ) {
-        e.anchor = anchor;
-        e.baseX = baseX;
-        e.baseY = baseY;
-        e.offsetX = offsetX;
-        e.offsetY = offsetY;
-        e.newLine = newLine;
+        QUEUE.add(new RenderElement.Texture(
+                texture, scale, backgroundColor, offsetX, offsetY), newLine);
     }
 
     public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
-        int currentYOffset = 0;
-
-        Anchor lastAnchor = null;
-        int lastBaseX = Integer.MIN_VALUE;
-        int lastBaseY = Integer.MIN_VALUE;
-
-        int i = 0;
-        while (i < activeElements) {
-            RenderElement firstInRow = ELEMENT_POOL.get(i);
-
-            if (firstInRow.anchor != lastAnchor || firstInRow.baseX != lastBaseX || firstInRow.baseY != lastBaseY) {
-                currentYOffset = 0;
-                lastAnchor = firstInRow.anchor;
-                lastBaseX = firstInRow.baseX;
-                lastBaseY = firstInRow.baseY;
-            }
-
-            int rowWidth = 0;
-            int j = i;
-            while (j < activeElements) {
-                RenderElement e = ELEMENT_POOL.get(j);
-
-                // If somehow stupid user decides to change the section mid-row, break the row calculation
-                if (e.anchor != lastAnchor || e.baseX != lastBaseX || e.baseY != lastBaseY) {
-                    j--;
-                    break;
-                }
-
-                rowWidth += measureWidth(e, textRenderer);
-
-                if (e.newLine) {
-                    break; // End of row
-                }
-                j++;
-            }
-
-            int endIdx = Math.min(j, activeElements - 1);
-
-
-            // Calc the absolute start position for the entire row
-            int totalRowWidth = rowWidth + PADDING_LEFT + PADDING_RIGHT;
-
-            int startX = lastAnchor.right()
-                    ? screenWidth - lastBaseX - totalRowWidth
-                    : lastBaseX;
-
-            int startY = lastAnchor.bottom()
-                    ? screenHeight - lastBaseY - currentYOffset - ROW_HEIGHT
-                    : lastBaseY + currentYOffset;
-
-            int currentDrawX = startX;
-
-            for (int k = i; k <= endIdx; k++) {
-                RenderElement e = ELEMENT_POOL.get(k);
-                int contentWidth = measureWidth(e, textRenderer);
-
-                int extraLeft = (k == i) ? PADDING_LEFT : 0;
-                int extraRight = (k == endIdx) ? PADDING_RIGHT : 0;
-                int elementBgWidth = contentWidth + extraLeft + extraRight;
-
-                if (contentWidth == 0) continue;
-
-                int elementX = currentDrawX + e.offsetX;
-                int elementY = startY + e.offsetY;
-
-                drawBackground(context, e.backgroundColor, elementX, elementY, elementX + elementBgWidth, elementY + ROW_HEIGHT);
-
-                renderContentAt(context, textRenderer, e, elementX + extraLeft, elementY);
-
-                currentDrawX += elementBgWidth;
-            }
-
-            currentYOffset += ROW_HEIGHT;
-            i = endIdx + 1;
-        }
-    }
-
-    private static int measureWidth(RenderElement element, TextRenderer textRenderer) {
-        return switch (element.type) {
-            case TEXT -> textRenderer.getWidth(element.text);
-            case STACK -> measureStackWidth(element.itemStack, element.scale, element.drawAir);
-            case ITEM -> measureStackWidth(element.itemStack, element.scale, false);
-            case TEXTURE -> {
-                float scale = element.scale > 0 ? element.scale : 1f;
-                yield Math.round(BASE_SIZE * scale);
-            }
-        };
+        RenderLayout layout = LAYOUT_ENGINE.layout(
+                QUEUE.sections(), element -> RenderElementMeasurer.width(element, textRenderer), screenWidth, screenHeight);
+        RenderPainter.paint(context, textRenderer, layout);
     }
 
     static int measureStackWidth(ItemStack stack, float scale, boolean drawAir) {
-        return measureStackWidth(stack == null || stack.isEmpty(), scale, drawAir);
+        return RenderElementMeasurer.stackWidth(stack, scale, drawAir);
     }
 
     static int measureStackWidth(boolean empty, float scale, boolean drawAir) {
-        if (empty && !drawAir) return 0;
-        return Math.round(BASE_SIZE * (scale > 0 ? scale : 1f));
-    }
-
-    private static void renderContentAt(DrawContext context, TextRenderer textRenderer, RenderElement element, int x, int y) {
-        switch (element.type) {
-            case TEXT -> {
-                int textY = y + (ROW_HEIGHT - textRenderer.fontHeight) / 2;
-                context.drawText(textRenderer, element.text, x, textY, element.textColor, element.shadow);
-            }
-            case STACK, ITEM -> {
-                if (element.itemStack == null || element.itemStack.isEmpty()) return;
-
-                float scale = element.scale > 0 ? element.scale : 1f;
-                int size = Math.round(BASE_SIZE * scale);
-                float matrixScale = (BASE_SIZE / 16f) * scale;
-
-                int itemY = anchoredIconY(element.anchor, y, size);
-
-                context.getMatrices().push();
-                context.getMatrices().translate(x, itemY, 0);
-                context.getMatrices().scale(matrixScale, matrixScale, 1f);
-
-                context.drawItem(element.itemStack, 0, 0);
-                context.drawItemInSlot(textRenderer, element.itemStack, 0, 0);
-
-                context.getMatrices().pop();
-            }
-            case TEXTURE -> {
-                float scale = element.scale > 0 ? element.scale : 1f;
-                int size = Math.round(BASE_SIZE * scale);
-                int textureY = anchoredIconY(element.anchor, y, size);
-
-                context.drawTexture(element.texture, x, textureY, 0, 0, size, size, size, size);
-            }
-        }
+        return RenderElementMeasurer.stackWidth(empty, scale, drawAir);
     }
 
     static int anchoredIconY(Anchor anchor, int rowY, int size) {
-        return anchor.bottom() ? rowY + ROW_HEIGHT - size - 1 : rowY - 1;
-    }
-
-    private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {
-        if (isVisible(color)) {
-            context.fill(x1, y1 - 1, x2, y2 - 1, color);
-        }
-    }
-
-    private static boolean isVisible(int color) {
-        return (color >> 24 & 0xFF) > 0;
+        return RenderPainter.anchoredIconY(anchor, rowY, size);
     }
 }

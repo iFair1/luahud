@@ -3,7 +3,10 @@ package me.ifair.luahud.api.modules;
 import me.ifair.luahud.api.*;
 import me.ifair.luahud.api.models.CoreModels;
 import me.ifair.luahud.render.Anchor;
+import me.ifair.luahud.render.InlineDirection;
 import me.ifair.luahud.render.RenderBuffer;
+import me.ifair.luahud.render.RowAlignment;
+import me.ifair.luahud.render.RowDirection;
 import me.ifair.luahud.render.SectionState;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.Item;
@@ -13,12 +16,12 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
 public final class RenderModule {
-    private static SectionState currentState = new SectionState();
+    private static SectionState currentState = SectionState.defaults();
 
     private RenderModule() {}
 
     public static void resetSection() {
-        currentState = new SectionState();
+        setSection(SectionState.defaults());
     }
 
     public static void register(LuaApiRegistrar api, CoreModels models) {
@@ -81,14 +84,27 @@ public final class RenderModule {
                     .optional("offsetY", LuaType.integer(), section ? "Vertical screen-edge offset" : "Local vertical offset");
             if (section) {
                 fields.optional("anchor", LuaType.union(
-                        LuaType.literal("topLeft"), LuaType.literal("bottomLeft"),
-                        LuaType.literal("topRight"), LuaType.literal("bottomRight")), "Screen anchor");
+                                LuaType.literal("topLeft"), LuaType.literal("topCenter"), LuaType.literal("topRight"),
+                                LuaType.literal("bottomLeft"), LuaType.literal("bottomCenter"), LuaType.literal("bottomRight")),
+                                "Screen anchor")
+                        .optional("rowAlign", LuaType.union(
+                                LuaType.literal("left"), LuaType.literal("center"), LuaType.literal("right")),
+                                "Alignment of rows within the widest row")
+                        .optional("inlineDirection", LuaType.union(
+                                LuaType.literal("leftToRight"), LuaType.literal("rightToLeft")),
+                                "Visual order of elements within a row")
+                        .optional("rowDirection", LuaType.union(
+                                LuaType.literal("topToBottom"), LuaType.literal("bottomToTop")),
+                                "Visual order of rows within the section");
             }
             if (section || text) {
                 fields.optional("textColor", color, "Text color")
                         .optional("shadow", LuaType.bool(), "Draw text shadow");
             }
-            if (section || !text) fields.optional("scale", LuaType.number(), "Drawing scale");
+            if (section || !text) {
+                fields.optional("scale", LuaType.number(),
+                        section ? "Default item, stack, and texture scale" : "Drawing scale");
+            }
             if (stack) {
                 fields.optional("showDurabilityBar", LuaType.bool(), "Show durability bar")
                         .optional("showCount", LuaType.bool(), "Show stack count")
@@ -99,24 +115,49 @@ public final class RenderModule {
     }
 
     private static void applySection(LuaTableValue options) {
-        currentState = new SectionState();
-        if (options == null) return;
-        String anchor = options.string("anchor", null);
-        if (anchor != null) currentState.anchor = Anchor.fromString(anchor);
-        if (options.contains("textColor")) currentState.textColor = color(options.get("textColor"));
-        if (options.contains("backgroundColor")) currentState.backgroundColor = color(options.get("backgroundColor"));
-        currentState.offsetX = options.integer("offsetX", currentState.offsetX);
-        currentState.offsetY = options.integer("offsetY", currentState.offsetY);
-        currentState.shadow = options.bool("shadow", currentState.shadow);
-        currentState.scale = (float) options.number("scale", currentState.scale);
+        setSection(sectionState(options));
+    }
+
+    static SectionState sectionState(LuaTableValue options) {
+        SectionState defaults = SectionState.defaults();
+        Anchor anchor = options == null ? defaults.anchor() : Anchor.fromString(options.string("anchor", null));
+        int offsetX = options == null ? anchor.defaultOffsetX() : options.integer("offsetX", anchor.defaultOffsetX());
+        int offsetY = options == null ? defaults.offsetY() : options.integer("offsetY", defaults.offsetY());
+        RowAlignment rowAlignment = options == null || !options.contains("rowAlign")
+                ? anchor.defaultRowAlignment()
+                : RowAlignment.fromString(options.string("rowAlign", null));
+        InlineDirection inlineDirection = options == null || !options.contains("inlineDirection")
+                ? defaults.inlineDirection()
+                : InlineDirection.fromString(options.string("inlineDirection", null));
+        RowDirection rowDirection = options == null || !options.contains("rowDirection")
+                ? defaults.rowDirection()
+                : RowDirection.fromString(options.string("rowDirection", null));
+
+        return new SectionState(
+                anchor,
+                offsetX,
+                offsetY,
+                rowAlignment,
+                inlineDirection,
+                rowDirection,
+                options == null ? defaults.shadow() : options.bool("shadow", defaults.shadow()),
+                options != null && options.contains("textColor") ? color(options.get("textColor")) : defaults.textColor(),
+                options != null && options.contains("backgroundColor")
+                        ? color(options.get("backgroundColor")) : defaults.backgroundColor(),
+                options == null ? defaults.scale() : (float) options.number("scale", defaults.scale())
+        );
+    }
+
+    private static void setSection(SectionState state) {
+        currentState = state;
+        RenderBuffer.beginSection(state.layout());
     }
 
     private static void drawText(String text, LuaTableValue options, boolean newline) {
         RenderBuffer.addText(text,
-                resolveColor(options, "textColor", currentState.textColor),
-                resolveColor(options, "backgroundColor", currentState.backgroundColor),
-                options == null ? currentState.shadow : options.bool("shadow", currentState.shadow),
-                currentState.anchor, currentState.offsetX, currentState.offsetY,
+                resolveColor(options, "textColor", currentState.textColor()),
+                resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+                options == null ? currentState.shadow() : options.bool("shadow", currentState.shadow()),
                 offset(options, "offsetX"), offset(options, "offsetY"), newline);
     }
 
@@ -130,16 +171,14 @@ public final class RenderModule {
         if (options != null && options.contains("showGlint")) {
             value.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, options.bool("showGlint", true));
         }
-        RenderBuffer.addStack(value, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor),
-                currentState.anchor, currentState.offsetX, currentState.offsetY,
+        RenderBuffer.addStack(value, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false, drawAir);
     }
 
     private static void drawItem(String id, LuaTableValue options) {
         Identifier identifier = Identifier.tryParse(id);
         Item item = identifier == null ? Items.AIR : Registries.ITEM.get(identifier);
-        RenderBuffer.addItem(new ItemStack(item), scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor),
-                currentState.anchor, currentState.offsetX, currentState.offsetY,
+        RenderBuffer.addItem(new ItemStack(item), scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
     }
 
@@ -148,13 +187,12 @@ public final class RenderModule {
         if (texture == null) {
             throw new IllegalArgumentException("Invalid texture path: " + path);
         }
-        RenderBuffer.addTexture(texture, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor),
-                currentState.anchor, currentState.offsetX, currentState.offsetY,
+        RenderBuffer.addTexture(texture, scale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
     }
 
     private static float scale(LuaTableValue options) {
-        return options == null ? currentState.scale : (float) options.number("scale", currentState.scale);
+        return options == null ? currentState.scale() : (float) options.number("scale", currentState.scale());
     }
 
     private static int offset(LuaTableValue options, String key) {
