@@ -144,7 +144,7 @@ public final class RenderModule {
                 options != null && options.contains("textColor") ? color(options.get("textColor")) : defaults.textColor(),
                 options != null && options.contains("backgroundColor")
                         ? color(options.get("backgroundColor")) : defaults.backgroundColor(),
-                options == null ? defaults.scale() : (float) options.number("scale", defaults.scale())
+                scale(options, defaults.scale())
         );
     }
 
@@ -192,7 +192,15 @@ public final class RenderModule {
     }
 
     private static float scale(LuaTableValue options) {
-        return options == null ? currentState.scale() : (float) options.number("scale", currentState.scale());
+        return scale(options, currentState.scale());
+    }
+
+    private static float scale(LuaTableValue options, float fallback) {
+        double requested = options == null ? fallback : options.number("scale", fallback);
+        if (!Double.isFinite(requested) || requested <= 0 || requested > Float.MAX_VALUE) {
+            throw new IllegalArgumentException("Scale must be finite and greater than zero");
+        }
+        return (float) requested;
     }
 
     private static int offset(LuaTableValue options, String key) {

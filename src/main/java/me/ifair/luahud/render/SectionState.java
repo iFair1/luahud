@@ -19,6 +19,9 @@ public record SectionState(
         Objects.requireNonNull(rowAlignment, "rowAlignment");
         Objects.requireNonNull(inlineDirection, "inlineDirection");
         Objects.requireNonNull(rowDirection, "rowDirection");
+        if (!Float.isFinite(scale) || scale <= 0) {
+            throw new IllegalArgumentException("Scale must be finite and greater than zero");
+        }
     }
 
     public static SectionState defaults() {

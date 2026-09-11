@@ -19,9 +19,9 @@ class RenderLayoutEngineTest {
         List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
 
         assertEquals(88, elements.get(0).backgroundX());
-        assertEquals(100, elements.get(0).backgroundX() + elements.get(0).backgroundWidth() + 2);
+        assertEquals(98, elements.get(0).backgroundX() + elements.get(0).backgroundWidth());
         assertEquals(92, elements.get(1).backgroundX());
-        assertEquals(100, elements.get(1).backgroundX() + elements.get(1).backgroundWidth() + 2);
+        assertEquals(98, elements.get(1).backgroundX() + elements.get(1).backgroundWidth());
     }
 
     @Test void centerAnchorAlignsShortRowsWithinTheLongestRow() {
@@ -87,7 +87,7 @@ class RenderLayoutEngineTest {
         SectionLayout options = SectionLayout.defaults(Anchor.TOP_LEFT, 2, 2);
         RenderQueue queue = new RenderQueue();
         queue.beginSection(options);
-        queue.add(text("first"), true);
+        queue.add(text("first"), false);
         queue.beginSection(options);
         queue.add(text("second"), true);
 
@@ -96,6 +96,17 @@ class RenderLayoutEngineTest {
         assertEquals(2, layout.elements().size());
         assertEquals(2, layout.elements().get(0).rowY());
         assertEquals(2, layout.elements().get(1).rowY());
+    }
+
+    @Test void blankRowsStillAdvanceTheFollowingRow() {
+        RenderSection section = section(Anchor.TOP_LEFT, RowAlignment.LEFT,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM);
+        section.add(text(""), true);
+        section.add(text("visible"), true);
+
+        RenderLayout.PositionedElement visible = layout(section, 100, 60).getFirst();
+
+        assertEquals(14, visible.rowY());
     }
 
     private int shortRowX(RowAlignment alignment) {

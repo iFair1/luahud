@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RenderModuleTest {
     @Test void numericColorsAreStrictArgb() {
@@ -50,5 +51,12 @@ class RenderModuleTest {
         assertEquals(RowAlignment.LEFT, state.rowAlignment());
         assertEquals(InlineDirection.RIGHT_TO_LEFT, state.inlineDirection());
         assertEquals(RowDirection.BOTTOM_TO_TOP, state.rowDirection());
+    }
+
+    @Test void sectionScaleMustBePositiveAndFinite() {
+        assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.sectionState(new LuaTableValue(Map.of("scale", 0))));
+        assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.sectionState(new LuaTableValue(Map.of("scale", Double.POSITIVE_INFINITY))));
     }
 }

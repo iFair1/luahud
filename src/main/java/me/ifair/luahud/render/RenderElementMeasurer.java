@@ -29,6 +29,9 @@ final class RenderElementMeasurer {
     }
 
     static float normalizedScale(float scale) {
-        return scale > 0 ? scale : 1f;
+        if (!Float.isFinite(scale) || scale <= 0) {
+            throw new IllegalArgumentException("Scale must be finite and greater than zero");
+        }
+        return scale;
     }
 }

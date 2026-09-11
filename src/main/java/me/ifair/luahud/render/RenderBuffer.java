@@ -8,15 +8,21 @@ import net.minecraft.util.Identifier;
 public final class RenderBuffer {
     private static final RenderQueue QUEUE = new RenderQueue();
     private static final RenderLayoutEngine LAYOUT_ENGINE = new RenderLayoutEngine();
+    private static RenderLayout cachedLayout;
+    private static TextRenderer cachedTextRenderer;
+    private static int cachedScreenWidth;
+    private static int cachedScreenHeight;
 
     private RenderBuffer() {}
 
     public static void clear() {
         QUEUE.clear();
+        invalidateLayout();
     }
 
     public static void beginSection(SectionLayout layout) {
         QUEUE.beginSection(layout);
+        invalidateLayout();
     }
 
     public static void addText(
@@ -30,6 +36,7 @@ public final class RenderBuffer {
     ) {
         QUEUE.add(new RenderElement.Text(
                 text, textColor, backgroundColor, shadow, offsetX, offsetY), newLine);
+        invalidateLayout();
     }
 
     public static void addStack(
@@ -43,6 +50,7 @@ public final class RenderBuffer {
     ) {
         QUEUE.add(new RenderElement.Stack(
                 itemStack, scale, backgroundColor, offsetX, offsetY, drawAir), newLine);
+        invalidateLayout();
     }
 
     public static void addItem(
@@ -55,6 +63,7 @@ public final class RenderBuffer {
     ) {
         QUEUE.add(new RenderElement.Item(
                 itemStack, scale, backgroundColor, offsetX, offsetY), newLine);
+        invalidateLayout();
     }
 
     public static void addTexture(
@@ -67,12 +76,26 @@ public final class RenderBuffer {
     ) {
         QUEUE.add(new RenderElement.Texture(
                 texture, scale, backgroundColor, offsetX, offsetY), newLine);
+        invalidateLayout();
     }
 
     public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
-        RenderLayout layout = LAYOUT_ENGINE.layout(
-                QUEUE.sections(), element -> RenderElementMeasurer.width(element, textRenderer), screenWidth, screenHeight);
-        RenderPainter.paint(context, textRenderer, layout);
+        if (cachedLayout == null
+                || cachedTextRenderer != textRenderer
+                || cachedScreenWidth != screenWidth
+                || cachedScreenHeight != screenHeight) {
+            cachedLayout = LAYOUT_ENGINE.layout(
+                    QUEUE.sections(), element -> RenderElementMeasurer.width(element, textRenderer), screenWidth, screenHeight);
+            cachedTextRenderer = textRenderer;
+            cachedScreenWidth = screenWidth;
+            cachedScreenHeight = screenHeight;
+        }
+        RenderPainter.paint(context, textRenderer, cachedLayout);
+    }
+
+    private static void invalidateLayout() {
+        cachedLayout = null;
+        cachedTextRenderer = null;
     }
 
     static int measureStackWidth(ItemStack stack, float scale, boolean drawAir) {
