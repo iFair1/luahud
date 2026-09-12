@@ -13,6 +13,9 @@ import org.squiddev.cobalt.lib.CoreLibraries;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Supplier;
@@ -27,6 +30,9 @@ public final class CobaltRuntime {
     private final Map<String, Long> errorCooldowns = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
     private final Map<LuaTable, ModelValue> modelValues = new IdentityHashMap<>();
+    private final CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT);
     private LuaState state;
     private String currentProfile;
 
@@ -177,7 +183,7 @@ public final class CobaltRuntime {
     private LuaValue toLua(Object value, LuaType<?> type, String path, String provider) throws LuaError {
         if (value == null || type.kind() == LuaType.Kind.NIL) return Constants.NIL;
         return switch (type.kind()) {
-            case STRING, LITERAL -> ValueFactory.valueOf((String) value);
+            case STRING, LITERAL -> luaString((String) value);
             case INTEGER -> ValueFactory.valueOf(((Number) value).intValue());
             case NUMBER -> ValueFactory.valueOf(((Number) value).doubleValue());
             case BOOLEAN -> ValueFactory.valueOf((Boolean) value);
@@ -197,7 +203,7 @@ public final class CobaltRuntime {
             }
             case MAP -> {
                 LuaTable table = new LuaTable();
-                for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) table.rawset(String.valueOf(entry.getKey()), toLua(entry.getValue(), type.elementType(), path, provider));
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) table.rawset(luaString(String.valueOf(entry.getKey())), toLua(entry.getValue(), type.elementType(), path, provider));
                 yield table;
             }
             case MODEL -> modelTable((Supplier<Object>) () -> value, (ModelBuilder) type.model(), path, provider);
@@ -238,14 +244,14 @@ public final class CobaltRuntime {
 
     private LuaValue anyToLua(Object value, String path, String provider) throws LuaError {
         if (value == null) return Constants.NIL;
-        if (value instanceof String string) return ValueFactory.valueOf(string);
+        if (value instanceof String string) return luaString(string);
         if (value instanceof Boolean bool) return ValueFactory.valueOf(bool);
         if (value instanceof Integer integer) return ValueFactory.valueOf(integer);
         if (value instanceof Number number) return ValueFactory.valueOf(number.doubleValue());
         if (value instanceof LuaTableValue table) return tableValueToLua(table, LuaType.inputTable("table", ignored -> {}), path, provider);
         if (value instanceof List<?> list) return toLua(list, LuaType.list(LuaType.any()), path, provider);
         if (value instanceof Map<?, ?> map) return toLua(map, LuaType.map(LuaType.any()), path, provider);
-        return ValueFactory.valueOf(String.valueOf(value));
+        return luaString(String.valueOf(value));
     }
 
     private boolean matchesJava(Object value, LuaType<?> type) {
@@ -264,11 +270,11 @@ public final class CobaltRuntime {
         return switch (type.kind()) {
             case NIL -> { if (!value.isNil()) throw new LuaError("expected nil, got " + value.typeName()); yield null; }
             case ANY -> anyFromLua(value);
-            case STRING -> value.checkString();
+            case STRING -> javaString(value);
             case INTEGER -> value.checkInteger();
             case NUMBER -> value.checkDouble();
             case BOOLEAN -> value.checkBoolean();
-            case LITERAL -> { String actual = value.checkString(); if (!actual.equals(type.displayName())) throw new LuaError("expected '" + type.displayName() + "'"); yield actual; }
+            case LITERAL -> { String actual = javaString(value); if (!actual.equals(type.displayName())) throw new LuaError("expected '" + type.displayName() + "'"); yield actual; }
             case OPTIONAL -> value.isNil() ? null : fromLua(value, type.elementType());
             case UNION -> unionFromLua(value, type);
             case LIST -> listFromLua(value.checkTable(), type.elementType());
@@ -328,7 +334,7 @@ public final class CobaltRuntime {
         Map<String, Object> result = new LinkedHashMap<>(); LuaValue key = Constants.NIL;
         while (true) {
             Varargs next = table.next(key); key = next.arg(1); if (key.isNil()) break;
-            result.put(key.checkString(), fromLua(next.arg(2), element));
+            result.put(javaString(key), fromLua(next.arg(2), element));
         }
         return result;
     }
@@ -346,12 +352,25 @@ public final class CobaltRuntime {
 
     private Object anyFromLua(LuaValue value) throws LuaError {
         if (value.isNil()) return null;
-        if (value.isString()) return value.checkString();
+        if (value.isString()) return javaString(value);
         if (value instanceof LuaInteger) return value.toInteger();
         if (value.isNumber()) return value.toDouble();
         if (value.type() == Constants.TBOOLEAN) return value.checkBoolean();
         if (value.type() == Constants.TTABLE) return new LuaTableValue(mapFromLua(value.checkTable(), LuaType.any()));
         return value.toString();
+    }
+
+    private static LuaString luaString(String value) {
+        return ValueFactory.valueOf(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String javaString(LuaValue value) throws LuaError {
+        LuaString string = value.checkLuaString();
+        try {
+            return utf8Decoder.decode(string.toBuffer()).toString();
+        } catch (CharacterCodingException ignored) {
+            return string.toString();
+        }
     }
 
     private void ready() { if (state == null) throw new IllegalStateException("Cobalt runtime is not ready"); }

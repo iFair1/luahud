@@ -117,6 +117,33 @@ class CobaltRuntimeTest {
         assertEquals(List.of("minecraft:stone", supplied), captured);
     }
 
+    @Test void publicApiStringsAreUtf8InBothDirections() throws Exception {
+        String text = "§2Yeşil: çığöşü 🌿";
+        List<Object> captured = new java.util.ArrayList<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        LuaApiRegistrar api = registry.registrar("fixture");
+        api.root().string("localized", "", () -> text);
+        FunctionBuilder<Void> captureString = api.root().function("captureString", LuaType.nil(), "");
+        LuaParameter<String> string = captureString.parameter("value", LuaType.string(), "");
+        captureString.call(arguments -> {
+            captured.add(arguments.get(string));
+            return null;
+        });
+        FunctionBuilder<Void> captureAny = api.root().function("captureAny", LuaType.nil(), "");
+        LuaParameter<Object> any = captureAny.parameter("value", LuaType.any(), "");
+        captureAny.call(arguments -> {
+            captured.add(arguments.get(any));
+            return null;
+        });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+
+        runtime.execute("lh.captureString('" + text + "'); lh.captureString(lh.localized); "
+                + "lh.captureAny('" + text + "'); lh.captureString(string.char(167) .. '2legacy')", "utf8");
+
+        assertEquals(List.of(text, text, text, "§2legacy"), captured);
+    }
+
     @Test void eventsTimersReloadAndSafeLibrariesWork() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
