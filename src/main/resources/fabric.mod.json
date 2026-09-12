@@ -16,7 +16,7 @@
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-			"me.ifair.luahud.LuaHUDClient"
+			"me.ifair.luahud.LuaHUD"
 		],
 		"modmenu": [
 			"me.ifair.luahud.ModMenuIntegration"
