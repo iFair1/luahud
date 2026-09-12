@@ -40,7 +40,7 @@ public class LuaHUD implements ClientModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private static final KeyBinding OPEN_SCREEN_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-			"Open Config Screen", // These are translation keys but I'm very lazy now so ill put literal text like this
+			"Open Config Screen", // These are translation keys, but I'm very lazy now so ill put literal text like this
 			InputUtil.Type.KEYSYM,
 			GLFW.GLFW_KEY_H,
 			"LuaHUDt"
