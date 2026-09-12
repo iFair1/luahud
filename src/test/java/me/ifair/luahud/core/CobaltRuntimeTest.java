@@ -94,6 +94,29 @@ class CobaltRuntimeTest {
         assertEquals(0xFF00FF00, captured.get());
     }
 
+    @Test void unionAcceptsEitherAStringOrAModel() throws Exception {
+        Data supplied = new Data("model", 4);
+        List<Object> captured = new java.util.ArrayList<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        LuaApiRegistrar api = registry.registrar("fixture");
+        ModelBuilder<Data> model = api.model("Data", Data.class)
+                .string("label", "", Data::label).integer("count", "", Data::count);
+        api.root().value("data", model.type(), LuaDoc.NONE, () -> supplied);
+        FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
+        LuaParameter<Object> value = capture.parameter(
+                "value", LuaType.union(LuaType.string(), model.type()), "");
+        capture.call(arguments -> {
+            captured.add(arguments.get(value));
+            return null;
+        });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+
+        runtime.execute("lh.capture('minecraft:stone'); lh.capture(lh.data)", "union-model");
+
+        assertEquals(List.of("minecraft:stone", supplied), captured);
+    }
+
     @Test void eventsTimersReloadAndSafeLibrariesWork() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();

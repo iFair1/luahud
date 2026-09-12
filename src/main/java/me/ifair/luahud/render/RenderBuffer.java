@@ -2,6 +2,7 @@ package me.ifair.luahud.render;
 
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 
@@ -63,6 +64,19 @@ public final class RenderBuffer {
     ) {
         QUEUE.add(new RenderElement.Item(
                 itemStack, scale, backgroundColor, offsetX, offsetY), newLine);
+        invalidateLayout();
+    }
+
+    public static void addEntity(
+            Entity entity,
+            float scale,
+            int backgroundColor,
+            int offsetX,
+            int offsetY,
+            boolean newLine
+    ) {
+        QUEUE.add(new RenderElement.Entity(
+                entity, scale, backgroundColor, offsetX, offsetY), newLine);
         invalidateLayout();
     }
 

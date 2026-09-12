@@ -1,6 +1,9 @@
 package me.ifair.luahud.api.modules;
 
 import me.ifair.luahud.api.LuaTableValue;
+import me.ifair.luahud.api.core.ApiRegistry;
+import me.ifair.luahud.api.core.StubGenerator;
+import me.ifair.luahud.api.models.CoreModels;
 import me.ifair.luahud.render.Anchor;
 import me.ifair.luahud.render.InlineDirection;
 import me.ifair.luahud.render.RowAlignment;
@@ -12,8 +15,22 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RenderModuleTest {
+    @Test void itemAndEntityDrawFunctionsAcceptIdsOrModels() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        CoreModels models = CoreModels.register(api);
+        RenderModule.register(api, models);
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@param id string | ItemStack Namespaced item ID or ItemStack model"));
+        assertTrue(stub.contains("---@param uuid string | Entity Entity UUID or Entity model"));
+        assertTrue(stub.contains("function lh.drawEntity(uuid, options) end"));
+    }
+
     @Test void numericColorsAreStrictArgb() {
         assertEquals(0x00000000, RenderModule.color(0x0));
         assertEquals(0xFF00FF00, RenderModule.color(0xFF00FF00));

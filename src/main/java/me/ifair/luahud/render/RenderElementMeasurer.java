@@ -13,6 +13,7 @@ final class RenderElementMeasurer {
             case RenderElement.Stack stack -> stackWidth(
                     stack.value(), stack.scale(), sectionScale, stack.drawAir());
             case RenderElement.Item item -> stackWidth(item.value(), item.scale(), sectionScale, false);
+            case RenderElement.Entity entity -> scaledIconSize(entity.scale(), sectionScale);
             case RenderElement.Texture texture -> scaledIconSize(texture.scale(), sectionScale);
         };
     }

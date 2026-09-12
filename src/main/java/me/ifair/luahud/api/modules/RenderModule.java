@@ -8,15 +8,29 @@ import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.RowAlignment;
 import me.ifair.luahud.render.RowDirection;
 import me.ifair.luahud.render.SectionState;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.entity.Entity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
 public final class RenderModule {
+    private static final int ENTITY_CACHE_SIZE = 128;
+    private static final Map<UUID, Integer> ENTITY_IDS = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<UUID, Integer> eldest) {
+            return size() > ENTITY_CACHE_SIZE;
+        }
+    };
     private static SectionState currentState = SectionState.defaults();
+    private static ClientWorld entityCacheWorld;
 
     private RenderModule() {}
 
@@ -50,11 +64,23 @@ public final class RenderModule {
             return null;
         });
 
-        FunctionBuilder<Void> drawItem = api.root().function("drawItem", LuaType.nil(), "Draw an item by namespaced ID.");
-        LuaParameter<String> itemId = drawItem.parameter("id", LuaType.string(), "Namespaced item ID");
+        FunctionBuilder<Void> drawItem = api.root().function(
+                "drawItem", LuaType.nil(), "Draw an item by namespaced ID or ItemStack model.");
+        LuaParameter<Object> itemId = drawItem.parameter(
+                "id", LuaType.union(LuaType.string(), models.itemStack().type()), "Namespaced item ID or ItemStack model");
         LuaParameter<LuaTableValue> itemOpts = drawItem.optionalParameter("options", iconOptions, "Rendering options");
         drawItem.call(arguments -> {
             drawItem(arguments.get(itemId), arguments.get(itemOpts));
+            return null;
+        });
+
+        FunctionBuilder<Void> drawEntity = api.root().function(
+                "drawEntity", LuaType.nil(), "Draw a loaded entity by UUID or Entity model.");
+        LuaParameter<Object> entityUuid = drawEntity.parameter(
+                "uuid", LuaType.union(LuaType.string(), models.entity().type()), "Entity UUID or Entity model");
+        LuaParameter<LuaTableValue> entityOpts = drawEntity.optionalParameter("options", iconOptions, "Rendering options");
+        drawEntity.call(arguments -> {
+            drawEntity(arguments.get(entityUuid), arguments.get(entityOpts));
             return null;
         });
 
@@ -100,7 +126,7 @@ public final class RenderModule {
                                 LuaType.literal("topToBottom"), LuaType.literal("bottomToTop")),
                                 "Visual order of rows within the section; defaults to topToBottom")
                         .optional("iconScale", LuaType.number(),
-                                "Default item, stack, and texture scale relative to the section")
+                                "Default item, stack, entity, and texture scale relative to the section")
                         .optional("rowHeight", LuaType.integer(),
                                 "Unscaled row height in pixels; affected by section scale");
             }
@@ -184,11 +210,50 @@ public final class RenderModule {
                 offset(options, "offsetX"), offset(options, "offsetY"), false, drawAir);
     }
 
-    private static void drawItem(String id, LuaTableValue options) {
+    private static void drawItem(Object reference, LuaTableValue options) {
+        String id = reference instanceof ItemStack stack
+                ? Registries.ITEM.getId(stack.getItem()).toString()
+                : (String) reference;
         Identifier identifier = Identifier.tryParse(id);
         Item item = identifier == null ? Items.AIR : Registries.ITEM.get(identifier);
         RenderBuffer.addItem(new ItemStack(item), iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
+    }
+
+    private static void drawEntity(Object reference, LuaTableValue options) {
+        Entity entity = reference instanceof Entity value ? value : findEntity((String) reference);
+        RenderBuffer.addEntity(entity, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+                offset(options, "offsetX"), offset(options, "offsetY"), false);
+    }
+
+    private static Entity findEntity(String value) {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(value);
+        } catch (IllegalArgumentException error) {
+            throw new IllegalArgumentException("Invalid entity UUID: " + value, error);
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null) throw new IllegalStateException("Cannot draw an entity without a loaded world");
+        if (entityCacheWorld != client.world) {
+            entityCacheWorld = client.world;
+            ENTITY_IDS.clear();
+        }
+
+        Integer entityId = ENTITY_IDS.get(uuid);
+        if (entityId != null) {
+            Entity cached = client.world.getEntityById(entityId);
+            if (cached != null && cached.getUuid().equals(uuid)) return cached;
+            ENTITY_IDS.remove(uuid);
+        }
+        for (Entity entity : client.world.getEntities()) {
+            if (entity.getUuid().equals(uuid)) {
+                ENTITY_IDS.put(uuid, entity.getId());
+                return entity;
+            }
+        }
+        throw new IllegalArgumentException("No loaded entity found for UUID: " + value);
     }
 
     private static void drawTexture(String path, LuaTableValue options) {

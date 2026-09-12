@@ -1,8 +1,16 @@
 package me.ifair.luahud.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
+import org.joml.Quaternionf;
 
 final class RenderPainter {
     private RenderPainter() {}
@@ -43,11 +51,91 @@ final class RenderPainter {
             case RenderElement.Item item -> paintItem(
                     context, textRenderer, item.value(), item.scale(), positioned.sectionScale(),
                     positioned.anchor(), positioned.rowHeight(), x, y);
+            case RenderElement.Entity entity -> paintEntity(
+                    context, entity.value(), entity.scale(), positioned.sectionScale(),
+                    positioned.anchor(), positioned.rowHeight(), x, y);
             case RenderElement.Texture texture -> {
                 int size = RenderElementMeasurer.scaledIconSize(texture.scale(), positioned.sectionScale());
                 int textureY = anchoredIconY(positioned.anchor(), y, size, positioned.rowHeight());
                 context.drawTexture(texture.value(), x, textureY, 0, 0, size, size, size, size);
             }
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void paintEntity(
+            DrawContext context,
+            Entity entity,
+            float iconScale,
+            float sectionScale,
+            Anchor anchor,
+            int rowHeight,
+            int x,
+            int rowY
+    ) {
+        if (entity == null || entity.isRemoved()) return;
+
+        int size = RenderElementMeasurer.scaledIconSize(iconScale, sectionScale);
+        int entityY = anchoredIconY(anchor, rowY, size, rowHeight);
+        float extent = Math.max(entity.getWidth(), entity.getHeight());
+        if (!Float.isFinite(extent) || extent <= 0) return;
+        float scale = size / extent;
+
+        float yaw = entity.getYaw();
+        float pitch = entity.getPitch();
+        LivingRotation livingRotation = LivingRotation.capture(entity);
+        MatrixStack matrices = context.getMatrices();
+        EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
+
+        entity.setYaw(180f);
+        entity.setPitch(0f);
+        livingRotation.faceForward();
+        matrices.push();
+        try {
+            matrices.translate(x + size / 2f, entityY + size / 2f, 50);
+            matrices.scale(scale, scale, -scale);
+            matrices.translate(0, entity.getHeight() / 2f, 0);
+            matrices.multiply(new Quaternionf().rotateZ((float) Math.PI));
+            DiffuseLighting.method_34742();
+            dispatcher.setRotation(new Quaternionf().rotateY((float) Math.PI));
+            dispatcher.setRenderShadows(false);
+            RenderSystem.runAsFancy(() -> dispatcher.render(
+                    entity, 0, 0, 0, 0, 1, matrices, context.getVertexConsumers(), 0xF000F0));
+            context.draw();
+        } finally {
+            dispatcher.setRenderShadows(true);
+            matrices.pop();
+            DiffuseLighting.enableGuiDepthLighting();
+            livingRotation.restore();
+            entity.setYaw(yaw);
+            entity.setPitch(pitch);
+        }
+    }
+
+    private record LivingRotation(
+            LivingEntity entity,
+            float bodyYaw,
+            float headYaw,
+            float prevHeadYaw
+    ) {
+        private static LivingRotation capture(Entity entity) {
+            return entity instanceof LivingEntity living
+                    ? new LivingRotation(living, living.bodyYaw, living.headYaw, living.prevHeadYaw)
+                    : new LivingRotation(null, 0, 0, 0);
+        }
+
+        private void faceForward() {
+            if (entity == null) return;
+            entity.bodyYaw = 180f;
+            entity.headYaw = 180f;
+            entity.prevHeadYaw = 180f;
+        }
+
+        private void restore() {
+            if (entity == null) return;
+            entity.bodyYaw = bodyYaw;
+            entity.headYaw = headYaw;
+            entity.prevHeadYaw = prevHeadYaw;
         }
     }
 
