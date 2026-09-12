@@ -35,8 +35,8 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	implementation "cc.tweaked:cobalt:0.9.9"
-	include "cc.tweaked:cobalt:0.9.9"
+	implementation "cc.tweaked:cobalt:${project.cobalt_version}"
+	include "cc.tweaked:cobalt:${project.cobalt_version}"
 
 	testImplementation platform("org.junit:junit-bom:5.11.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"
