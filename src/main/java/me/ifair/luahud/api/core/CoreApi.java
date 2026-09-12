@@ -2,15 +2,7 @@ package me.ifair.luahud.api.core;
 
 import me.ifair.luahud.api.LuaApiRegistrar;
 import me.ifair.luahud.api.models.CoreModels;
-import me.ifair.luahud.api.modules.FacingModule;
-import me.ifair.luahud.api.modules.FunctionsModule;
-import me.ifair.luahud.api.modules.PcModule;
-import me.ifair.luahud.api.modules.PerformanceModule;
-import me.ifair.luahud.api.modules.PlayerModule;
-import me.ifair.luahud.api.modules.PositionModule;
-import me.ifair.luahud.api.modules.RenderModule;
-import me.ifair.luahud.api.modules.TimeModule;
-import me.ifair.luahud.api.modules.WeatherModule;
+import me.ifair.luahud.api.modules.*;
 import net.minecraft.client.MinecraftClient;
 
 /** Registers LuaHUD's built-in API using the same builders exposed to addons. */
@@ -30,6 +22,7 @@ public final class CoreApi {
         WeatherModule.register(api, client);
         PositionModule.register(api, client);
         PlayerModule.register(api, client, models);
+        SessionModule.register(api, client);
         FunctionsModule.register(api, client, models);
         registry.addEventFunctions();
     }
