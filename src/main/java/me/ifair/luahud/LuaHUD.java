@@ -43,7 +43,7 @@ public class LuaHUD implements ClientModInitializer {
 			"Open Config Screen", // These are translation keys, but I'm very lazy now so ill put literal text like this
 			InputUtil.Type.KEYSYM,
 			GLFW.GLFW_KEY_H,
-			"LuaHUDt"
+			"LuaHUD"
 	));
 
 	@Override
