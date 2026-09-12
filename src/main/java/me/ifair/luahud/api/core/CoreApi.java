@@ -20,7 +20,7 @@ public final class CoreApi {
         TimeModule.register(api, client);
         FacingModule.register(api, client, models);
         WeatherModule.register(api, client);
-        PositionModule.register(api, client);
+        PositionModule.register(api, client, models);
         PlayerModule.register(api, client, models);
         SessionModule.register(api, client);
         FunctionsModule.register(api, client, models);
