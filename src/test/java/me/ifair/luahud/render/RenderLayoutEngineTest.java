@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RenderLayoutEngineTest {
     private static final ElementWidthProvider TEXT_WIDTH = (element, sectionScale) -> RenderDimensions.scaleLength(
             ((RenderElement.Text) element).value().length(), sectionScale);
+    private static final ElementHeightProvider TEXT_HEIGHT = (element, sectionScale) -> RenderDimensions.scaleLength(
+            ((RenderElement.Text) element).value().length(), sectionScale);
     private final RenderLayoutEngine engine = new RenderLayoutEngine();
 
     @Test void rightAnchorKeepsRowsInsideTheScreen() {
@@ -92,7 +94,7 @@ class RenderLayoutEngineTest {
         queue.beginSection(options);
         queue.add(text("second"), true);
 
-        RenderLayout layout = engine.layout(queue.sections(), TEXT_WIDTH, 100, 60);
+        RenderLayout layout = engine.layout(queue.sections(), TEXT_WIDTH, TEXT_HEIGHT, 100, 60);
 
         assertEquals(2, layout.elements().size());
         assertEquals(2, layout.elements().get(0).rowY());
@@ -139,6 +141,44 @@ class RenderLayoutEngineTest {
         assertEquals(6, element.rowY());
     }
 
+    @Test void automaticRowsShrinkAndGrowToTheirTallestElement() {
+        RenderSection section = autoSection(Anchor.TOP_LEFT, RowDirection.TOP_TO_BOTTOM);
+        section.add(text("123456"), false);
+        section.add(text("12345678901234567890"), true);
+        section.add(text("123456"), true);
+
+        List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
+
+        assertEquals(20, elements.get(0).rowHeight());
+        assertEquals(2, elements.get(0).rowY());
+        assertEquals(20, elements.get(1).rowHeight());
+        assertEquals(2, elements.get(1).rowY());
+        assertEquals(6, elements.get(2).rowHeight());
+        assertEquals(22, elements.get(2).rowY());
+    }
+
+    @Test void automaticEmptyRowsUseTheDefaultRowHeight() {
+        RenderSection section = autoSection(Anchor.TOP_LEFT, RowDirection.TOP_TO_BOTTOM);
+        section.newLine();
+        section.add(text("123456"), true);
+
+        RenderLayout.PositionedElement visible = layout(section, 100, 60).getFirst();
+
+        assertEquals(14, visible.rowY());
+        assertEquals(6, visible.rowHeight());
+    }
+
+    @Test void bottomToTopDirectionAccountsForDifferentAutomaticRowHeights() {
+        RenderSection section = autoSection(Anchor.BOTTOM_LEFT, RowDirection.BOTTOM_TO_TOP);
+        section.add(text("123456"), true);
+        section.add(text("12345678901234567890"), true);
+
+        List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
+
+        assertEquals(52, elements.get(0).rowY());
+        assertEquals(32, elements.get(1).rowY());
+    }
+
     private int shortRowX(RowAlignment alignment) {
         RenderSection section = section(Anchor.TOP_CENTER, alignment,
                 InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM);
@@ -148,7 +188,7 @@ class RenderLayoutEngineTest {
     }
 
     private List<RenderLayout.PositionedElement> layout(RenderSection section, int width, int height) {
-        return engine.layout(List.of(section), TEXT_WIDTH, width, height).elements();
+        return engine.layout(List.of(section), TEXT_WIDTH, TEXT_HEIGHT, width, height).elements();
     }
 
     private static RenderSection section(
@@ -169,7 +209,13 @@ class RenderLayoutEngineTest {
             int rowHeight
     ) {
         return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
-                alignment, inlineDirection, rowDirection, scale, rowHeight));
+                alignment, inlineDirection, rowDirection, scale, rowHeight, false));
+    }
+
+    private static RenderSection autoSection(Anchor anchor, RowDirection rowDirection) {
+        return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
+                anchor.defaultRowAlignment(), InlineDirection.LEFT_TO_RIGHT, rowDirection,
+                1f, 12, true));
     }
 
     private static RenderElement.Text text(String value) {

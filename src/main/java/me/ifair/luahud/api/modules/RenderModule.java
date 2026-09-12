@@ -54,6 +54,16 @@ public final class RenderModule {
             return null;
         });
 
+        FunctionBuilder<Void> newline = api.root().function(
+                "newline", LuaType.nil(), "End the current row, optionally repeating the line break.");
+        LuaParameter<Integer> newlineCount = newline.optionalParameter(
+                "count", LuaType.integer(), "Number of line breaks; defaults to 1");
+        newline.call(arguments -> {
+            Integer count = arguments.get(newlineCount);
+            RenderBuffer.newLine(count == null ? 1 : count);
+            return null;
+        });
+
         registerDraw(api, "draw", false, textOptions);
         registerDraw(api, "drawln", true, textOptions);
 
@@ -135,8 +145,8 @@ public final class RenderModule {
                                 "Visual order of rows within the section; defaults to topToBottom")
                         .optional("iconScale", LuaType.number(),
                                 "Default item, stack, entity, and texture scale relative to the section")
-                        .optional("rowHeight", LuaType.integer(),
-                                "Unscaled row height in pixels; affected by section scale");
+                        .optional("rowHeight", LuaType.union(LuaType.integer(), LuaType.literal("auto")),
+                                "Fixed unscaled row height, or auto to fit the tallest element; defaults to auto");
             }
             if (section || text) {
                 fields.optional("textColor", color, "Text color")
@@ -180,6 +190,7 @@ public final class RenderModule {
         RowDirection rowDirection = options == null || !options.contains("rowDirection")
                 ? defaults.rowDirection()
                 : RowDirection.fromString(options.string("rowDirection", null));
+        RowHeight rowHeight = rowHeight(options, defaults);
 
         return new SectionState(
                 anchor,
@@ -194,8 +205,21 @@ public final class RenderModule {
                         ? color(options.get("backgroundColor")) : defaults.backgroundColor(),
                 scale(options, "scale", defaults.scale()),
                 scale(options, "iconScale", defaults.iconScale()),
-                options == null ? defaults.rowHeight() : options.integer("rowHeight", defaults.rowHeight())
+                rowHeight.value(),
+                rowHeight.auto()
         );
+    }
+
+    private record RowHeight(int value, boolean auto) {}
+
+    private static RowHeight rowHeight(LuaTableValue options, SectionState defaults) {
+        if (options == null || !options.contains("rowHeight")) {
+            return new RowHeight(defaults.rowHeight(), defaults.autoRowHeight());
+        }
+        Object requested = options.get("rowHeight");
+        if ("auto".equals(requested)) return new RowHeight(defaults.rowHeight(), true);
+        if (requested instanceof Number number) return new RowHeight(number.intValue(), false);
+        throw new IllegalArgumentException("Row height must be a positive integer or 'auto'");
     }
 
     private static void setSection(SectionState state) {

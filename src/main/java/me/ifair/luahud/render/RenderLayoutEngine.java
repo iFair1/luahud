@@ -4,12 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class RenderLayoutEngine {
-    private record MeasuredElement(RenderElement element, int width) {}
-    private record MeasuredRow(List<MeasuredElement> elements, int width) {}
+    private record MeasuredElement(RenderElement element, int width, int height) {}
+    private record MeasuredRow(List<MeasuredElement> elements, int width, int height) {}
 
     RenderLayout layout(
             List<RenderSection> sections,
             ElementWidthProvider widthProvider,
+            ElementHeightProvider heightProvider,
             int screenWidth,
             int screenHeight
     ) {
@@ -17,18 +18,26 @@ final class RenderLayoutEngine {
 
         for (RenderSection section : sections) {
             SectionLayout options = section.layout();
-            List<MeasuredRow> rows = measure(section, widthProvider, options.scale());
+            List<MeasuredRow> rows = measure(section, widthProvider, heightProvider, options);
             int sectionWidth = rows.stream().mapToInt(MeasuredRow::width).max().orElse(0);
-            int rowHeight = options.scaledRowHeight();
-            int sectionHeight = rows.size() * rowHeight;
+            int sectionHeight = rows.stream().mapToInt(MeasuredRow::height).sum();
             int sectionX = options.anchor().resolveX(screenWidth, sectionWidth, options.offsetX());
             int sectionY = options.anchor().resolveY(screenHeight, sectionHeight, options.offsetY());
+            int rowCursor = options.rowDirection() == RowDirection.TOP_TO_BOTTOM
+                    ? sectionY : sectionY + sectionHeight;
 
             for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
                 MeasuredRow row = rows.get(rowIndex);
                 int rowX = alignRow(sectionX, sectionWidth, row.width(), options.rowAlignment());
-                int rowY = positionRow(sectionY, rows.size(), rowIndex, rowHeight, options.rowDirection());
-                positionElements(positioned, row, rowX, rowY, rowHeight, options);
+                int rowY;
+                if (options.rowDirection() == RowDirection.TOP_TO_BOTTOM) {
+                    rowY = rowCursor;
+                    rowCursor += row.height();
+                } else {
+                    rowCursor -= row.height();
+                    rowY = rowCursor;
+                }
+                positionElements(positioned, row, rowX, rowY, row.height(), options);
             }
         }
 
@@ -38,19 +47,25 @@ final class RenderLayoutEngine {
     private static List<MeasuredRow> measure(
             RenderSection section,
             ElementWidthProvider widthProvider,
-            float sectionScale
+            ElementHeightProvider heightProvider,
+            SectionLayout options
     ) {
         List<MeasuredRow> rows = new ArrayList<>(section.rows().size());
         for (RenderRow row : section.rows()) {
             List<MeasuredElement> elements = row.elements().stream()
                     .map(element -> new MeasuredElement(
-                            element, Math.max(0, widthProvider.width(element, sectionScale))))
+                            element,
+                            Math.max(0, widthProvider.width(element, options.scale())),
+                            Math.max(0, heightProvider.height(element, options.scale()))))
                     .toList();
             int contentWidth = elements.stream().mapToInt(MeasuredElement::width).sum();
             int padding = contentWidth == 0 ? 0
-                    : RenderDimensions.scaleOffset(RenderDimensions.PADDING_LEFT, sectionScale)
-                    + RenderDimensions.scaleOffset(RenderDimensions.PADDING_RIGHT, sectionScale);
-            rows.add(new MeasuredRow(elements, contentWidth + padding));
+                    : RenderDimensions.scaleOffset(RenderDimensions.PADDING_LEFT, options.scale())
+                    + RenderDimensions.scaleOffset(RenderDimensions.PADDING_RIGHT, options.scale());
+            int rowHeight = options.autoRowHeight() && !elements.isEmpty()
+                    ? elements.stream().mapToInt(MeasuredElement::height).max().orElse(0)
+                    : options.scaledRowHeight();
+            rows.add(new MeasuredRow(elements, contentWidth + padding, rowHeight));
         }
         return rows;
     }
@@ -61,17 +76,6 @@ final class RenderLayoutEngine {
             case CENTER -> sectionX + (sectionWidth - rowWidth) / 2;
             case RIGHT -> sectionX + sectionWidth - rowWidth;
         };
-    }
-
-    private static int positionRow(
-            int sectionY,
-            int rowCount,
-            int rowIndex,
-            int rowHeight,
-            RowDirection direction
-    ) {
-        int visualIndex = direction == RowDirection.TOP_TO_BOTTOM ? rowIndex : rowCount - rowIndex - 1;
-        return sectionY + visualIndex * rowHeight;
     }
 
     private static void positionElements(

@@ -18,12 +18,30 @@ final class RenderElementMeasurer {
         };
     }
 
+    static int height(RenderElement element, TextRenderer textRenderer, float sectionScale) {
+        return switch (element) {
+            case RenderElement.Text ignored -> RenderDimensions.scaleLength(
+                    textRenderer.fontHeight, sectionScale);
+            case RenderElement.Stack stack -> stackHeight(
+                    stack.value(), stack.scale(), sectionScale, stack.drawAir());
+            case RenderElement.Item item -> stackHeight(
+                    item.value(), item.scale(), sectionScale, false);
+            case RenderElement.Entity entity -> scaledIconSize(entity.scale(), sectionScale);
+            case RenderElement.Texture texture -> scaledIconSize(texture.scale(), sectionScale);
+        };
+    }
+
     static int stackWidth(ItemStack stack, float iconScale, float sectionScale, boolean drawAir) {
         return stackWidth(stack == null || stack.isEmpty(), iconScale, sectionScale, drawAir);
     }
 
     static int stackWidth(boolean empty, float iconScale, float sectionScale, boolean drawAir) {
         if (empty && !drawAir) return 0;
+        return scaledIconSize(iconScale, sectionScale);
+    }
+
+    static int stackHeight(ItemStack stack, float iconScale, float sectionScale, boolean drawAir) {
+        if ((stack == null || stack.isEmpty()) && !drawAir) return 0;
         return scaledIconSize(iconScale, sectionScale);
     }
 

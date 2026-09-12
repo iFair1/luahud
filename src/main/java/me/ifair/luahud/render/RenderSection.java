@@ -29,4 +29,9 @@ final class RenderSection {
         currentRow.add(element);
         if (endsRow) currentRow = null;
     }
+
+    void newLine() {
+        if (currentRow == null) rows.add(new RenderRow());
+        currentRow = null;
+    }
 }

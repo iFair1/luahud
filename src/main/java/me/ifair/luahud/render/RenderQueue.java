@@ -25,6 +25,13 @@ final class RenderQueue {
         currentSection.add(element, endsRow);
     }
 
+    void newLine() {
+        if (currentSection == null) {
+            throw new IllegalStateException("Cannot add a newline before beginning a section");
+        }
+        currentSection.newLine();
+    }
+
     List<RenderSection> sections() {
         return Collections.unmodifiableList(sections);
     }

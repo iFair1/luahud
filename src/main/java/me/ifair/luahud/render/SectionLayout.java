@@ -10,7 +10,8 @@ public record SectionLayout(
         InlineDirection inlineDirection,
         RowDirection rowDirection,
         float scale,
-        int rowHeight
+        int rowHeight,
+        boolean autoRowHeight
 ) {
     public SectionLayout {
         Objects.requireNonNull(anchor, "anchor");
@@ -32,7 +33,8 @@ public record SectionLayout(
                 InlineDirection.LEFT_TO_RIGHT,
                 RowDirection.TOP_TO_BOTTOM,
                 1.0f,
-                RenderDimensions.DEFAULT_ROW_HEIGHT
+                RenderDimensions.DEFAULT_ROW_HEIGHT,
+                true
         );
     }
 

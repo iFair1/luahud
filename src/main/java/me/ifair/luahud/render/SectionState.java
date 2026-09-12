@@ -14,7 +14,8 @@ public record SectionState(
         int backgroundColor,
         float scale,
         float iconScale,
-        int rowHeight
+        int rowHeight,
+        boolean autoRowHeight
 ) {
     public SectionState {
         Objects.requireNonNull(anchor, "anchor");
@@ -44,12 +45,14 @@ public record SectionState(
                 0x80000000,
                 1.0f,
                 1.0f,
-                RenderDimensions.DEFAULT_ROW_HEIGHT
+                RenderDimensions.DEFAULT_ROW_HEIGHT,
+                true
         );
     }
 
     public SectionLayout layout() {
         return new SectionLayout(
-                anchor, offsetX, offsetY, rowAlignment, inlineDirection, rowDirection, scale, rowHeight);
+                anchor, offsetX, offsetY, rowAlignment, inlineDirection, rowDirection,
+                scale, rowHeight, autoRowHeight);
     }
 }

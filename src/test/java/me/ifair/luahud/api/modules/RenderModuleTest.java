@@ -36,6 +36,9 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field useEntityRotation? boolean "
                 + "Use the entity's current rotation as the base for yaw and pitch offsets"));
         assertTrue(stub.contains("function lh.drawEntity(uuid, options) end"));
+        assertTrue(stub.contains("---@field rowHeight? integer | \"auto\" Fixed unscaled row height"));
+        assertTrue(stub.contains("---@param count? integer Number of line breaks; defaults to 1"));
+        assertTrue(stub.contains("function lh.newline(count) end"));
     }
 
     @Test void entityAnglesDefaultNormalizeAndRejectNonFiniteValues() {
@@ -74,6 +77,7 @@ class RenderModuleTest {
         assertEquals(0, state.offsetX());
         assertEquals(RowAlignment.CENTER, state.rowAlignment());
         assertEquals(RowDirection.TOP_TO_BOTTOM, state.rowDirection());
+        assertTrue(state.autoRowHeight());
     }
 
     @Test void rightAnchorsKeepTheirInsetAndDeriveRightRowAlignment() {
@@ -113,7 +117,17 @@ class RenderModuleTest {
         assertEquals(2f, state.scale());
         assertEquals(1.5f, state.iconScale());
         assertEquals(10, state.rowHeight());
+        assertFalse(state.autoRowHeight());
         assertEquals(20, state.layout().scaledRowHeight());
+    }
+
+    @Test void automaticRowHeightIsTheDefaultAndCanBeRequestedExplicitly() {
+        SectionState defaults = RenderModule.sectionState(null);
+        SectionState explicit = RenderModule.sectionState(new LuaTableValue(Map.of("rowHeight", "auto")));
+
+        assertTrue(defaults.autoRowHeight());
+        assertTrue(explicit.autoRowHeight());
+        assertEquals(12, explicit.rowHeight());
     }
 
     @Test void iconScaleAndRowHeightMustBePositive() {

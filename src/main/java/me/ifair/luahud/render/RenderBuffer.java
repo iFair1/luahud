@@ -26,6 +26,12 @@ public final class RenderBuffer {
         invalidateLayout();
     }
 
+    public static void newLine(int count) {
+        if (count <= 0) throw new IllegalArgumentException("Newline count must be greater than zero");
+        for (int i = 0; i < count; i++) QUEUE.newLine();
+        invalidateLayout();
+    }
+
     public static void addText(
             String text,
             int textColor,
@@ -106,6 +112,7 @@ public final class RenderBuffer {
             cachedLayout = LAYOUT_ENGINE.layout(
                     QUEUE.sections(),
                     (element, sectionScale) -> RenderElementMeasurer.width(element, textRenderer, sectionScale),
+                    (element, sectionScale) -> RenderElementMeasurer.height(element, textRenderer, sectionScale),
                     screenWidth,
                     screenHeight);
             cachedTextRenderer = textRenderer;
