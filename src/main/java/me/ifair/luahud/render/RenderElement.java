@@ -37,6 +37,10 @@ sealed interface RenderElement permits RenderElement.Text, RenderElement.Stack, 
     record Entity(
             net.minecraft.entity.Entity value,
             float scale,
+            float yaw,
+            float pitch,
+            boolean fullBright,
+            boolean useEntityRotation,
             int backgroundColor,
             int offsetX,
             int offsetY

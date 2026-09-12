@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,7 +29,32 @@ class RenderModuleTest {
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@param id string | ItemStack Namespaced item ID or ItemStack model"));
         assertTrue(stub.contains("---@param uuid string | Entity Entity UUID or Entity model"));
+        assertTrue(stub.contains("---@param options? EntityOptions Rendering options"));
+        assertTrue(stub.contains("---@field pitch? number Vertical viewing angle offset in degrees"));
+        assertTrue(stub.contains("---@field yaw? number Horizontal viewing angle offset in degrees"));
+        assertTrue(stub.contains("---@field fullBright? boolean Use maximum lighting; defaults to true"));
+        assertTrue(stub.contains("---@field useEntityRotation? boolean "
+                + "Use the entity's current rotation as the base for yaw and pitch offsets"));
         assertTrue(stub.contains("function lh.drawEntity(uuid, options) end"));
+    }
+
+    @Test void entityAnglesDefaultNormalizeAndRejectNonFiniteValues() {
+        assertEquals(0f, RenderModule.angle(null, "yaw"));
+        assertEquals(45f, RenderModule.angle(new LuaTableValue(Map.of("yaw", 405)), "yaw"));
+        assertEquals(-45f, RenderModule.angle(new LuaTableValue(Map.of("pitch", -405)), "pitch"));
+        assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.angle(new LuaTableValue(Map.of("yaw", Double.NaN)), "yaw"));
+    }
+
+    @Test void entityBooleanOptionsHaveStableDefaults() {
+        assertTrue(RenderModule.bool(null, "fullBright", true));
+        assertFalse(RenderModule.bool(null, "useEntityRotation", false));
+        LuaTableValue options = new LuaTableValue(Map.of(
+                "fullBright", false,
+                "useEntityRotation", true
+        ));
+        assertFalse(RenderModule.bool(options, "fullBright", true));
+        assertTrue(RenderModule.bool(options, "useEntityRotation", false));
     }
 
     @Test void numericColorsAreStrictArgb() {

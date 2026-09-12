@@ -52,7 +52,8 @@ final class RenderPainter {
                     context, textRenderer, item.value(), item.scale(), positioned.sectionScale(),
                     positioned.anchor(), positioned.rowHeight(), x, y);
             case RenderElement.Entity entity -> paintEntity(
-                    context, entity.value(), entity.scale(), positioned.sectionScale(),
+                    context, entity.value(), entity.scale(), entity.yaw(), entity.pitch(),
+                    entity.fullBright(), entity.useEntityRotation(), positioned.sectionScale(),
                     positioned.anchor(), positioned.rowHeight(), x, y);
             case RenderElement.Texture texture -> {
                 int size = RenderElementMeasurer.scaledIconSize(texture.scale(), positioned.sectionScale());
@@ -67,6 +68,10 @@ final class RenderPainter {
             DrawContext context,
             Entity entity,
             float iconScale,
+            float yaw,
+            float pitch,
+            boolean fullBright,
+            boolean useEntityRotation,
             float sectionScale,
             Anchor anchor,
             int rowHeight,
@@ -81,34 +86,46 @@ final class RenderPainter {
         if (!Float.isFinite(extent) || extent <= 0) return;
         float scale = size / extent;
 
-        float yaw = entity.getYaw();
-        float pitch = entity.getPitch();
+        float originalYaw = entity.getYaw();
+        float originalPitch = entity.getPitch();
         LivingRotation livingRotation = LivingRotation.capture(entity);
         MatrixStack matrices = context.getMatrices();
         EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
+        Quaternionf dispatcherRotation = new Quaternionf(dispatcher.getRotation());
 
-        entity.setYaw(180f);
-        entity.setPitch(0f);
-        livingRotation.faceForward();
+        if (!useEntityRotation) {
+            entity.setYaw(180f);
+            entity.setPitch(0f);
+            livingRotation.faceForward();
+        }
         matrices.push();
         try {
+            float yawRadians = (float) Math.toRadians(yaw);
+            float pitchRadians = (float) Math.toRadians(pitch);
+            Quaternionf verticalRotation = new Quaternionf().rotateX(pitchRadians);
             matrices.translate(x + size / 2f, entityY + size / 2f, 50);
             matrices.scale(scale, scale, -scale);
             matrices.translate(0, entity.getHeight() / 2f, 0);
-            matrices.multiply(new Quaternionf().rotateZ((float) Math.PI));
+            matrices.multiply(new Quaternionf()
+                    .rotateZ((float) Math.PI)
+                    .mul(verticalRotation)
+                    .rotateY(yawRadians));
             DiffuseLighting.method_34742();
-            dispatcher.setRotation(new Quaternionf().rotateY((float) Math.PI));
+            dispatcher.setRotation(new Quaternionf(verticalRotation).conjugate().rotateY((float) Math.PI));
             dispatcher.setRenderShadows(false);
+            float entityYaw = useEntityRotation ? originalYaw : 0;
+            int light = fullBright ? 0xF000F0 : dispatcher.getLight(entity, 1);
             RenderSystem.runAsFancy(() -> dispatcher.render(
-                    entity, 0, 0, 0, 0, 1, matrices, context.getVertexConsumers(), 0xF000F0));
+                    entity, 0, 0, 0, entityYaw, 1, matrices, context.getVertexConsumers(), light));
             context.draw();
         } finally {
             dispatcher.setRenderShadows(true);
+            dispatcher.setRotation(dispatcherRotation);
             matrices.pop();
             DiffuseLighting.enableGuiDepthLighting();
             livingRotation.restore();
-            entity.setYaw(yaw);
-            entity.setPitch(pitch);
+            entity.setYaw(originalYaw);
+            entity.setPitch(originalPitch);
         }
     }
 

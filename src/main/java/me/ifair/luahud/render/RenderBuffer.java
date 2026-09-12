@@ -70,13 +70,18 @@ public final class RenderBuffer {
     public static void addEntity(
             Entity entity,
             float scale,
+            float yaw,
+            float pitch,
+            boolean fullBright,
+            boolean useEntityRotation,
             int backgroundColor,
             int offsetX,
             int offsetY,
             boolean newLine
     ) {
         QUEUE.add(new RenderElement.Entity(
-                entity, scale, backgroundColor, offsetX, offsetY), newLine);
+                entity, scale, yaw, pitch, fullBright, useEntityRotation,
+                backgroundColor, offsetX, offsetY), newLine);
         invalidateLayout();
     }
 

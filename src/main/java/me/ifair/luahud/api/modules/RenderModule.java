@@ -40,10 +40,11 @@ public final class RenderModule {
 
     public static void register(LuaApiRegistrar api, CoreModels models) {
         LuaType<Object> color = LuaType.union(LuaType.string(), LuaType.integer());
-        LuaType<LuaTableValue> sectionOptions = optionsType("SectionOptions", color, true, true, false);
-        LuaType<LuaTableValue> textOptions = optionsType("TextOptions", color, false, true, false);
-        LuaType<LuaTableValue> iconOptions = optionsType("IconOptions", color, false, false, false);
-        LuaType<LuaTableValue> stackOptions = optionsType("StackOptions", color, false, false, true);
+        LuaType<LuaTableValue> sectionOptions = optionsType("SectionOptions", color, true, true, false, false);
+        LuaType<LuaTableValue> textOptions = optionsType("TextOptions", color, false, true, false, false);
+        LuaType<LuaTableValue> iconOptions = optionsType("IconOptions", color, false, false, false, false);
+        LuaType<LuaTableValue> stackOptions = optionsType("StackOptions", color, false, false, true, false);
+        LuaType<LuaTableValue> entityOptions = optionsType("EntityOptions", color, false, false, false, true);
 
         FunctionBuilder<Void> section = api.root().function(
                 "section", LuaType.nil(), "Start an independent drawing section with fresh options.");
@@ -78,7 +79,7 @@ public final class RenderModule {
                 "drawEntity", LuaType.nil(), "Draw a loaded entity by UUID or Entity model.");
         LuaParameter<Object> entityUuid = drawEntity.parameter(
                 "uuid", LuaType.union(LuaType.string(), models.entity().type()), "Entity UUID or Entity model");
-        LuaParameter<LuaTableValue> entityOpts = drawEntity.optionalParameter("options", iconOptions, "Rendering options");
+        LuaParameter<LuaTableValue> entityOpts = drawEntity.optionalParameter("options", entityOptions, "Rendering options");
         drawEntity.call(arguments -> {
             drawEntity(arguments.get(entityUuid), arguments.get(entityOpts));
             return null;
@@ -104,7 +105,14 @@ public final class RenderModule {
         });
     }
 
-    private static LuaType<LuaTableValue> optionsType(String name, LuaType<Object> color, boolean section, boolean text, boolean stack) {
+    private static LuaType<LuaTableValue> optionsType(
+            String name,
+            LuaType<Object> color,
+            boolean section,
+            boolean text,
+            boolean stack,
+            boolean entity
+    ) {
         return LuaType.inputTable(name, fields -> {
             fields.optional("backgroundColor", color, "ARGB integer or RGB/ARGB hex string")
                     .optional("offsetX", LuaType.integer(), section
@@ -143,6 +151,13 @@ public final class RenderModule {
                         .optional("showCount", LuaType.bool(), "Show stack count")
                         .optional("showGlint", LuaType.bool(), "Show enchantment glint")
                         .optional("drawAir", LuaType.bool(), "Reserve one item width for an empty stack");
+            }
+            if (entity) {
+                fields.optional("yaw", LuaType.number(), "Horizontal viewing angle offset in degrees")
+                        .optional("pitch", LuaType.number(), "Vertical viewing angle offset in degrees")
+                        .optional("fullBright", LuaType.bool(), "Use maximum lighting; defaults to true")
+                        .optional("useEntityRotation", LuaType.bool(),
+                                "Use the entity's current rotation as the base for yaw and pitch offsets");
             }
         });
     }
@@ -222,7 +237,9 @@ public final class RenderModule {
 
     private static void drawEntity(Object reference, LuaTableValue options) {
         Entity entity = reference instanceof Entity value ? value : findEntity((String) reference);
-        RenderBuffer.addEntity(entity, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+        RenderBuffer.addEntity(entity, iconScale(options), angle(options, "yaw"), angle(options, "pitch"),
+                bool(options, "fullBright", true), bool(options, "useEntityRotation", false),
+                resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
     }
 
@@ -267,6 +284,16 @@ public final class RenderModule {
 
     private static float iconScale(LuaTableValue options) {
         return scale(options, "scale", currentState.iconScale());
+    }
+
+    static float angle(LuaTableValue options, String key) {
+        double requested = options == null ? 0 : options.number(key, 0);
+        if (!Double.isFinite(requested)) throw new IllegalArgumentException("Angle must be finite");
+        return (float) (requested % 360);
+    }
+
+    static boolean bool(LuaTableValue options, String key, boolean fallback) {
+        return options == null ? fallback : options.bool(key, fallback);
     }
 
     private static float scale(LuaTableValue options, String key, float fallback) {
