@@ -4,12 +4,15 @@ import me.ifair.luahud.api.LuaTableValue;
 import me.ifair.luahud.api.core.ApiRegistry;
 import me.ifair.luahud.api.core.StubGenerator;
 import me.ifair.luahud.api.models.CoreModels;
+import me.ifair.luahud.core.CobaltRuntime;
 import me.ifair.luahud.render.Anchor;
 import me.ifair.luahud.render.InlineDirection;
 import me.ifair.luahud.render.RowAlignment;
 import me.ifair.luahud.render.RowDirection;
 import me.ifair.luahud.render.SectionState;
+import net.minecraft.util.Identifier;
 import org.junit.jupiter.api.Test;
+import org.squiddev.cobalt.LuaError;
 
 import java.util.Map;
 
@@ -58,6 +61,33 @@ class RenderModuleTest {
         ));
         assertFalse(RenderModule.bool(options, "fullBright", true));
         assertTrue(RenderModule.bool(options, "useEntityRotation", false));
+    }
+
+    @Test void texturePathsMustBeValidAndReferToAnExistingResource() {
+        Identifier expected = Identifier.of("minecraft", "textures/gui/icon.png");
+
+        assertEquals(expected, RenderModule.textureIdentifier(expected.toString(), expected::equals));
+        IllegalArgumentException malformed = assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.textureIdentifier("minecraft:Invalid Path", ignored -> true));
+        IllegalArgumentException missing = assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.textureIdentifier("minecraft:textures/gui/missing.png", ignored -> false));
+
+        assertTrue(malformed.getMessage().contains("Invalid texture path"));
+        assertTrue(missing.getMessage().contains("Texture not found"));
+    }
+
+    @Test void invalidTexturePathSurfacesAsALuaError() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        RenderModule.register(api, CoreModels.register(api));
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+
+        LuaError error = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.drawTexture('minecraft:Invalid Path')", "invalid-texture"));
+
+        assertTrue(error.getMessage().contains("Invalid texture path: minecraft:Invalid Path"));
     }
 
     @Test void numericColorsAreStrictArgb() {

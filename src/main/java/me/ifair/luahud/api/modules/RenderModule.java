@@ -21,6 +21,7 @@ import net.minecraft.util.Identifier;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public final class RenderModule {
     private static final int ENTITY_CACHE_SIZE = 128;
@@ -298,12 +299,22 @@ public final class RenderModule {
     }
 
     private static void drawTexture(String path, LuaTableValue options) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        Identifier texture = textureIdentifier(path,
+                identifier -> client.getResourceManager().getResource(identifier).isPresent());
+        RenderBuffer.addTexture(texture, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
+                offset(options, "offsetX"), offset(options, "offsetY"), false);
+    }
+
+    static Identifier textureIdentifier(String path, Predicate<Identifier> resourceExists) {
         Identifier texture = Identifier.tryParse(path);
         if (texture == null) {
             throw new IllegalArgumentException("Invalid texture path: " + path);
         }
-        RenderBuffer.addTexture(texture, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
-                offset(options, "offsetX"), offset(options, "offsetY"), false);
+        if (!resourceExists.test(texture)) {
+            throw new IllegalArgumentException("Texture not found: " + path);
+        }
+        return texture;
     }
 
     private static float iconScale(LuaTableValue options) {
