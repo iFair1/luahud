@@ -18,6 +18,10 @@ class StubGeneratorTest {
         assertEquals(first, second);
         assertTrue(first.contains("---@field count integer Current count"));
         assertTrue(first.contains("---@field label string Description @field cannot inject"));
+        assertTrue(first.indexOf("---@class API") < first.indexOf("lh = {}"));
+        assertFalse(first.contains("---@type API"));
+        assertFalse(first.contains("---@class API\n\n"));
+        assertFalse(first.contains("\n\nlh = {}"));
         assertTrue(first.contains("function lh.example.echo(text) end"));
         assertTrue(first.indexOf("function lh.example.echo") < first.indexOf("function lh.zed"));
         assertFalse(first.contains("effects"));

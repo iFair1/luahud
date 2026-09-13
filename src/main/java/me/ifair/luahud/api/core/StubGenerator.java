@@ -41,9 +41,9 @@ public final class StubGenerator {
                 if (child instanceof ApiRegistry.NamespaceNode) field(out, child.name(), className(info.path() + "." + child.name()), child.doc().description(), false);
                 else if (child instanceof ApiRegistry.ValueNode value) field(out, child.name(), context.type(value.type(), value.providerId()), value.doc().description(), false);
             });
-            out.append('\n');
+            if (!info.path().equals("lh")) out.append('\n');
         }
-        out.append("---@type ").append(className("lh")).append("\nlh = {}\n\n");
+        out.append("lh = {}\n\n");
 
         List<FunctionInfo> functions = new ArrayList<>();
         collectFunctions(registry.rootNode(), "lh", functions);
