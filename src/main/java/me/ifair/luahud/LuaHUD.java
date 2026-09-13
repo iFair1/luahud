@@ -16,7 +16,6 @@ import me.ifair.luahud.gui.LuaHUDErrorsScreen;
 import me.ifair.luahud.gui.LuaHUDScreen;
 import me.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -25,7 +24,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Identifier;
 
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -38,16 +36,17 @@ import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.lit
 public class LuaHUD implements ClientModInitializer {
 	public static final String MOD_ID = "luahud";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-
-	private static final KeyBinding OPEN_SCREEN_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-			"Open Config Screen", // These are translation keys, but I'm very lazy now so ill put literal text like this
-			InputUtil.Type.KEYSYM,
-			GLFW.GLFW_KEY_H,
-			"LuaHUD"
-	));
+	private static KeyBinding openScreenKey;
 
 	@Override
 	public void onInitializeClient() {
+		openScreenKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+				"Open Config Screen", // These are translation keys, but I'm very lazy now so ill put literal text like this
+				InputUtil.Type.KEYSYM,
+				GLFW.GLFW_KEY_H,
+				"LuaHUD"
+		));
+
 		ConfigManager.load();
 		ConfigInstaller.generateDefaults();
 
@@ -102,7 +101,7 @@ public class LuaHUD implements ClientModInitializer {
 
 	private static void handleKeybinds(MinecraftClient client) {
 		boolean openScreen = false;
-		while (OPEN_SCREEN_KEY.wasPressed()) openScreen = true;
+		while (openScreenKey.wasPressed()) openScreen = true;
 		if (openScreen && client.currentScreen == null) {
 			client.setScreen(new LuaHUDScreen(null));
 		}
