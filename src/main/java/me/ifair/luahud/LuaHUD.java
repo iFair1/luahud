@@ -12,8 +12,7 @@ import me.ifair.luahud.core.ProfileKeybindManager;
 import me.ifair.luahud.core.TimerManager;
 import me.ifair.luahud.error.ErrorManager;
 import me.ifair.luahud.error.ErrorNotifications;
-import me.ifair.luahud.gui_old.LuaHUDErrorsScreen;
-import me.ifair.luahud.gui_old.LuaHUDScreen;
+import me.ifair.luahud.gui.LuaHUDScreen;
 import me.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
 
