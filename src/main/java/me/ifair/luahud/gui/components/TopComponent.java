@@ -40,8 +40,8 @@ public class TopComponent {
                 new IconButtonWidget(
                         left1,
                         y,
-                        20,
-                        20,
+                        BUTTON_SIZE,
+                        BUTTON_SIZE,
                         GuiTextures.GITHUB,
                         ignored -> GuiUtils.openInBrowser(GITHUB_URL)
                 )
@@ -50,8 +50,8 @@ public class TopComponent {
                 new IconButtonWidget(
                         left2,
                         y,
-                        20,
-                        20,
+                        BUTTON_SIZE,
+                        BUTTON_SIZE,
                         GuiTextures.MODRINTH,
                         ignored -> GuiUtils.openInBrowser(MODRINTH_URL)
                 )
@@ -60,8 +60,8 @@ public class TopComponent {
                 new IconButtonWidget(
                 left3,
                 y,
-                20,
-                20,
+                BUTTON_SIZE,
+                BUTTON_SIZE,
                 GuiTextures.DISCORD,
                 ignored -> {}
             )
@@ -73,8 +73,8 @@ public class TopComponent {
                 new IconButtonWidget(
                         right1,
                         y,
-                        20,
-                        20,
+                        BUTTON_SIZE,
+                        BUTTON_SIZE,
                         GuiTextures.NO_ERRORS,
                         ignored -> {/* TODO: Open ErrorScreen */}
                 )
@@ -83,8 +83,8 @@ public class TopComponent {
                 new IconButtonWidget(
                         right2,
                         y,
-                        20,
-                        20,
+                        BUTTON_SIZE,
+                        BUTTON_SIZE,
                         GuiTextures.SHOW_HIDDEN,
                         button -> {
                             boolean showHidden = !ConfigManager.isShowHiddenFilesEnabled();
