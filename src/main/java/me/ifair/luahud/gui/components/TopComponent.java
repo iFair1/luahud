@@ -79,7 +79,7 @@ public class TopComponent {
                         ignored -> {/* TODO: Open ErrorScreen */}
                 )
         );
-        IconButtonWidget visibilityButton = screen.addWidget(
+        this.visibilityButton = screen.addWidget(
                 new IconButtonWidget(
                         right2,
                         y,
