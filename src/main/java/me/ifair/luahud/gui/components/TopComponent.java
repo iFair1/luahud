@@ -1,5 +1,6 @@
 package me.ifair.luahud.gui.components;
 
+import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.gui.GuiTextures;
 import me.ifair.luahud.gui.GuiUtils;
 import me.ifair.luahud.gui.IconButtonWidget;
@@ -78,14 +79,23 @@ public class TopComponent {
                         ignored -> {/* TODO: Open ErrorScreen */}
                 )
         );
-        screen.addWidget(
+        IconButtonWidget visibilityButton = screen.addWidget(
                 new IconButtonWidget(
                         right2,
                         y,
                         20,
                         20,
                         GuiTextures.SHOW_HIDDEN,
-                        ignored -> {/* TODO: show hidden files + update yourself to HIDE_HIDDEN */}
+                        button -> {
+                            if (ConfigManager.isShowHiddenFilesEnabled()) {
+                                this.visibilityButton.setIcon(GuiTextures.HIDE_HIDDEN);
+                                ConfigManager.setShowHiddenFiles(false);
+                            }
+                            else {
+                                this.visibilityButton.setIcon(GuiTextures.SHOW_HIDDEN);
+                                ConfigManager.setShowHiddenFiles(true);
+                            }
+                        }
                 )
         );
     }
