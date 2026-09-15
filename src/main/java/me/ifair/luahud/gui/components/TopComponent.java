@@ -87,14 +87,13 @@ public class TopComponent {
                         20,
                         GuiTextures.SHOW_HIDDEN,
                         button -> {
-                            if (ConfigManager.isShowHiddenFilesEnabled()) {
-                                this.visibilityButton.setIcon(GuiTextures.HIDE_HIDDEN);
-                                ConfigManager.setShowHiddenFiles(false);
-                            }
-                            else {
-                                this.visibilityButton.setIcon(GuiTextures.SHOW_HIDDEN);
-                                ConfigManager.setShowHiddenFiles(true);
-                            }
+                            boolean showHidden = !ConfigManager.isShowHiddenFilesEnabled();
+
+                            ConfigManager.setShowHiddenFiles(showHidden);
+
+                            this.visibilityButton.setIcon(
+                                    showHidden ? GuiTextures.SHOW_HIDDEN : GuiTextures.HIDE_HIDDEN
+                            );
                         }
                 )
         );
