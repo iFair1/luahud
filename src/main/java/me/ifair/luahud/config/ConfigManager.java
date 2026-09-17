@@ -140,6 +140,48 @@ public class ConfigManager {
         return false;
     }
 
+    public static synchronized boolean deleteProfile(String name) {
+        int index = indexOfProfile(name);
+        if (index < 0) return false;
+
+        Path profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
+        if (!MOD_CONFIG_DIR.equals(profileFile.getParent())) return false;
+
+        ConfigData.ProfileData removed = config.profiles.remove(index);
+        if (!save()) {
+            config.profiles.add(index, removed);
+            return false;
+        }
+
+        try {
+            Files.deleteIfExists(profileFile);
+            profileReloadNeeded.set(true);
+            profileKeybindRevision++;
+            return true;
+        } catch (IOException | SecurityException e) {
+            config.profiles.add(index, removed);
+            save();
+            LuaHUD.LOGGER.error("There was an error while deleting profile '{}': {}", name, e.getMessage());
+            ErrorManager.reportSystem("profile delete", e);
+            return false;
+        }
+    }
+
+    public static synchronized boolean moveProfile(String name, int offset) {
+        int index = indexOfProfile(name);
+        int target = index + offset;
+        if (index < 0 || target < 0 || target >= config.profiles.size()) return false;
+
+        Collections.swap(config.profiles, index, target);
+        if (save()) {
+            profileReloadNeeded.set(true);
+            return true;
+        }
+
+        Collections.swap(config.profiles, index, target);
+        return false;
+    }
+
     public static synchronized boolean setProfileActive(String name, boolean active) {
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null) return false;

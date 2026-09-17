@@ -1,0 +1,240 @@
+package me.ifair.luahud.gui;
+
+import me.ifair.luahud.config.ConfigData;
+import me.ifair.luahud.config.ConfigManager;
+import me.ifair.luahud.gui.components.ProfileListWidget;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.Selectable;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ElementListWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.text.Text;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
+
+public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
+    private static final int GAP = 4;
+    public static final int ROW_HEIGHT = 20;
+    private static final int BUTTON_SIZE = ROW_HEIGHT - GAP;
+    private static final int KEYBIND_WIDTH = 72;
+    private static final int MIN_NAME_WIDTH = 20;
+    private static final int MAX_NAME_LENGTH = 128;
+    private static final int LABEL_Y_OFFSET = 1;
+
+    private final ProfileListWidget list;
+    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final IconButtonWidget activeButton;
+    private final TextFieldWidget nameField;
+    private final IconButtonWidget visibilityButton;
+    private final ButtonWidget keybindButton;
+    private final IconButtonWidget upButton;
+    private final IconButtonWidget downButton;
+    private final IconButtonWidget deleteButton;
+
+    private String profileName;
+    private String keybind;
+    private boolean active;
+    private boolean hidden;
+    private boolean deleteConfirmation;
+    private boolean finishingNameEdit;
+
+    public ProfileEntry(ProfileListWidget list, ConfigData.ProfileData profile) {
+        this.list = list;
+        this.profileName = profile.getName();
+        this.keybind = profile.getKeybind();
+        this.active = profile.isActive();
+        this.hidden = profile.isHidden();
+
+        this.activeButton = iconButton(active ? GuiTextures.SHOW : GuiTextures.HIDE, ignored -> toggleActive());
+
+        this.nameField = new TextFieldWidget(client.textRenderer, 0, 0, Text.literal("Profile name")) {
+            @Override
+            public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+                if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                    cancelNameEdit();
+                    return true;
+                }
+                if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                    commitNameEdit();
+                    return true;
+                }
+                return super.keyPressed(keyCode, scanCode, modifiers);
+            }
+
+            @Override
+            public void setFocused(boolean focused) {
+                boolean wasFocused = isFocused();
+                super.setFocused(focused);
+                if (wasFocused && !isFocused() && !finishingNameEdit) {
+                    setText(profileName);
+                }
+            }
+        };
+        this.nameField.setMaxLength(MAX_NAME_LENGTH);
+        this.nameField.setText(profileName);
+        this.nameField.setVisible(false);
+
+        this.visibilityButton = iconButton(hidden ? GuiTextures.SHOW : GuiTextures.HIDE, ignored -> toggleHidden());
+        this.keybindButton = ButtonWidget.builder(keybindText(keybind), ignored -> list.selectKeybind(this))
+                .dimensions(0, 0, KEYBIND_WIDTH, BUTTON_SIZE)
+                .build();
+        this.upButton = iconButton(GuiTextures.SHOW, ignored -> list.moveProfile(profileName, -1));
+        this.downButton = iconButton(GuiTextures.HIDE, ignored -> list.moveProfile(profileName, 1));
+        this.deleteButton = iconButton(GuiTextures.DELETE, ignored -> deleteProfile());
+    }
+
+    @Override
+    public void render(
+            DrawContext context,
+            int index,
+            int y,
+            int x,
+            int entryWidth,
+            int entryHeight,
+            int mouseX,
+            int mouseY,
+            boolean hovered,
+            float tickDelta
+    ) {
+        context.fill(x, y, x + entryWidth, y + entryHeight, index % 2 == 0 ? 0x44000000 : 0x22000000);
+
+        int deleteX = x + entryWidth - BUTTON_SIZE;
+        int downX = deleteX - GAP - BUTTON_SIZE;
+        int upX = downX - GAP - BUTTON_SIZE;
+        int keybindX = upX - GAP - KEYBIND_WIDTH;
+        int visibilityX = keybindX - GAP - BUTTON_SIZE;
+        int nameX = x + BUTTON_SIZE + GAP;
+        int nameWidth = Math.max(MIN_NAME_WIDTH, visibilityX - GAP - nameX);
+
+        activeButton.setPosition(x, y);
+        nameField.setDimensionsAndPosition(nameWidth, BUTTON_SIZE, nameX, y);
+        visibilityButton.setPosition(visibilityX, y);
+        keybindButton.setPosition(keybindX, y);
+        upButton.setPosition(upX, y);
+        downButton.setPosition(downX, y);
+        deleteButton.setPosition(deleteX, y);
+
+        if (!nameField.isFocused()) {
+            nameField.setCursorToStart(false);
+            nameField.setSelectionEnd(0);
+        }
+
+        boolean hoveringName = mouseX >= nameField.getX()
+                && mouseX < nameField.getRight()
+                && mouseY >= nameField.getY()
+                && mouseY < nameField.getBottom();
+        nameField.setVisible(hoveringName || nameField.isFocused());
+
+        activeButton.render(context, mouseX, mouseY, tickDelta);
+        if (nameField.isVisible()) {
+            nameField.render(context, mouseX, mouseY, tickDelta);
+        } else {
+            String name = client.textRenderer.trimToWidth(profileName, nameField.getInnerWidth());
+            int textY = y + (BUTTON_SIZE - client.textRenderer.fontHeight) / 2 + LABEL_Y_OFFSET;
+            context.drawTextWithShadow(client.textRenderer, name, nameX + 4, textY, 0xFFFFFF);
+        }
+        visibilityButton.render(context, mouseX, mouseY, tickDelta);
+        keybindButton.render(context, mouseX, mouseY, tickDelta);
+        upButton.render(context, mouseX, mouseY, tickDelta);
+        downButton.render(context, mouseX, mouseY, tickDelta);
+        deleteButton.render(context, mouseX, mouseY, tickDelta);
+    }
+
+    @Override
+    public List<? extends Element> children() {
+        return List.of(activeButton, nameField, visibilityButton, keybindButton, upButton, downButton, deleteButton);
+    }
+
+    @Override
+    public List<? extends Selectable> selectableChildren() {
+        return List.of(activeButton, nameField, visibilityButton, keybindButton, upButton, downButton, deleteButton);
+    }
+
+    public void setKeybindSelected(boolean selected) {
+        Text text = keybindText(keybind);
+        keybindButton.setMessage(selected ? Text.literal("> ").append(text).append(" <") : text);
+    }
+
+    public void setKeybind(InputUtil.Key key) {
+        if (ConfigManager.setProfileKeybind(profileName, key.getTranslationKey())) {
+            this.keybind = key.getTranslationKey();
+        }
+        setKeybindSelected(false);
+    }
+
+    public boolean cancelNameEditIfFocused() {
+        if (!nameField.isFocused()) return false;
+        cancelNameEdit();
+        return true;
+    }
+
+    private void toggleActive() {
+        boolean newValue = !active;
+        if (ConfigManager.setProfileActive(profileName, newValue)) {
+            active = newValue;
+            activeButton.setIcon(active ? GuiTextures.SHOW : GuiTextures.HIDE);
+        }
+    }
+
+    private void toggleHidden() {
+        boolean newValue = !hidden;
+        if (ConfigManager.setProfileHidden(profileName, newValue)) {
+            hidden = newValue;
+            visibilityButton.setIcon(hidden ? GuiTextures.SHOW : GuiTextures.HIDE);
+            list.requestReload();
+        }
+    }
+
+    private void cancelNameEdit() {
+        finishingNameEdit = true;
+        nameField.setText(profileName);
+        nameField.setFocused(false);
+        finishingNameEdit = false;
+    }
+
+    private void commitNameEdit() {
+        String newName = nameField.getText().trim();
+        if (ConfigManager.renameProfile(profileName, newName)) {
+            profileName = newName;
+            finishingNameEdit = true;
+            nameField.setText(profileName);
+            nameField.setFocused(false);
+            finishingNameEdit = false;
+            list.requestReload();
+        } else {
+            cancelNameEdit();
+        }
+    }
+
+    private void deleteProfile() {
+        if (!deleteConfirmation) {
+            deleteConfirmation = true;
+            deleteButton.setIcon(GuiTextures.DELETE_CONFIRM);
+            return;
+        }
+
+        if (ConfigManager.deleteProfile(profileName)) {
+            list.requestReload();
+        } else {
+            deleteConfirmation = false;
+            deleteButton.setIcon(GuiTextures.DELETE);
+        }
+    }
+
+    private static IconButtonWidget iconButton(net.minecraft.util.Identifier icon, ButtonWidget.PressAction action) {
+        return new IconButtonWidget(0, 0, BUTTON_SIZE, BUTTON_SIZE, icon, action);
+    }
+
+    private static Text keybindText(String translationKey) {
+        try {
+            return InputUtil.fromTranslationKey(translationKey).getLocalizedText();
+        } catch (IllegalArgumentException ignored) {
+            return InputUtil.UNKNOWN_KEY.getLocalizedText();
+        }
+    }
+
+}
