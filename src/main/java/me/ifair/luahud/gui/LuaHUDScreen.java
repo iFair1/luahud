@@ -1,7 +1,8 @@
 package me.ifair.luahud.gui;
 
-import me.ifair.luahud.gui.components.BottomComponent;
-import me.ifair.luahud.gui.components.TopComponent;
+import me.ifair.luahud.gui.components.FooterWidget;
+import me.ifair.luahud.gui.components.HeaderWidget;
+import me.ifair.luahud.gui.components.ProfileListWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
@@ -23,8 +24,11 @@ public class LuaHUDScreen extends Screen {
 
     @Override
     protected void init() {
-        new TopComponent(this).build();
-        new BottomComponent(this).build();
+        new HeaderWidget(this).build();
+
+        new ProfileListWidget(this).build();
+
+        new FooterWidget(this).build();
     }
 
     @Override

@@ -6,15 +6,15 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 
-public class BottomComponent {
+public class FooterWidget {
     private static final int GAP = 8;
-    private static final int MARGIN = 8;
+    public static final int MARGIN = 8;
     private static final int BUTTON_WIDTH = 150;
-    private static final int BUTTON_HEIGHT = 20;
+    public static final int BUTTON_HEIGHT = 20;
 
     private final LuaHUDScreen screen;
 
-    public BottomComponent(LuaHUDScreen screen) { this.screen = screen; }
+    public FooterWidget(LuaHUDScreen screen) { this.screen = screen; }
 
     public void build() {
 
