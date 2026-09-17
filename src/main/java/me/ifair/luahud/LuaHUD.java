@@ -110,7 +110,7 @@ public class LuaHUD implements ClientModInitializer {
 
 	private static int openErrorsScreen(Long entryId) {
 		MinecraftClient client = MinecraftClient.getInstance();
-		client.send(() -> client.setScreen(new LuaHUDErrorsScreen(null, entryId)));
+		// client.send(() -> client.setScreen(new LuaHUDErrorsScreen(null, entryId)));
 		return 1;
 	}
 }
