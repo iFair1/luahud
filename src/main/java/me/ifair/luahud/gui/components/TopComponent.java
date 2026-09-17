@@ -12,9 +12,9 @@ public class TopComponent {
     private static final String MODRINTH_URL = "https://modrinth.com/mod/luahud";
     // TODO: Discord
 
-    private static int MARGIN = 8;
-    private static int GAP = 4;
-    private static int BUTTON_SIZE = 20; // You should change the assets too. Else, bad things will happen
+    private static final int MARGIN = 8;
+    private static final int GAP = 4;
+    private static final int BUTTON_SIZE = 20; // You should change the assets too. Else, bad things will happen
 
     private final LuaHUDScreen screen;
     private IconButtonWidget visibilityButton;
