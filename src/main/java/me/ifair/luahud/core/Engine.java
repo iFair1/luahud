@@ -10,7 +10,6 @@ import me.ifair.luahud.error.ErrorManager;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 public final class Engine {
     private final ApiRegistry registry;
@@ -22,7 +21,7 @@ public final class Engine {
         ErrorManager.beginProfileReload();
         try { CobaltRuntime replacement = new CobaltRuntime(registry); replacement.start(); runtime = replacement; }
         catch (Exception error) { runtime = null; LuaHUD.LOGGER.error("Could not start the Cobalt runtime", error); ErrorManager.reportSystem("runtime", error); return; }
-        for (Map.Entry<String, ConfigData.ProfileData> entry : ConfigManager.getProfiles().entrySet()) if (entry.getValue().isActive()) runProfile(entry.getKey());
+        for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) if (profile.isActive()) runProfile(profile.getName());
         fireEvent("init");
     }
     public void runProfile(String name) { runScript(ConfigManager.getScriptsDir().resolve(name + ".lua"), name); }

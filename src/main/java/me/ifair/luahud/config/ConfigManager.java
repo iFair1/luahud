@@ -10,9 +10,9 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConfigManager {
@@ -34,12 +34,10 @@ public class ConfigManager {
             ConfigData loaded = gson.fromJson(reader, ConfigData.class);
             config = (loaded != null) ? loaded : new ConfigData();
             if (config.profiles == null) config.profiles = new ConfigData().profiles;
-            config.profiles.entrySet().removeIf(entry -> entry.getKey() == null || entry.getKey().isBlank());
-            config.profiles.replaceAll((name, profile) -> {
-                ConfigData.ProfileData normalized = profile != null ? profile : new ConfigData.ProfileData();
-                normalized.normalize();
-                return normalized;
-            });
+            config.profiles.removeIf(profile -> profile == null
+                    || profile.getName() == null
+                    || profile.getName().isBlank());
+            config.profiles.forEach(ConfigData.ProfileData::normalize);
 
         } catch (IOException e) {
             LuaHUD.LOGGER.error("There was an error while reading the config file: {}", e.getMessage());
@@ -71,10 +69,10 @@ public class ConfigManager {
 
     public static synchronized boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
     public static synchronized boolean isGenerateExampleProfilesEnabled() { return config.generateExampleProfiles; }
-    public static synchronized Map<String, ConfigData.ProfileData> getProfiles() {
-        Map<String, ConfigData.ProfileData> snapshot = new HashMap<>();
-        config.profiles.forEach((name, profile) -> snapshot.put(name, profile.copy()));
-        return Collections.unmodifiableMap(snapshot);
+    public static synchronized List<ConfigData.ProfileData> getProfiles() {
+        List<ConfigData.ProfileData> snapshot = new ArrayList<>();
+        config.profiles.forEach(profile -> snapshot.add(profile.copy()));
+        return Collections.unmodifiableList(snapshot);
     }
 
     public static synchronized boolean setShowHiddenFiles(boolean value) {
@@ -100,30 +98,37 @@ public class ConfigManager {
     }
 
     public static synchronized boolean hasProfile(String name) {
-        return config.profiles.containsKey(name);
+        return findProfile(name) != null;
     }
 
     public static synchronized boolean addProfile(String name, ConfigData.ProfileData profile) {
         if (name == null || name.isBlank() || profile == null) return false;
 
-        ConfigData.ProfileData previous = config.profiles.put(name, profile.copy());
+        int index = indexOfProfile(name);
+        ConfigData.ProfileData replacement = profile.copy();
+        replacement.setName(name);
+        ConfigData.ProfileData previous = index >= 0
+                ? config.profiles.set(index, replacement)
+                : null;
+        if (index < 0) config.profiles.add(replacement);
         if (save()) {
             profileReloadNeeded.set(true);
             profileKeybindRevision++;
             return true;
         }
 
-        restoreProfile(name, previous);
+        restoreProfile(index, previous);
         return false;
     }
 
     public static synchronized boolean addProfile(String name) {
-        return addProfile(name, new ConfigData.ProfileData());
+        return addProfile(name, new ConfigData.ProfileData(name));
     }
 
     public static synchronized boolean removeProfile(String name) {
-        ConfigData.ProfileData removed = config.profiles.remove(name);
-        if (removed == null) return false;
+        int index = indexOfProfile(name);
+        if (index < 0) return false;
+        ConfigData.ProfileData removed = config.profiles.remove(index);
 
         if (save()) {
             profileReloadNeeded.set(true);
@@ -131,12 +136,12 @@ public class ConfigManager {
             return true;
         }
 
-        config.profiles.put(name, removed);
+        config.profiles.add(index, removed);
         return false;
     }
 
     public static synchronized boolean setProfileActive(String name, boolean active) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
+        ConfigData.ProfileData profile = findProfile(name);
         if (profile == null) return false;
         if (profile.isActive() == active) return true;
 
@@ -152,12 +157,12 @@ public class ConfigManager {
     }
 
     public static synchronized boolean toggleProfileActive(String name) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
+        ConfigData.ProfileData profile = findProfile(name);
         return profile != null && setProfileActive(name, !profile.isActive());
     }
 
     public static synchronized boolean setProfileHidden(String name, boolean hidden) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
+        ConfigData.ProfileData profile = findProfile(name);
         if (profile == null) return false;
         if (profile.isHidden() == hidden) return true;
 
@@ -170,7 +175,7 @@ public class ConfigManager {
     }
 
     public static synchronized boolean setProfileKeybind(String name, String keybind) {
-        ConfigData.ProfileData profile = config.profiles.get(name);
+        ConfigData.ProfileData profile = findProfile(name);
         if (profile == null || keybind == null || keybind.isBlank()) return false;
         if (profile.getKeybind().equals(keybind)) return true;
 
@@ -188,18 +193,18 @@ public class ConfigManager {
     public static synchronized boolean renameProfile(String oldName, String newName) {
         String trimmedName = newName.trim();
         if (oldName.equals(trimmedName)) return true;
-        if (trimmedName.isEmpty() || !config.profiles.containsKey(oldName)) return false;
+        ConfigData.ProfileData profile = findProfile(oldName);
+        if (trimmedName.isEmpty() || profile == null) return false;
 
         Path oldFile = MOD_CONFIG_DIR.resolve(oldName + ".lua").normalize();
         Path newFile = MOD_CONFIG_DIR.resolve(trimmedName + ".lua").normalize();
         if (!MOD_CONFIG_DIR.equals(newFile.getParent())
-                || config.profiles.containsKey(trimmedName)
+                || hasProfile(trimmedName)
                 || Files.exists(newFile)) {
             return false;
         }
 
-        ConfigData.ProfileData profile = config.profiles.remove(oldName);
-        config.profiles.put(trimmedName, profile);
+        profile.setName(trimmedName);
 
         try {
             Files.move(oldFile, newFile);
@@ -209,8 +214,7 @@ public class ConfigManager {
                 return true;
             }
 
-            config.profiles.remove(trimmedName);
-            config.profiles.put(oldName, profile);
+            profile.setName(oldName);
             try {
                 Files.move(newFile, oldFile);
             } catch (IOException rollbackError) {
@@ -219,8 +223,7 @@ public class ConfigManager {
             }
             return false;
         } catch (IOException e) {
-            config.profiles.remove(trimmedName);
-            config.profiles.put(oldName, profile);
+            profile.setName(oldName);
             LuaHUD.LOGGER.error("There was an error while renaming profile '{}' to '{}': {}", oldName, trimmedName, e.getMessage());
             ErrorManager.reportSystem("profile rename", e);
             return false;
@@ -235,11 +238,24 @@ public class ConfigManager {
         return profileKeybindRevision;
     }
 
-    private static void restoreProfile(String name, ConfigData.ProfileData profile) {
+    private static ConfigData.ProfileData findProfile(String name) {
+        int index = indexOfProfile(name);
+        return index >= 0 ? config.profiles.get(index) : null;
+    }
+
+    private static int indexOfProfile(String name) {
+        if (name == null) return -1;
+        for (int index = 0; index < config.profiles.size(); index++) {
+            if (name.equals(config.profiles.get(index).getName())) return index;
+        }
+        return -1;
+    }
+
+    private static void restoreProfile(int index, ConfigData.ProfileData profile) {
         if (profile == null) {
-            config.profiles.remove(name);
+            config.profiles.removeLast();
         } else {
-            config.profiles.put(name, profile);
+            config.profiles.set(index, profile);
         }
     }
 }

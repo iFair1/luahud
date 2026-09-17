@@ -9,7 +9,6 @@ import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.widget.ElementListWidget;
 
 import java.util.List;
-import java.util.Map;
 
 public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
     private static final int TOP_MARGIN = HeaderWidget.MARGIN * 2 + HeaderWidget.BUTTON_SIZE;
@@ -41,11 +40,10 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
 
         boolean showHidden = ConfigManager.isShowHiddenFilesEnabled();
 
-        ConfigManager.getProfiles().entrySet().stream()
-                .filter(entry -> showHidden || !entry.getValue().isHidden())
-                .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER)) // TODO: add profile ordering because rn its not deterministic
-                .forEach(entry -> {
-                    addEntry(new ProfileEntry(entry.getKey(), entry.getValue()));
+        ConfigManager.getProfiles().stream()
+                .filter(profile -> showHidden || !profile.isHidden())
+                .forEach(profile -> {
+                    addEntry(new ProfileEntry(profile.getName(), profile));
                 });
     }
 }
