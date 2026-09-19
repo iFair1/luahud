@@ -5,53 +5,113 @@ import me.ifair.luahud.error.ErrorManager;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
-import java.util.HashSet;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Set;
 
 public final class LuaHUDErrorsScreen extends Screen {
-    private static final int CONTENT_MAX_WIDTH = 540;
-    private static final int ROW_HEIGHT = 28;
+    private static final int CONTENT_MAX_WIDTH = 760;
+    private static final int PAGE_MARGIN = 12;
+    private static final int HEADER_HEIGHT = 58;
+    private static final int TOOLBAR_HEIGHT = 24;
+    private static final int FOOTER_HEIGHT = 34;
+    private static final DateTimeFormatter COPY_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(ZoneId.systemDefault());
 
     @Nullable
     private final Screen parent;
     @Nullable
-    private final Long selectedErrorId;
-    private final Set<Long> expandedErrors = new HashSet<>();
-    private boolean targetPending;
-    private ErrorListWidget errorList;
+    private final Long requestedErrorId;
+    private ErrorListWidget.Filter filter = ErrorListWidget.Filter.ALL;
+    private String query = "";
+    @Nullable
+    private Long selectedErrorId;
+    private ErrorListWidget errorBrowser;
+    private TextFieldWidget searchField;
+    private ButtonWidget allButton;
+    private ButtonWidget profileButton;
+    private ButtonWidget systemButton;
+    private ButtonWidget copyButton;
     private long displayedRevision;
 
     public LuaHUDErrorsScreen(@Nullable Screen parent, @Nullable Long selectedErrorId) {
-        super(Text.literal("LuaHUD Errors"));
+        super(Text.literal("LuaHUD error inbox"));
         this.parent = parent;
+        this.requestedErrorId = selectedErrorId;
         this.selectedErrorId = selectedErrorId;
-        this.targetPending = selectedErrorId != null;
-        if (selectedErrorId != null) this.expandedErrors.add(selectedErrorId);
     }
 
     @Override
     protected void init() {
         List<ErrorEntry> errors = ErrorManager.snapshot();
         this.displayedRevision = ErrorManager.structureRevision();
-        this.errorList = this.addDrawableChild(new ErrorListWidget(
-                this.client,
-                this.width,
-                Math.max(ROW_HEIGHT, this.height - 72),
-                36,
-                errors,
-                this.expandedErrors,
-                this.targetPending ? this.selectedErrorId : null
-        ));
-        this.targetPending = false;
 
-        int buttonWidth = Math.min(150, Math.min(CONTENT_MAX_WIDTH, this.width - 24));
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Back"), button -> this.close())
-                .dimensions((this.width - buttonWidth) / 2, this.height - 28, buttonWidth, 20)
+        int contentWidth = Math.max(1, Math.min(CONTENT_MAX_WIDTH, this.width - PAGE_MARGIN * 2));
+        int contentX = (this.width - contentWidth) / 2;
+        int toolbarY = HEADER_HEIGHT;
+        int filterWidth = Math.min(78, Math.max(54, (contentWidth - 122) / 5));
+        int searchX = contentX + filterWidth * 3 + 8;
+        int searchWidth = Math.max(54, contentX + contentWidth - searchX);
+
+        this.allButton = this.addDrawableChild(filterButton(
+                Text.literal("All"), contentX, toolbarY, filterWidth, ErrorListWidget.Filter.ALL));
+        this.profileButton = this.addDrawableChild(filterButton(
+                Text.literal("Profiles"), contentX + filterWidth, toolbarY, filterWidth,
+                ErrorListWidget.Filter.PROFILES));
+        this.systemButton = this.addDrawableChild(filterButton(
+                Text.literal("LuaHUD"), contentX + filterWidth * 2, toolbarY, filterWidth,
+                ErrorListWidget.Filter.SYSTEM));
+
+        this.searchField = this.addDrawableChild(new TextFieldWidget(
+                this.textRenderer, searchX, toolbarY, searchWidth, 20, Text.literal("Search errors")));
+        this.searchField.setMaxLength(160);
+        this.searchField.setPlaceholder(Text.literal("Search messages...").formatted(Formatting.DARK_GRAY));
+        this.searchField.setText(this.query);
+
+        int browserY = toolbarY + TOOLBAR_HEIGHT;
+        int browserHeight = Math.max(40, this.height - browserY - FOOTER_HEIGHT);
+        Long initialSelection = findInitialSelection(errors);
+        this.errorBrowser = this.addDrawableChild(new ErrorListWidget(
+                this.client,
+                contentX,
+                browserY,
+                contentWidth,
+                browserHeight,
+                errors,
+                initialSelection,
+                this.requestedErrorId != null,
+                this::selectError
+        ));
+        this.errorBrowser.setFilter(this.filter, this.query);
+        this.selectedErrorId = this.errorBrowser.selectedErrorId();
+
+        this.searchField.setChangedListener(value -> {
+            this.query = value;
+            this.errorBrowser.setFilter(this.filter, value);
+            this.selectedErrorId = this.errorBrowser.selectedErrorId();
+            updateCopyButton();
+        });
+
+        int footerY = this.height - 28;
+        int buttonWidth = Math.min(126, Math.max(88, (contentWidth - 8) / 2));
+        this.copyButton = this.addDrawableChild(ButtonWidget.builder(
+                        Text.literal("Copy details"), button -> copySelectedError())
+                .dimensions(contentX, footerY, buttonWidth, 20)
                 .build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> this.close())
+                .dimensions(contentX + contentWidth - buttonWidth, footerY, buttonWidth, 20)
+                .build());
+
+        updateFilterButtons();
+        updateCopyButton();
     }
 
     @Override
@@ -63,8 +123,41 @@ public final class LuaHUDErrorsScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 22, 0xFFFFFF);
-        this.errorList.renderTooltip(context, mouseX, mouseY);
+
+        List<ErrorEntry> errors = ErrorManager.snapshot();
+        int distinct = errors.size();
+        long occurrences = errors.stream().mapToLong(ErrorEntry::count).sum();
+        long affectedProfiles = errors.stream().filter(error -> !error.system()).map(ErrorEntry::group).distinct().count();
+        int contentWidth = Math.max(1, Math.min(CONTENT_MAX_WIDTH, this.width - PAGE_MARGIN * 2));
+        int contentX = (this.width - contentWidth) / 2;
+
+        int accent = distinct == 0 ? 0xFF55D68B : 0xFFFF667A;
+        context.fill(contentX, 14, contentX + 3, 43, accent);
+        context.drawTextWithShadow(this.textRenderer, "Error inbox", contentX + 11, 14, 0xFFF4F4F5);
+
+        String profileLabel = affectedProfiles == 1 ? "profile" : "profiles";
+        String status = distinct == 0
+                ? "Everything looks good"
+                : distinct + " distinct  ·  " + occurrences + " total  ·  "
+                + affectedProfiles + " " + profileLabel;
+        context.drawTextWithShadow(this.textRenderer, status, contentX + 11, 29,
+                distinct == 0 ? 0xFF80DDA5 : 0xFFA7A7B1);
+
+        String hint = this.errorBrowser != null && this.errorBrowser.isMobileDetailVisible()
+                ? "Esc to return to the list"
+                : "Click an item to inspect";
+        int hintWidth = this.textRenderer.getWidth(hint);
+        if (hintWidth < contentWidth / 2) {
+            context.drawTextWithShadow(this.textRenderer, hint,
+                    contentX + contentWidth - hintWidth, 22, 0xFF777783);
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && this.errorBrowser != null
+                && this.errorBrowser.backToMobileList()) return true;
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -72,4 +165,63 @@ public final class LuaHUDErrorsScreen extends Screen {
         if (this.client != null) this.client.setScreen(this.parent);
     }
 
+    private ButtonWidget filterButton(Text label, int x, int y, int width, ErrorListWidget.Filter target) {
+        return ButtonWidget.builder(label, button -> {
+                    this.filter = target;
+                    this.errorBrowser.setFilter(target, this.query);
+                    this.selectedErrorId = this.errorBrowser.selectedErrorId();
+                    updateFilterButtons();
+                    updateCopyButton();
+                })
+                .dimensions(x, y, width, 20)
+                .build();
+    }
+
+    private void selectError(@Nullable Long id) {
+        this.selectedErrorId = id;
+        if (this.copyButton != null) this.copyButton.setMessage(Text.literal("Copy details"));
+        updateCopyButton();
+    }
+
+    private void updateFilterButtons() {
+        if (this.allButton == null) return;
+        this.allButton.active = this.filter != ErrorListWidget.Filter.ALL;
+        this.profileButton.active = this.filter != ErrorListWidget.Filter.PROFILES;
+        this.systemButton.active = this.filter != ErrorListWidget.Filter.SYSTEM;
+    }
+
+    private void updateCopyButton() {
+        if (this.copyButton != null) this.copyButton.active = currentSelection() != null;
+    }
+
+    private void copySelectedError() {
+        ErrorEntry error = currentSelection();
+        if (error == null || this.client == null) return;
+
+        String location = error.line().equals("—") ? error.source() : error.source() + ":" + error.line();
+        String details = "LuaHUD error\n"
+                + "Source: " + location + "\n"
+                + "Phase: " + error.phase() + "\n"
+                + "Occurrences: " + error.count() + "\n"
+                + "First seen: " + COPY_TIME_FORMAT.format(Instant.ofEpochMilli(error.firstSeen())) + "\n"
+                + "Last seen: " + COPY_TIME_FORMAT.format(Instant.ofEpochMilli(error.lastSeen())) + "\n\n"
+                + error.displayMessage();
+        this.client.keyboard.setClipboard(details);
+        this.copyButton.setMessage(Text.literal("Copied!"));
+    }
+
+    @Nullable
+    private ErrorEntry currentSelection() {
+        if (this.selectedErrorId == null) return null;
+        return ErrorManager.find(this.selectedErrorId).orElse(null);
+    }
+
+    @Nullable
+    private Long findInitialSelection(List<ErrorEntry> errors) {
+        if (this.selectedErrorId != null
+                && errors.stream().anyMatch(error -> error.id() == this.selectedErrorId)) {
+            return this.selectedErrorId;
+        }
+        return errors.isEmpty() ? null : errors.getFirst().id();
+    }
 }
