@@ -160,10 +160,8 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
     }
 
     public void setKeybind(InputUtil.Key key) {
-        if (ConfigManager.setProfileKeybind(profileName, key.getTranslationKey())) {
-            this.keybind = key.getTranslationKey();
-        }
-        setKeybindSelected(false);
+        ConfigManager.setProfileKeybind(profileName, key.getTranslationKey());
+        this.keybind = key.getTranslationKey();
     }
 
     public boolean cancelNameEditIfFocused() {

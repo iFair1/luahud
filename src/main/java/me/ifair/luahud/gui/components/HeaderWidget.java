@@ -10,6 +10,7 @@ public class HeaderWidget {
     private static final String GITHUB_URL = "https://github.com/iFair1/luahud";
     private static final String MODRINTH_URL = "https://modrinth.com/mod/luahud";
     // TODO: Discord
+    // TODO: Documentation
 
     public static final int MARGIN = 8;
     private static final int GAP = 4;
@@ -89,12 +90,11 @@ public class HeaderWidget {
                         button -> {
                             boolean showHidden = !ConfigManager.isShowHiddenFilesEnabled();
 
-                            if (ConfigManager.getShowHiddenFiles(showHidden)) {
-                                this.visibilityButton.setIcon(
-                                        showHidden ? GuiTextures.SHOW_HIDDEN : GuiTextures.HIDE_HIDDEN
-                                );
-                                screen.reloadProfiles();
-                            }
+                            ConfigManager.setShowHiddenFiles(showHidden);
+                            this.visibilityButton.setIcon(
+                                    showHidden ? GuiTextures.SHOW_HIDDEN : GuiTextures.HIDE_HIDDEN
+                            );
+                            screen.reloadProfiles();
                         }
                 )
         );
