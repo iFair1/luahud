@@ -14,9 +14,6 @@ public final class ConfigData {
         private String keybind = "key.keyboard.unknown";
         private boolean hidden = false;
 
-        public ProfileData() {
-        }
-
         public ProfileData(String name) {
             this.name = name;
         }
