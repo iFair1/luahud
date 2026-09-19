@@ -2,6 +2,7 @@ package me.ifair.luahud.gui;
 
 import me.ifair.luahud.gui.components.*;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
@@ -42,6 +43,12 @@ public class LuaHUDScreen extends Screen {
     public void tick() {
         super.tick();
         if (header != null) header.tick();
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 14, 0xFFFFFF);
     }
 
     public void reloadProfiles() {
