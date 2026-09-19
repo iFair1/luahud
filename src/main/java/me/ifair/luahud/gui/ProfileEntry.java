@@ -78,7 +78,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
         this.nameField.setText(profileName);
         this.nameField.setVisible(false);
 
-        this.visibilityButton = iconButton(hidden ? GuiTextures.SHOW : GuiTextures.HIDE, ignored -> toggleHidden());
+        this.visibilityButton = iconButton(hidden ? GuiTextures.HIDDEN : GuiTextures.SHOWN, ignored -> toggleHidden());
         this.keybindButton = ButtonWidget.builder(keybindText(keybind), ignored -> list.selectKeybind(this))
                 .dimensions(0, 0, KEYBIND_WIDTH, BUTTON_SIZE)
                 .build();
@@ -181,7 +181,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
         boolean newValue = !hidden;
         ConfigManager.setProfileHidden(profileName, newValue);
         hidden = newValue;
-        visibilityButton.setIcon(hidden ? GuiTextures.SHOW : GuiTextures.HIDE);
+        visibilityButton.setIcon(hidden ? GuiTextures.HIDDEN : GuiTextures.SHOWN);
         list.requestReload();
     }
 

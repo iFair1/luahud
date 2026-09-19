@@ -13,8 +13,8 @@ public class GuiTextures {
 
     public static final Identifier ENABLED = id("textures/16/enabled.png");
     public static final Identifier DISABLED = id("textures/16/disabled.png");
-    public static final Identifier HIDE = id("textures/16/eye_closed.png");
-    public static final Identifier SHOW = id("textures/16/eye.png");
+    public static final Identifier HIDDEN = id("textures/16/eye_closed.png");
+    public static final Identifier SHOWN = id("textures/16/eye.png");
     public static final Identifier MOVE_UP = id("textures/16/up.png");
     public static final Identifier MOVE_DOWN = id("textures/16/down.png");
     public static final Identifier DELETE = id("textures/16/trash.png");

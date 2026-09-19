@@ -85,14 +85,14 @@ public class HeaderWidget {
                         BUTTON_SIZE,
                         BUTTON_SIZE,
                         ConfigManager.isShowHiddenFilesEnabled()
-                                ? GuiTextures.SHOW_HIDDEN
-                                : GuiTextures.HIDE_HIDDEN,
+                                ? GuiTextures.HIDE_HIDDEN
+                                : GuiTextures.SHOW_HIDDEN,
                         button -> {
                             boolean showHidden = !ConfigManager.isShowHiddenFilesEnabled();
 
                             ConfigManager.setShowHiddenFiles(showHidden);
                             this.visibilityButton.setIcon(
-                                    showHidden ? GuiTextures.SHOW_HIDDEN : GuiTextures.HIDE_HIDDEN
+                                    showHidden ? GuiTextures.HIDE_HIDDEN : GuiTextures.SHOW_HIDDEN
                             );
                             screen.reloadProfiles();
                         }
