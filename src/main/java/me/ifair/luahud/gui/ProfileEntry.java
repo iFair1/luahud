@@ -49,7 +49,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
         this.active = profile.isActive();
         this.hidden = profile.isHidden();
 
-        this.activeButton = iconButton(active ? GuiTextures.SHOW : GuiTextures.HIDE, ignored -> toggleActive());
+        this.activeButton = iconButton(active ? GuiTextures.ENABLED : GuiTextures.DISABLED, ignored -> toggleActive());
 
         this.nameField = new TextFieldWidget(client.textRenderer, 0, 0, Text.literal("Profile name")) {
             @Override
@@ -82,8 +82,8 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
         this.keybindButton = ButtonWidget.builder(keybindText(keybind), ignored -> list.selectKeybind(this))
                 .dimensions(0, 0, KEYBIND_WIDTH, BUTTON_SIZE)
                 .build();
-        this.upButton = iconButton(GuiTextures.SHOW, ignored -> list.moveProfile(profileName, -1));
-        this.downButton = iconButton(GuiTextures.HIDE, ignored -> list.moveProfile(profileName, 1));
+        this.upButton = iconButton(GuiTextures.MOVE_UP, ignored -> list.moveProfile(profileName, -1));
+        this.downButton = iconButton(GuiTextures.MOVE_DOWN, ignored -> list.moveProfile(profileName, 1));
         this.deleteButton = iconButton(GuiTextures.DELETE, ignored -> deleteProfile());
     }
 
@@ -174,7 +174,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
         boolean newValue = !active;
         ConfigManager.setProfileActive(profileName, newValue);
         active = newValue;
-        activeButton.setIcon(active ? GuiTextures.SHOW : GuiTextures.HIDE);
+        activeButton.setIcon(active ? GuiTextures.ENABLED : GuiTextures.DISABLED);
     }
 
     private void toggleHidden() {
