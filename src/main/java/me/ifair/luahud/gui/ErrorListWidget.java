@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.function.Consumer;
 
 final class ErrorListWidget extends ClickableWidget {
+    // when enabled, it switches to single-pane layout if the screen width is low
+    private static final boolean ENABLE_COMPACT_LAYOUT = false;
     enum Filter {
         ALL,
         PROFILES,
@@ -70,7 +72,10 @@ final class ErrorListWidget extends ClickableWidget {
         this.textRenderer = client.textRenderer;
         this.allErrors = List.copyOf(errors);
         this.selectedErrorId = selectedErrorId;
-        this.mobileDetailVisible = openedFromNotification && selectedErrorId != null && width < MOBILE_BREAKPOINT;
+        this.mobileDetailVisible = ENABLE_COMPACT_LAYOUT
+                && openedFromNotification
+                && selectedErrorId != null
+                && width < MOBILE_BREAKPOINT;
         this.selectionListener = selectionListener;
         this.rebuildFilteredErrors();
     }
@@ -90,7 +95,7 @@ final class ErrorListWidget extends ClickableWidget {
     }
 
     boolean isMobileDetailVisible() {
-        return this.getWidth() < MOBILE_BREAKPOINT && this.mobileDetailVisible;
+        return usesCompactLayout() && this.mobileDetailVisible;
     }
 
     boolean backToMobileList() {
@@ -107,7 +112,7 @@ final class ErrorListWidget extends ClickableWidget {
             return;
         }
 
-        if (this.getWidth() < MOBILE_BREAKPOINT) {
+        if (usesCompactLayout()) {
             if (this.mobileDetailVisible && currentSelection() != null) {
                 renderMobileDetail(context, mouseX, mouseY);
             } else {
@@ -116,7 +121,7 @@ final class ErrorListWidget extends ClickableWidget {
             return;
         }
 
-        int listWidth = Math.clamp((int) (getWidth() * 0.38), 224, 284);
+        int listWidth = listWidth();
         renderList(context, getX(), getY(), listWidth, getHeight(), mouseX, mouseY);
         renderDetail(context, getX() + listWidth + PANEL_GAP, getY(),
                 getWidth() - listWidth - PANEL_GAP, getHeight(), mouseX, mouseY, false);
@@ -129,15 +134,15 @@ final class ErrorListWidget extends ClickableWidget {
             return;
         }
 
-        int listWidth = getWidth() < MOBILE_BREAKPOINT
+        int listWidth = usesCompactLayout()
                 ? getWidth()
-                : Math.clamp((int) (getWidth() * 0.38), 224, 284);
+                : listWidth();
         if (mouseX >= getX() + listWidth) return;
 
         ListRow row = rowAt(mouseY);
         if (row == null) return;
         select(row.error().id());
-        if (getWidth() < MOBILE_BREAKPOINT) this.mobileDetailVisible = true;
+        if (usesCompactLayout()) this.mobileDetailVisible = true;
     }
 
     @Override
@@ -145,13 +150,13 @@ final class ErrorListWidget extends ClickableWidget {
         if (!this.isMouseOver(mouseX, mouseY)) return false;
         double movement = -verticalAmount * 34;
 
-        if (getWidth() < MOBILE_BREAKPOINT) {
+        if (usesCompactLayout()) {
             if (this.mobileDetailVisible) scrollDetail(movement, getHeight() - 27);
             else scrollList(movement, getHeight());
             return true;
         }
 
-        int listWidth = Math.clamp((int) (getWidth() * 0.38), 224, 284);
+        int listWidth = listWidth();
         if (mouseX < getX() + listWidth) scrollList(movement, getHeight());
         else scrollDetail(movement, getHeight());
         return true;
@@ -159,7 +164,7 @@ final class ErrorListWidget extends ClickableWidget {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ENTER && getWidth() < MOBILE_BREAKPOINT && this.selectedErrorId != null) {
+        if (keyCode == GLFW.GLFW_KEY_ENTER && usesCompactLayout() && this.selectedErrorId != null) {
             this.mobileDetailVisible = true;
             return true;
         }
@@ -468,6 +473,15 @@ final class ErrorListWidget extends ClickableWidget {
 
     private int maxDetailScroll(int viewportHeight) {
         return Math.max(0, this.detailContentsHeight - viewportHeight);
+    }
+
+    private boolean usesCompactLayout() {
+        return ENABLE_COMPACT_LAYOUT && getWidth() < MOBILE_BREAKPOINT;
+    }
+
+    private int listWidth() {
+        int minimum = Math.min(224, Math.max(120, getWidth() / 2));
+        return Math.min(284, Math.max(minimum, (int) (getWidth() * 0.38)));
     }
 
     private List<OrderedText> wrapMessage(String message, int width) {
