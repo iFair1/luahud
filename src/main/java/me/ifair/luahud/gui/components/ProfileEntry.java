@@ -178,6 +178,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
     public void setKeybind(InputUtil.Key key) {
         ConfigManager.setProfileKeybind(profileName, key.getTranslationKey());
         this.keybind = key.getTranslationKey();
+        keybindButton.setMessage(getKeybindText());
     }
 
     public void setKeybindSelected(boolean selected) {
