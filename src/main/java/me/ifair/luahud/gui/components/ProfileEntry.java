@@ -22,6 +22,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
     public static final int ROW_HEIGHT = 20;
     private static final int BUTTON_SIZE = 16;
     private static final int GAP = ROW_HEIGHT - BUTTON_SIZE;
+    private static final int LABEL_Y_OFFSET = 1;
 
     private static final int KEYBIND_WIDTH = 72;
 
@@ -154,7 +155,7 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
             nameField.render(context, mouseX, mouseY, tickDelta);
         } else {
             String name = client.textRenderer.trimToWidth(profileName, nameField.getInnerWidth());
-            int textY = y + (BUTTON_SIZE - client.textRenderer.fontHeight) / 2 - 1;
+            int textY = y + (BUTTON_SIZE - client.textRenderer.fontHeight) / 2 + LABEL_Y_OFFSET;
             context.drawTextWithShadow(client.textRenderer, name, nameX + 4, textY, 0xFFFFFF);
         }
         visibilityButton.render(context, mouseX, mouseY, tickDelta);
