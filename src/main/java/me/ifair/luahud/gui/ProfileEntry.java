@@ -174,19 +174,17 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
 
     private void toggleActive() {
         boolean newValue = !active;
-        if (ConfigManager.setProfileActive(profileName, newValue)) {
-            active = newValue;
-            activeButton.setIcon(active ? GuiTextures.SHOW : GuiTextures.HIDE);
-        }
+        ConfigManager.setProfileActive(profileName, newValue);
+        active = newValue;
+        activeButton.setIcon(active ? GuiTextures.SHOW : GuiTextures.HIDE);
     }
 
     private void toggleHidden() {
         boolean newValue = !hidden;
-        if (ConfigManager.setProfileHidden(profileName, newValue)) {
-            hidden = newValue;
-            visibilityButton.setIcon(hidden ? GuiTextures.SHOW : GuiTextures.HIDE);
-            list.requestReload();
-        }
+        ConfigManager.setProfileHidden(profileName, newValue);
+        hidden = newValue;
+        visibilityButton.setIcon(hidden ? GuiTextures.SHOW : GuiTextures.HIDE);
+        list.requestReload();
     }
 
     private void cancelNameEdit() {
@@ -198,16 +196,13 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
 
     private void commitNameEdit() {
         String newName = nameField.getText().trim();
-        if (ConfigManager.renameProfile(profileName, newName)) {
-            profileName = newName;
-            finishingNameEdit = true;
-            nameField.setText(profileName);
-            nameField.setFocused(false);
-            finishingNameEdit = false;
-            list.requestReload();
-        } else {
-            cancelNameEdit();
-        }
+        ConfigManager.renameProfile(profileName, newName);
+        profileName = newName;
+        finishingNameEdit = true;
+        nameField.setText(profileName);
+        nameField.setFocused(false);
+        finishingNameEdit = false;
+        list.requestReload();
     }
 
     private void deleteProfile() {
@@ -217,12 +212,8 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
             return;
         }
 
-        if (ConfigManager.deleteProfile(profileName)) {
-            list.requestReload();
-        } else {
-            deleteConfirmation = false;
-            deleteButton.setIcon(GuiTextures.DELETE);
-        }
+        ConfigManager.deleteProfile(profileName);
+        list.requestReload();
     }
 
     private static IconButtonWidget iconButton(net.minecraft.util.Identifier icon, ButtonWidget.PressAction action) {

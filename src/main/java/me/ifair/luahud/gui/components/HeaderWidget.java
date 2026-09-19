@@ -89,7 +89,7 @@ public class HeaderWidget {
                         button -> {
                             boolean showHidden = !ConfigManager.isShowHiddenFilesEnabled();
 
-                            if (ConfigManager.setShowHiddenFiles(showHidden)) {
+                            if (ConfigManager.getShowHiddenFiles(showHidden)) {
                                 this.visibilityButton.setIcon(
                                         showHidden ? GuiTextures.SHOW_HIDDEN : GuiTextures.HIDE_HIDDEN
                                 );

@@ -51,7 +51,8 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
     }
 
     public void moveProfile(String profileName, int offset) {
-        if (ConfigManager.moveProfile(profileName, offset)) requestReload();
+        ConfigManager.moveProfile(profileName, offset);
+        requestReload();
     }
 
     public void requestReload() {
