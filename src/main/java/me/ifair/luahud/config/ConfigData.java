@@ -1,17 +1,26 @@
 package me.ifair.luahud.config;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class ConfigData {
     boolean showHiddenFiles = false;
     boolean generateExampleProfiles = true;
-    Map<String, ProfileData> profiles = new HashMap<>();
+    List<ProfileData> profiles = new ArrayList<>();
 
     public static final class ProfileData {
+        private String name;
         private boolean active = true;
         private String keybind = "key.keyboard.unknown";
         private boolean hidden = false;
+
+        public ProfileData(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return this.name;
+        }
 
         public boolean isActive() {
             return this.active;
@@ -29,6 +38,10 @@ public final class ConfigData {
             this.active = active;
         }
 
+        void setName(String name) {
+            this.name = name;
+        }
+
         void setKeybind(String keybind) {
             this.keybind = keybind;
         }
@@ -44,7 +57,7 @@ public final class ConfigData {
         }
 
         ProfileData copy() {
-            ProfileData copy = new ProfileData();
+            ProfileData copy = new ProfileData(this.name);
             copy.active = this.active;
             copy.keybind = this.keybind;
             copy.hidden = this.hidden;

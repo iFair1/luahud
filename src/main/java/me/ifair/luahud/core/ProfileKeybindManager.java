@@ -45,10 +45,10 @@ public final class ProfileKeybindManager {
         if (loadedRevision == revision) return;
 
         Map<InputUtil.Key, List<String>> refreshed = new HashMap<>();
-        ConfigManager.getProfiles().forEach((name, profile) -> {
+        ConfigManager.getProfiles().forEach(profile -> {
             InputUtil.Key key = parseKey(profile.getKeybind());
             if (key != null && !key.equals(InputUtil.UNKNOWN_KEY)) {
-                refreshed.computeIfAbsent(key, ignored -> new ArrayList<>()).add(name);
+                refreshed.computeIfAbsent(key, ignored -> new ArrayList<>()).add(profile.getName());
             }
         });
         profilesByKey = refreshed;

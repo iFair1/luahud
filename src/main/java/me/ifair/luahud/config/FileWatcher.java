@@ -56,7 +56,8 @@ public class FileWatcher {
             ErrorManager.reportSystem("profile sync", e);
         }
 
-        for (String profileName : ConfigManager.getProfiles().keySet()) {
+        for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) {
+            String profileName = profile.getName();
             Path expectedFile = ConfigManager.MOD_CONFIG_DIR.resolve(profileName + LUA_EXTENSION);
             if (Files.notExists(expectedFile)) {
                 ConfigManager.removeProfile(profileName);
