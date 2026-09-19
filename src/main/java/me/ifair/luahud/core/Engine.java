@@ -20,7 +20,7 @@ public final class Engine {
     public void reloadAll() {
         ErrorManager.beginProfileReload();
         try { CobaltRuntime replacement = new CobaltRuntime(registry); replacement.start(); runtime = replacement; }
-        catch (Exception error) { runtime = null; LuaHUD.LOGGER.error("Could not start the Cobalt runtime", error); ErrorManager.reportSystem("runtime", error); return; }
+        catch (Exception error) { runtime = null; ErrorManager.reportSystem("runtime", error); return; }
         for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) if (profile.isActive()) runProfile(profile.getName());
         fireEvent("init");
     }
@@ -29,7 +29,6 @@ public final class Engine {
     private void runScript(Path file, String profile) {
         if (Files.notExists(file)) {
             String message = "Couldn't find the Lua profile at " + file.toAbsolutePath();
-            LuaHUD.LOGGER.error(message);
             ErrorManager.reportProfile(profile, "load", message);
             return;
         }
@@ -37,7 +36,6 @@ public final class Engine {
             runtime.execute(stream, "@" + file.getFileName(), profile);
             LuaHUD.LOGGER.info("Script loaded successfully at {}", file.toAbsolutePath());
         } catch (Exception error) {
-            LuaHUD.LOGGER.error("There was an error while loading the script {}: {}", file.getFileName(), error.getMessage());
             ErrorManager.reportProfile(profile, "load", error);
         }
     }

@@ -1,7 +1,6 @@
 package me.ifair.luahud.api.modules;
 
 import com.sun.management.OperatingSystemMXBean;
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.LuaApiRegistrar;
 import me.ifair.luahud.api.core.CachedValue;
 import net.minecraft.client.MinecraftClient;
@@ -66,9 +65,7 @@ public final class PcModule {
             } else if (SystemInfo.getCurrentPlatform() == PlatformEnum.WINDOWS) {
                 return nvidiaUsage();
             }
-        } catch (Exception error) {
-            LuaHUD.LOGGER.error("Error while getting GPU usage", error);
-        }
+        } catch (Exception ignored) {}
         return -1;
     }
 

@@ -1,6 +1,5 @@
 package me.ifair.luahud.config;
 
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.error.ErrorManager;
 
 import java.io.IOException;
@@ -39,7 +38,6 @@ public class FileWatcher {
             watchThread.start();
 
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("Could not start File-Watcher: {}", e.getMessage());
             ErrorManager.reportSystem("file watcher", e);
         }
     }
@@ -52,7 +50,6 @@ public class FileWatcher {
                 if (!ConfigManager.hasProfile(profileName)) ConfigManager.addProfile(profileName);
             }
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("Could not sync existing files with config: {}", e.getMessage());
             ErrorManager.reportSystem("profile sync", e);
         }
 
@@ -97,7 +94,6 @@ public class FileWatcher {
         } catch (ClosedWatchServiceException e) {
             // Here will trigger when the watcher is closed. No problem, just skip
         } catch (Exception e) {
-            LuaHUD.LOGGER.error("FileWatcher error: {}", e.getMessage());
             ErrorManager.reportSystem("file watcher", e);
         }
     }

@@ -1,6 +1,5 @@
 package me.ifair.luahud.core;
 
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.*;
 import me.ifair.luahud.api.core.ApiRegistry;
 import me.ifair.luahud.error.ErrorManager;
@@ -27,7 +26,6 @@ public final class CobaltRuntime {
 
     private final ApiRegistry registry;
     private final Map<String, List<Callback>> listeners = new HashMap<>();
-    private final Map<String, Long> errorCooldowns = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
     private final Map<LuaTable, ModelValue> modelValues = new IdentityHashMap<>();
     private final CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder()
@@ -44,7 +42,7 @@ public final class CobaltRuntime {
     }
 
     public void start() throws LuaError {
-        listeners.clear(); timers.clear(); errorCooldowns.clear(); modelValues.clear();
+        listeners.clear(); timers.clear(); modelValues.clear();
         state = new LuaState();
         CoreLibraries.standardGlobals(state);
         state.globals().rawset("lh", namespace(registry.rootNode(), "lh"));
@@ -76,30 +74,24 @@ public final class CobaltRuntime {
     public void fireEvent(String eventName) {
         List<Callback> callbacks = listeners.get(eventName);
         if (callbacks == null) return;
-        for (Callback callback : List.copyOf(callbacks)) invokeCallback(callback, "event '" + eventName + "'", eventName);
+        for (Callback callback : List.copyOf(callbacks)) invokeCallback(callback, eventName);
     }
 
     public void tickTimers() {
         for (Timer timer : List.copyOf(timers)) {
             if (++timer.elapsed[0] >= timer.interval) {
                 timer.elapsed[0] = 0;
-                invokeCallback(timer.callback, "interval", null);
+                invokeCallback(timer.callback, null);
             }
         }
     }
 
-    private void invokeCallback(Callback callback, String label, String cooldownKey) {
+    private void invokeCallback(Callback callback, String cooldownKey) {
         String previousProfile = currentProfile;
         currentProfile = callback.profile;
         try {
             LuaThread.run(new LuaThread(state, callback.function), Constants.NONE);
         } catch (LuaError error) {
-            long now = System.currentTimeMillis();
-            String scopedCooldownKey = callback.profile + "\u0000" + cooldownKey + "\u0000" + error.getMessage();
-            if (cooldownKey == null || now - errorCooldowns.getOrDefault(scopedCooldownKey, 0L) > 5000) {
-                LuaHUD.LOGGER.error("Lua error in {}: {}", label, error.getMessage());
-                if (cooldownKey != null) errorCooldowns.put(scopedCooldownKey, now);
-            }
             ErrorManager.reportProfile(callback.profile, cooldownKey == null ? "timer" : cooldownKey, error);
         } finally {
             currentProfile = previousProfile;

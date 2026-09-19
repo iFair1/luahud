@@ -1,6 +1,5 @@
 package me.ifair.luahud.config;
 
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.error.ErrorManager;
 
 import java.io.IOException;
@@ -20,7 +19,6 @@ public class ConfigInstaller {
                 Files.createDirectory(MOD_CONFIG_DIR);
 
             } catch (IOException e) {
-                LuaHUD.LOGGER.error("There was an error while generating default config directory.");
                 ErrorManager.reportSystem("default config", e);
             }
         }
@@ -38,7 +36,6 @@ public class ConfigInstaller {
         try {
             Files.createDirectories(luaDir);
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("There was an error while creating luahud/api directory: {}", e.getMessage());
             ErrorManager.reportSystem("default config", e);
         }
         copyFromResourceIfAbsent(source + "lua/.luarc.json", luaDir);
@@ -56,7 +53,6 @@ public class ConfigInstaller {
 
             Files.copy(stream, targetFile, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("There was an error while generating files. source: '{}' destination: '{}' error: {}", resourcePath, targetDir.toString(), e.getMessage());
             ErrorManager.reportSystem("default config", e);
         }
     }

@@ -69,7 +69,6 @@ public final class ApiRegistry {
             String provider = entry.getProvider().getMetadata().getId();
             try { registerAddon(provider, entry.getEntrypoint()::register); }
             catch (Throwable error) {
-                LuaHUD.LOGGER.error("Discarding Lua API contribution from '{}' because its entrypoint failed", provider, error);
                 ErrorManager.reportSystem("addon " + provider, error);
             }
         }

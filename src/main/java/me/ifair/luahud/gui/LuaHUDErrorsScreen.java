@@ -20,7 +20,7 @@ public final class LuaHUDErrorsScreen extends Screen {
     private final Screen parent;
     @Nullable
     private final Long selectedErrorId;
-    private final Set<String> expandedGroups = new HashSet<>();
+    private final Set<Long> expandedErrors = new HashSet<>();
     private boolean targetPending;
     private ErrorListWidget errorList;
     private long displayedRevision;
@@ -30,9 +30,7 @@ public final class LuaHUDErrorsScreen extends Screen {
         this.parent = parent;
         this.selectedErrorId = selectedErrorId;
         this.targetPending = selectedErrorId != null;
-        if (selectedErrorId != null) {
-            ErrorManager.find(selectedErrorId).ifPresent(error -> this.expandedGroups.add(groupKey(error)));
-        }
+        if (selectedErrorId != null) this.expandedErrors.add(selectedErrorId);
     }
 
     @Override
@@ -42,12 +40,10 @@ public final class LuaHUDErrorsScreen extends Screen {
         this.errorList = this.addDrawableChild(new ErrorListWidget(
                 this.client,
                 this.width,
-                Math.max(ROW_HEIGHT, this.height - 84),
-                44,
-                ROW_HEIGHT,
+                Math.max(ROW_HEIGHT, this.height - 72),
+                36,
                 errors,
-                this.expandedGroups,
-                this,
+                this.expandedErrors,
                 this.targetPending ? this.selectedErrorId : null
         ));
         this.targetPending = false;
@@ -76,12 +72,4 @@ public final class LuaHUDErrorsScreen extends Screen {
         if (this.client != null) this.client.setScreen(this.parent);
     }
 
-    void toggleGroup(String group) {
-        if (!this.expandedGroups.add(group)) this.expandedGroups.remove(group);
-        this.clearAndInit();
-    }
-
-    static String groupKey(ErrorEntry error) {
-        return (error.system() ? "system:" : "profile:") + error.group();
-    }
 }

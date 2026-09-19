@@ -86,7 +86,8 @@ public final class ErrorManager {
 
     private static void report(ErrorGroup group, String phase, String rawMessage) {
         String safePhase = phase == null || phase.isBlank() ? "unknown" : phase.trim();
-        String message = rawMessage == null || rawMessage.isBlank() ? "Unknown error" : rawMessage.trim();
+        String normalized = rawMessage == null ? null : normalizeLineEndings(rawMessage);
+        String message = normalized == null || normalized.isBlank() ? "Unknown error" : normalized.trim();
         String key = safePhase + '\u0000' + fingerprint(group.system, message);
         MutableError existing = group.entries.get(key);
         if (existing != null) {
@@ -135,7 +136,15 @@ public final class ErrorManager {
     private static String detail(Throwable error) {
         if (error == null) return "Unknown error";
         String message = error.getMessage();
-        return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
+        if (message == null || message.isBlank()) return error.getClass().getSimpleName();
+
+        String normalized = normalizeLineEndings(message);
+        int traceback = normalized.indexOf("\nstack traceback:");
+        return traceback < 0 ? normalized : normalized.substring(0, traceback);
+    }
+
+    private static String normalizeLineEndings(String message) {
+        return message.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     private static final class ErrorGroup {

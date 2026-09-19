@@ -57,7 +57,6 @@ public class LuaHUD implements ClientModInitializer {
 		try {
 			StubGenerator.writeIfChanged(ConfigManager.getScriptsDir().resolve("api/lh.lua"), StubGenerator.generate(api));
 		} catch (Exception error) {
-			LuaHUD.LOGGER.error("Could not generate config/luahud/api/lh.lua; retaining the previous file", error);
 			ErrorManager.reportSystem("stub generation", error);
 		}
 

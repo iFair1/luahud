@@ -3,7 +3,6 @@ package me.ifair.luahud.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.error.ErrorManager;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -42,10 +41,8 @@ public class ConfigManager {
             config.profiles.forEach(ConfigData.ProfileData::normalize);
 
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("There was an error while reading the config file: {}", e.getMessage());
             ErrorManager.reportSystem("config read", e);
         } catch (JsonSyntaxException e) {
-            LuaHUD.LOGGER.error("Config JSON is invalid. Loading defaults: {}", e.getMessage());
             ErrorManager.reportSystem("config read", e);
             config = new ConfigData();
         }
@@ -56,7 +53,6 @@ public class ConfigManager {
         try (BufferedWriter writer = Files.newBufferedWriter(JSON_CONFIG)) {
             gson.toJson(config, writer);
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("There was an error while saving config to disk: {}", e.getMessage());
             ErrorManager.reportSystem("config write", e);
         }
     }
@@ -145,7 +141,6 @@ public class ConfigManager {
             profileKeybindRevision++;
         } catch (IOException e) {
             save();
-            LuaHUD.LOGGER.error("There was an error while deleting profile '{}': {}", name, e.getMessage());
             ErrorManager.reportSystem("profile delete", e);
         }
     }
@@ -214,7 +209,6 @@ public class ConfigManager {
             profileReloadNeeded.set(true);
             profileKeybindRevision++;
         } catch (IOException e) {
-            LuaHUD.LOGGER.error("There was an error while renaming profile from '{}' to '{}': {}", oldName, newName, e.getMessage());
             ErrorManager.reportSystem("profile rename", e);
         }
     }

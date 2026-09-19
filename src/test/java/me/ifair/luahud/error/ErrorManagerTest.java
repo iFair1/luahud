@@ -54,4 +54,20 @@ class ErrorManagerTest {
         assertEquals(2, overflow.count());
         assertFalse(overflow.system());
     }
+
+    @Test
+    void throwableTracebackIsRemovedButMultilineMessageIsPreserved() {
+        ErrorManager.reportProfile("Example", "tick",
+                new IllegalStateException("Example.lua:12: target is nil\nstack traceback:\n\tExample.lua:12"));
+
+        ErrorEntry error = ErrorManager.snapshot().getFirst();
+        assertEquals("12", error.line());
+        assertEquals("Example.lua", error.source());
+        assertEquals("target is nil", error.displayMessage());
+
+        ErrorManager.reportSystem("config read", "first line\r\nsecond line");
+        ErrorEntry system = ErrorManager.snapshot().stream().filter(ErrorEntry::system).findFirst().orElseThrow();
+        assertEquals("first line\nsecond line", system.displayMessage());
+        assertEquals("first line second line", system.summary());
+    }
 }
