@@ -13,6 +13,7 @@ import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
@@ -183,7 +184,12 @@ public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
 
     public void setKeybindSelected(boolean selected) {
         Text text = getKeybindText();
-        keybindButton.setMessage(selected ? Text.literal("> ").append(text).append(" <") : text);
+        keybindButton.setMessage(selected
+                ? Text.literal("> ")
+                .append(text.copy().formatted(Formatting.WHITE, Formatting.UNDERLINE))
+                .append(" <")
+                .formatted(Formatting.YELLOW)
+                : text);
     }
 
     private void toggleActive() {
