@@ -12,7 +12,6 @@ import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -33,13 +32,10 @@ final class ErrorListWidget extends ClickableWidget {
 
     private static final int MOBILE_BREAKPOINT = 560;
     private static final int PANEL_GAP = 8;
-    private static final int ROW_HEIGHT = 48;
-    private static final int ROW_GAP = 3;
-    private static final int GROUP_HEIGHT = 20;
+    private static final int ROW_HEIGHT = 36;
+    private static final int ROW_GAP = 1;
     private static final int SCROLLBAR_WIDTH = 2;
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss")
-            .withZone(ZoneId.systemDefault());
-    private static final DateTimeFormatter FULL_TIME_FORMAT = DateTimeFormatter.ofPattern("MMM d, HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 
     private final TextRenderer textRenderer;
@@ -218,15 +214,8 @@ final class ErrorListWidget extends ClickableWidget {
 
     private void rebuildRows() {
         this.rows.clear();
-        int top = 7;
-        boolean previousSystem = false;
-        boolean first = true;
+        int top = 4;
         for (ErrorEntry error : this.filteredErrors) {
-            if (first || error.system() != previousSystem) {
-                top += GROUP_HEIGHT;
-                previousSystem = error.system();
-                first = false;
-            }
             this.rows.add(new ListRow(error, top));
             top += ROW_HEIGHT + ROW_GAP;
         }
@@ -246,50 +235,35 @@ final class ErrorListWidget extends ClickableWidget {
         drawPanel(context, x, y, width, height);
         context.enableScissor(x + 1, y + 1, x + width - 1, y + height - 1);
 
-        Boolean previousSystem = null;
         for (ListRow row : this.rows) {
             ErrorEntry current = current(row.error());
             int rowY = y + row.top() - (int) this.listScroll;
-            if (previousSystem == null || current.system() != previousSystem) {
-                int groupY = rowY - GROUP_HEIGHT + 5;
-                String group = current.system() ? "LUAHUD" : "PROFILES";
-                context.drawTextWithShadow(this.textRenderer, group, x + 9, groupY,
-                        current.system() ? 0xFFFF8090 : 0xFF8FA9FF);
-                previousSystem = current.system();
-            }
             if (rowY + ROW_HEIGHT < y || rowY > y + height) continue;
 
             boolean selected = this.selectedErrorId != null && current.id() == this.selectedErrorId;
             boolean hovered = mouseX >= x + 4 && mouseX < x + width - 4
                     && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
-            int rowColor = selected ? 0xDD34232A : hovered ? 0xCC282A31 : 0xA81C1E24;
+            int rowColor = selected ? 0x99505050 : hovered ? 0x66383838 : 0x33181818;
             context.fill(x + 4, rowY, x + width - 5, rowY + ROW_HEIGHT, rowColor);
-            if (selected) context.fill(x + 4, rowY, x + 7, rowY + ROW_HEIGHT, 0xFFFF667A);
 
-            int textX = x + (selected ? 12 : 10);
+            int textX = x + 9;
             int availableWidth = width - (textX - x) - 12;
             String source = this.textRenderer.trimToWidth(current.source(), Math.max(30, availableWidth - 54));
-            context.drawTextWithShadow(this.textRenderer, source, textX, rowY + 7, 0xFFF1F1F3);
+            context.drawTextWithShadow(this.textRenderer, source, textX, rowY + 6, 0xFFFFFFFF);
 
-            String phase = current.phase().toUpperCase(Locale.ROOT);
+            String phase = current.phase();
             phase = this.textRenderer.trimToWidth(phase, 50);
             context.drawTextWithShadow(this.textRenderer, phase,
-                    x + width - 10 - this.textRenderer.getWidth(phase), rowY + 7, 0xFFCF7B88);
+                    x + width - 10 - this.textRenderer.getWidth(phase), rowY + 6, 0xFFAAAAAA);
 
             int countWidth = current.count() > 1 ? this.textRenderer.getWidth("×" + current.count()) + 8 : 0;
             String summary = this.textRenderer.trimToWidth(current.summary(), Math.max(20, availableWidth - countWidth));
-            context.drawTextWithShadow(this.textRenderer, summary, textX, rowY + 21, 0xFFB8B8C0);
+            context.drawTextWithShadow(this.textRenderer, summary, textX, rowY + 20, 0xFFAAAAAA);
             if (current.count() > 1) {
                 String count = "×" + current.count();
                 context.drawTextWithShadow(this.textRenderer, count,
-                        x + width - 10 - this.textRenderer.getWidth(count), rowY + 21, 0xFFFF9AA6);
+                        x + width - 10 - this.textRenderer.getWidth(count), rowY + 20, 0xFFAAAAAA);
             }
-
-            String line = current.line().equals("—") ? "No line" : "Line " + current.line();
-            String seen = relativeTime(current.lastSeen());
-            context.drawTextWithShadow(this.textRenderer, line, textX, rowY + 34, 0xFF777984);
-            context.drawTextWithShadow(this.textRenderer, seen,
-                    x + width - 10 - this.textRenderer.getWidth(seen), rowY + 34, 0xFF777984);
         }
 
         renderScrollbar(context, x + width - 4, y + 4, height - 8,
@@ -303,7 +277,7 @@ final class ErrorListWidget extends ClickableWidget {
                 && mouseY >= getY() && mouseY < getY() + 27;
         if (hovered) context.fill(getX() + 1, getY() + 1, getRight() - 1, getY() + 27, 0x552F3138);
         context.drawTextWithShadow(this.textRenderer, "‹  All errors", getX() + 10, getY() + 9, 0xFFE0E0E4);
-        context.fill(getX() + 1, getY() + 27, getRight() - 1, getY() + 28, 0xFF30323A);
+        context.fill(getX() + 1, getY() + 27, getRight() - 1, getY() + 28, 0xFF444444);
         renderDetail(context, getX(), getY() + 28, getWidth(), getHeight() - 28, mouseX, mouseY, true);
     }
 
@@ -322,69 +296,44 @@ final class ErrorListWidget extends ClickableWidget {
         if (selected == null) return;
 
         context.enableScissor(x + 1, y + 1, x + width - 1, y + height - 1);
-        int contentX = x + 14;
-        int contentWidth = Math.max(40, width - 28);
-        int cursor = y + 14 - (int) this.detailScroll;
-
-        String kind = selected.system() ? "SYSTEM ERROR" : "PROFILE ERROR";
-        int kindColor = selected.system() ? 0xFFFF7184 : 0xFF8FA9FF;
-        context.drawTextWithShadow(this.textRenderer, kind, contentX, cursor, kindColor);
-        cursor += 16;
+        int contentX = x + 12;
+        int contentWidth = Math.max(40, width - 24);
+        int cursor = y + 12 - (int) this.detailScroll;
 
         String title = this.textRenderer.trimToWidth(selected.source(), contentWidth);
         context.drawTextWithShadow(this.textRenderer, title, contentX, cursor, 0xFFFFFFFF);
-        cursor += 14;
+        cursor += 15;
 
         String location = selected.line().equals("—") ? "Location unavailable" : "Line " + selected.line();
-        location = this.textRenderer.trimToWidth(location, Math.max(20, contentWidth / 2 - 4));
-        String phase = this.textRenderer.trimToWidth(
-                "Phase: " + selected.phase(), Math.max(20, contentWidth / 2 - 4));
-        context.drawTextWithShadow(this.textRenderer, location, contentX, cursor, 0xFF9698A3);
-        context.drawTextWithShadow(this.textRenderer, phase,
-                contentX + contentWidth - this.textRenderer.getWidth(phase), cursor, 0xFFCF8993);
+        String kind = selected.system() ? "LuaHUD" : "Profile";
+        String metadata = kind + " · " + selected.phase() + " · " + location;
+        context.drawTextWithShadow(this.textRenderer,
+                this.textRenderer.trimToWidth(metadata, contentWidth), contentX, cursor, 0xFFAAAAAA);
         cursor += 18;
 
-        context.fill(contentX, cursor, contentX + contentWidth, cursor + 1, 0xFF363842);
-        cursor += 12;
-        context.drawTextWithShadow(this.textRenderer, "MESSAGE", contentX, cursor, 0xFF7F818D);
-        cursor += 15;
+        context.fill(contentX, cursor, contentX + contentWidth, cursor + 1, 0xFF555555);
+        cursor += 10;
 
-        List<OrderedText> messageLines = wrapMessage(selected.displayMessage(), Math.max(20, contentWidth - 18));
-        int messageHeight = Math.max(34, messageLines.size() * 11 + 16);
-        context.fill(contentX, cursor, contentX + contentWidth, cursor + messageHeight, 0xD9121419);
-        context.drawBorder(contentX, cursor, contentWidth, messageHeight, 0xFF30323B);
+        List<OrderedText> messageLines = wrapMessage(selected.displayMessage(), contentWidth);
         for (int i = 0; i < messageLines.size(); i++) {
             context.drawTextWithShadow(this.textRenderer, messageLines.get(i),
-                    contentX + 9, cursor + 8 + i * 11, 0xFFE0E0E4);
+                    contentX, cursor + i * 11, 0xFFDDDDDD);
         }
-        cursor += messageHeight + 13;
+        cursor += Math.max(1, messageLines.size()) * 11 + 10;
 
-        context.drawTextWithShadow(this.textRenderer, "ACTIVITY", contentX, cursor, 0xFF7F818D);
-        cursor += 15;
-        int cardGap = 5;
-        int cardWidth = Math.max(1, (contentWidth - cardGap * 2) / 3);
-        renderStat(context, contentX, cursor, cardWidth, "OCCURRENCES", Integer.toString(selected.count()));
-        renderStat(context, contentX + cardWidth + cardGap, cursor, cardWidth,
-                "FIRST SEEN", FULL_TIME_FORMAT.format(Instant.ofEpochMilli(selected.firstSeen())));
-        renderStat(context, contentX + (cardWidth + cardGap) * 2, cursor,
-                contentWidth - (cardWidth + cardGap) * 2,
-                "LAST SEEN", FULL_TIME_FORMAT.format(Instant.ofEpochMilli(selected.lastSeen())));
-        cursor += 45;
-
-        int noteColor = selected.system() ? 0xFFB28D92 : 0xFF8797BE;
-        String note = selected.system()
-                ? "This error comes from LuaHUD itself. Copy the details when reporting it."
-                : "Edit the profile and save it. LuaHUD reloads profiles automatically.";
-        List<OrderedText> noteLines = this.textRenderer.wrapLines(Text.literal(note), contentWidth - 18);
-        int noteHeight = noteLines.size() * 11 + 16;
-        context.fill(contentX, cursor, contentX + contentWidth, cursor + noteHeight,
-                selected.system() ? 0x332F2024 : 0x33212A40);
-        context.fill(contentX, cursor, contentX + 2, cursor + noteHeight, noteColor);
-        for (int i = 0; i < noteLines.size(); i++) {
-            context.drawTextWithShadow(this.textRenderer, noteLines.get(i),
-                    contentX + 10, cursor + 8 + i * 11, 0xFFBFC0C7);
-        }
-        cursor += noteHeight + 14;
+        context.fill(contentX, cursor, contentX + contentWidth, cursor + 1, 0xFF555555);
+        cursor += 10;
+        context.drawTextWithShadow(this.textRenderer, "Occurrences: " + selected.count(),
+                contentX, cursor, 0xFFAAAAAA);
+        cursor += 13;
+        context.drawTextWithShadow(this.textRenderer,
+                "First seen: " + TIME_FORMAT.format(Instant.ofEpochMilli(selected.firstSeen())),
+                contentX, cursor, 0xFFAAAAAA);
+        cursor += 13;
+        context.drawTextWithShadow(this.textRenderer,
+                "Last seen: " + TIME_FORMAT.format(Instant.ofEpochMilli(selected.lastSeen())),
+                contentX, cursor, 0xFFAAAAAA);
+        cursor += 20;
 
         this.detailContentsHeight = cursor - y + (int) this.detailScroll;
         this.detailScroll = Math.min(this.detailScroll, maxDetailScroll(height));
@@ -393,27 +342,15 @@ final class ErrorListWidget extends ClickableWidget {
         context.disableScissor();
     }
 
-    private void renderStat(DrawContext context, int x, int y, int width, String label, String value) {
-        context.fill(x, y, x + width, y + 37, 0xB51A1C22);
-        context.drawTextWithShadow(this.textRenderer,
-                this.textRenderer.trimToWidth(label, Math.max(1, width - 10)), x + 6, y + 6, 0xFF71737D);
-        context.drawTextWithShadow(this.textRenderer,
-                this.textRenderer.trimToWidth(value, Math.max(1, width - 10)), x + 6, y + 20, 0xFFD5D5DA);
-    }
-
     private void renderEmpty(DrawContext context) {
         drawPanel(context, getX(), getY(), getWidth(), getHeight());
         int centerX = getX() + getWidth() / 2;
-        int centerY = getY() + getHeight() / 2 - 16;
+        int centerY = getY() + getHeight() / 2 - 6;
         boolean trulyEmpty = this.allErrors.isEmpty();
-        int accent = trulyEmpty ? 0xFF55D68B : 0xFF8FA9FF;
-
-        context.drawBorder(centerX - 11, centerY - 11, 22, 22, accent);
-        context.drawCenteredTextWithShadow(this.textRenderer, trulyEmpty ? "✓" : "?", centerX, centerY - 4, accent);
         String title = trulyEmpty ? "No errors reported" : "No matching errors";
-        String detail = trulyEmpty ? "LuaHUD is running quietly." : "Try another filter or search.";
-        context.drawCenteredTextWithShadow(this.textRenderer, title, centerX, centerY + 20, 0xFFF1F1F3);
-        context.drawCenteredTextWithShadow(this.textRenderer, detail, centerX, centerY + 35, 0xFF858791);
+        String detail = trulyEmpty ? "" : "Try another filter or search.";
+        context.drawCenteredTextWithShadow(this.textRenderer, title, centerX, centerY, 0xFFDDDDDD);
+        context.drawCenteredTextWithShadow(this.textRenderer, detail, centerX, centerY + 15, 0xFF888888);
     }
 
     private void select(long id) {
@@ -495,8 +432,8 @@ final class ErrorListWidget extends ClickableWidget {
     }
 
     private static void drawPanel(DrawContext context, int x, int y, int width, int height) {
-        context.fill(x, y, x + width, y + height, 0xD90E1015);
-        context.drawBorder(x, y, width, height, 0xFF30323A);
+        context.fill(x, y, x + width, y + height, 0x99000000);
+        context.drawBorder(x, y, width, height, 0xFF555555);
     }
 
     private static void renderScrollbar(
@@ -513,17 +450,8 @@ final class ErrorListWidget extends ClickableWidget {
         int travel = height - thumbHeight;
         int maxScroll = contentHeight - viewportHeight;
         int thumbY = y + (int) Math.round(travel * scroll / maxScroll);
-        context.fill(x, y, x + SCROLLBAR_WIDTH, y + height, 0x442F3139);
-        context.fill(x, thumbY, x + SCROLLBAR_WIDTH, thumbY + thumbHeight, 0xFF747681);
-    }
-
-    private static String relativeTime(long epochMillis) {
-        Duration elapsed = Duration.between(Instant.ofEpochMilli(epochMillis), Instant.now());
-        long seconds = Math.max(0, elapsed.toSeconds());
-        if (seconds < 60) return "now";
-        if (seconds < 3600) return seconds / 60 + "m ago";
-        if (seconds < 86400) return seconds / 3600 + "h ago";
-        return TIME_FORMAT.format(Instant.ofEpochMilli(epochMillis));
+        context.fill(x, y, x + SCROLLBAR_WIDTH, y + height, 0x44000000);
+        context.fill(x, thumbY, x + SCROLLBAR_WIDTH, thumbY + thumbHeight, 0xFF888888);
     }
 
     private record ListRow(ErrorEntry error, int top) {

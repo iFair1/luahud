@@ -19,7 +19,7 @@ import java.util.List;
 public final class LuaHUDErrorsScreen extends Screen {
     private static final int CONTENT_MAX_WIDTH = 760;
     private static final int PAGE_MARGIN = 12;
-    private static final int HEADER_HEIGHT = 58;
+    private static final int HEADER_HEIGHT = 42;
     private static final int TOOLBAR_HEIGHT = 24;
     private static final int FOOTER_HEIGHT = 34;
     private static final DateTimeFormatter COPY_TIME_FORMAT = DateTimeFormatter
@@ -43,7 +43,7 @@ public final class LuaHUDErrorsScreen extends Screen {
     private long displayedRevision;
 
     public LuaHUDErrorsScreen(@Nullable Screen parent, @Nullable Long selectedErrorId) {
-        super(Text.literal("LuaHUD error inbox"));
+        super(Text.literal("LuaHUD Errors"));
         this.parent = parent;
         this.requestedErrorId = selectedErrorId;
         this.selectedErrorId = selectedErrorId;
@@ -124,33 +124,11 @@ public final class LuaHUDErrorsScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
 
-        List<ErrorEntry> errors = ErrorManager.snapshot();
-        int distinct = errors.size();
-        long occurrences = errors.stream().mapToLong(ErrorEntry::count).sum();
-        long affectedProfiles = errors.stream().filter(error -> !error.system()).map(ErrorEntry::group).distinct().count();
-        int contentWidth = Math.max(1, Math.min(CONTENT_MAX_WIDTH, this.width - PAGE_MARGIN * 2));
-        int contentX = (this.width - contentWidth) / 2;
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 14, 0xFFFFFFFF);
 
-        int accent = distinct == 0 ? 0xFF55D68B : 0xFFFF667A;
-        context.fill(contentX, 14, contentX + 3, 43, accent);
-        context.drawTextWithShadow(this.textRenderer, "Error inbox", contentX + 11, 14, 0xFFF4F4F5);
-
-        String profileLabel = affectedProfiles == 1 ? "profile" : "profiles";
-        String status = distinct == 0
-                ? "Everything looks good"
-                : distinct + " distinct  ·  " + occurrences + " total  ·  "
-                + affectedProfiles + " " + profileLabel;
-        context.drawTextWithShadow(this.textRenderer, status, contentX + 11, 29,
-                distinct == 0 ? 0xFF80DDA5 : 0xFFA7A7B1);
-
-        String hint = this.errorBrowser != null && this.errorBrowser.isMobileDetailVisible()
-                ? "Esc to return to the list"
-                : "Click an item to inspect";
-        int hintWidth = this.textRenderer.getWidth(hint);
-        if (hintWidth < contentWidth / 2) {
-            context.drawTextWithShadow(this.textRenderer, hint,
-                    contentX + contentWidth - hintWidth, 22, 0xFF777783);
-        }
+        int errorCount = ErrorManager.snapshot().size();
+        String status = errorCount == 1 ? "1 error" : errorCount + " errors";
+        context.drawCenteredTextWithShadow(this.textRenderer, status, this.width / 2, 27, 0xFFAAAAAA);
     }
 
     @Override
