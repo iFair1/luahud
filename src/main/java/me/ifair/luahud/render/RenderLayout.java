@@ -9,9 +9,9 @@ record RenderLayout(List<PositionedElement> elements) {
 
     record PositionedElement(
             RenderElement element,
-            Anchor anchor,
             int backgroundX,
             int rowY,
+            int contentY,
             int contentX,
             int backgroundWidth,
             float sectionScale,

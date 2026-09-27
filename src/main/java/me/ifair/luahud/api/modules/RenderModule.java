@@ -3,6 +3,7 @@ package me.ifair.luahud.api.modules;
 import me.ifair.luahud.api.*;
 import me.ifair.luahud.api.models.CoreModels;
 import me.ifair.luahud.render.Anchor;
+import me.ifair.luahud.render.InlineAlignment;
 import me.ifair.luahud.render.InlineDirection;
 import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.RowAlignment;
@@ -137,6 +138,9 @@ public final class RenderModule {
                         .optional("rowAlign", LuaType.union(
                                 LuaType.literal("left"), LuaType.literal("center"), LuaType.literal("right")),
                                 "Alignment of rows within the widest row; defaults from the anchor")
+                        .optional("inlineAlign", LuaType.union(
+                                LuaType.literal("top"), LuaType.literal("center"), LuaType.literal("bottom")),
+                                "Vertical alignment of elements within a row; defaults to center")
                         .optional("inlineDirection", LuaType.union(
                                 LuaType.literal("leftToRight"), LuaType.literal("rightToLeft")),
                                 "Visual order of elements within a row; defaults to leftToRight")
@@ -187,6 +191,9 @@ public final class RenderModule {
         RowAlignment rowAlignment = options == null || !options.contains("rowAlign")
                 ? anchor.defaultRowAlignment()
                 : RowAlignment.fromString(options.string("rowAlign", null));
+        InlineAlignment inlineAlignment = options == null || !options.contains("inlineAlign")
+                ? defaults.inlineAlignment()
+                : InlineAlignment.fromString(options.string("inlineAlign", null));
         InlineDirection inlineDirection = options == null || !options.contains("inlineDirection")
                 ? defaults.inlineDirection()
                 : InlineDirection.fromString(options.string("inlineDirection", null));
@@ -200,6 +207,7 @@ public final class RenderModule {
                 offsetX,
                 offsetY,
                 rowAlignment,
+                inlineAlignment,
                 inlineDirection,
                 rowDirection,
                 options == null ? defaults.shadow() : options.bool("shadow", defaults.shadow()),

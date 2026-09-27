@@ -103,11 +103,13 @@ final class RenderLayoutEngine {
             if (options.inlineDirection() == InlineDirection.RIGHT_TO_LEFT) cursor -= backgroundWidth;
             RenderElement element = measured.element();
             int backgroundX = cursor + RenderDimensions.scaleOffset(element.offsetX(), options.scale());
+            int elementRowY = rowY + RenderDimensions.scaleOffset(element.offsetY(), options.scale());
+            int contentY = alignInline(elementRowY, rowHeight, measured.height(), options.inlineAlignment());
             output.add(new RenderLayout.PositionedElement(
                     element,
-                    options.anchor(),
                     backgroundX,
-                    rowY + RenderDimensions.scaleOffset(element.offsetY(), options.scale()),
+                    elementRowY,
+                    contentY,
                     backgroundX + leftPadding,
                     backgroundWidth,
                     options.scale(),
@@ -115,6 +117,14 @@ final class RenderLayoutEngine {
             ));
             if (options.inlineDirection() == InlineDirection.LEFT_TO_RIGHT) cursor += backgroundWidth;
         }
+    }
+
+    private static int alignInline(int rowY, int rowHeight, int elementHeight, InlineAlignment alignment) {
+        return switch (alignment) {
+            case TOP -> rowY;
+            case CENTER -> rowY + (rowHeight - elementHeight) / 2;
+            case BOTTOM -> rowY + rowHeight - elementHeight;
+        };
     }
 
     private static int firstVisible(List<MeasuredElement> elements) {

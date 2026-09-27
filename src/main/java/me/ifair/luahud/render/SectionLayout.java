@@ -7,6 +7,7 @@ public record SectionLayout(
         int offsetX,
         int offsetY,
         RowAlignment rowAlignment,
+        InlineAlignment inlineAlignment,
         InlineDirection inlineDirection,
         RowDirection rowDirection,
         float scale,
@@ -16,6 +17,7 @@ public record SectionLayout(
     public SectionLayout {
         Objects.requireNonNull(anchor, "anchor");
         Objects.requireNonNull(rowAlignment, "rowAlignment");
+        Objects.requireNonNull(inlineAlignment, "inlineAlignment");
         Objects.requireNonNull(inlineDirection, "inlineDirection");
         Objects.requireNonNull(rowDirection, "rowDirection");
         if (!Float.isFinite(scale) || scale <= 0) {
@@ -30,6 +32,7 @@ public record SectionLayout(
                 offsetX,
                 offsetY,
                 anchor.defaultRowAlignment(),
+                InlineAlignment.CENTER,
                 InlineDirection.LEFT_TO_RIGHT,
                 RowDirection.TOP_TO_BOTTOM,
                 1.0f,

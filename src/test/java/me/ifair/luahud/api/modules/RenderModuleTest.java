@@ -6,6 +6,7 @@ import me.ifair.luahud.api.core.StubGenerator;
 import me.ifair.luahud.api.models.CoreModels;
 import me.ifair.luahud.core.CobaltRuntime;
 import me.ifair.luahud.render.Anchor;
+import me.ifair.luahud.render.InlineAlignment;
 import me.ifair.luahud.render.InlineDirection;
 import me.ifair.luahud.render.RowAlignment;
 import me.ifair.luahud.render.RowDirection;
@@ -40,6 +41,8 @@ class RenderModuleTest {
                 + "Use the entity's current rotation as the base for yaw and pitch offsets"));
         assertTrue(stub.contains("function lh.drawEntity(uuid, options) end"));
         assertTrue(stub.contains("---@field rowHeight? integer | \"auto\" Fixed unscaled row height"));
+        assertTrue(stub.contains("---@field inlineAlign? \"top\" | \"center\" | \"bottom\" "
+                + "Vertical alignment of elements within a row; defaults to center"));
         assertTrue(stub.contains("---@param count? integer Number of line breaks; defaults to 1"));
         assertTrue(stub.contains("function lh.newline(count) end"));
         assertTrue(stub.contains("---@field id string Namespaced item ID"));
@@ -137,6 +140,7 @@ class RenderModuleTest {
         assertEquals(Anchor.TOP_CENTER, state.anchor());
         assertEquals(0, state.offsetX());
         assertEquals(RowAlignment.CENTER, state.rowAlignment());
+        assertEquals(InlineAlignment.CENTER, state.inlineAlignment());
         assertEquals(RowDirection.TOP_TO_BOTTOM, state.rowDirection());
         assertTrue(state.autoRowHeight());
     }
@@ -152,11 +156,13 @@ class RenderModuleTest {
         SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of(
                 "anchor", "bottomCenter",
                 "rowAlign", "left",
+                "inlineAlign", "bottom",
                 "inlineDirection", "rightToLeft",
                 "rowDirection", "bottomToTop"
         )));
 
         assertEquals(RowAlignment.LEFT, state.rowAlignment());
+        assertEquals(InlineAlignment.BOTTOM, state.inlineAlignment());
         assertEquals(InlineDirection.RIGHT_TO_LEFT, state.inlineDirection());
         assertEquals(RowDirection.BOTTOM_TO_TOP, state.rowDirection());
     }

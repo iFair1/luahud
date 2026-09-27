@@ -7,6 +7,7 @@ public record SectionState(
         int offsetX,
         int offsetY,
         RowAlignment rowAlignment,
+        InlineAlignment inlineAlignment,
         InlineDirection inlineDirection,
         RowDirection rowDirection,
         boolean shadow,
@@ -20,6 +21,7 @@ public record SectionState(
     public SectionState {
         Objects.requireNonNull(anchor, "anchor");
         Objects.requireNonNull(rowAlignment, "rowAlignment");
+        Objects.requireNonNull(inlineAlignment, "inlineAlignment");
         Objects.requireNonNull(inlineDirection, "inlineDirection");
         Objects.requireNonNull(rowDirection, "rowDirection");
         if (!Float.isFinite(scale) || scale <= 0) {
@@ -38,6 +40,7 @@ public record SectionState(
                 anchor.defaultOffsetX(),
                 2,
                 anchor.defaultRowAlignment(),
+                InlineAlignment.CENTER,
                 InlineDirection.LEFT_TO_RIGHT,
                 RowDirection.TOP_TO_BOTTOM,
                 true,
@@ -52,7 +55,7 @@ public record SectionState(
 
     public SectionLayout layout() {
         return new SectionLayout(
-                anchor, offsetX, offsetY, rowAlignment, inlineDirection, rowDirection,
+                anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
                 scale, rowHeight, autoRowHeight);
     }
 }

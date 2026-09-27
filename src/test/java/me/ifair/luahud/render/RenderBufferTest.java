@@ -39,17 +39,4 @@ class RenderBufferTest {
         assertEquals(36, RenderElementMeasurer.stackWidth(true, 1.5f, 2f, true));
     }
 
-    @Test void topAnchorsKeepTheIconTopEdgeFixedWhileScaling() {
-        assertEquals(19, RenderPainter.anchoredIconY(Anchor.TOP_LEFT, 20, 12, 12));
-        assertEquals(19, RenderPainter.anchoredIconY(Anchor.TOP_LEFT, 20, 24, 12));
-        assertEquals(19, RenderPainter.anchoredIconY(Anchor.TOP_CENTER, 20, 24, 12));
-        assertEquals(19, RenderPainter.anchoredIconY(Anchor.TOP_RIGHT, 20, 24, 12));
-    }
-
-    @Test void bottomAnchorsKeepTheIconBottomEdgeFixedWhileScaling() {
-        assertEquals(19, RenderPainter.anchoredIconY(Anchor.BOTTOM_LEFT, 20, 12, 12));
-        assertEquals(7, RenderPainter.anchoredIconY(Anchor.BOTTOM_LEFT, 20, 24, 12));
-        assertEquals(7, RenderPainter.anchoredIconY(Anchor.BOTTOM_CENTER, 20, 24, 12));
-        assertEquals(7, RenderPainter.anchoredIconY(Anchor.BOTTOM_RIGHT, 20, 24, 12));
-    }
 }

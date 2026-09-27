@@ -37,28 +37,24 @@ final class RenderPainter {
     ) {
         RenderElement element = positioned.element();
         int x = positioned.contentX();
-        int y = positioned.rowY();
+        int y = positioned.contentY();
 
         switch (element) {
-            case RenderElement.Text text -> {
-                int textHeight = RenderDimensions.scaleLength(textRenderer.fontHeight, positioned.sectionScale());
-                int textY = y + (positioned.rowHeight() - textHeight) / 2;
-                paintText(context, textRenderer, text, positioned.sectionScale(), x, textY);
-            }
+            case RenderElement.Text text -> paintText(
+                    context, textRenderer, text, positioned.sectionScale(), x, y);
             case RenderElement.Stack stack -> paintItem(
                     context, textRenderer, stack.value(), stack.scale(), positioned.sectionScale(),
-                    positioned.anchor(), positioned.rowHeight(), x, y);
+                    x, y - 1);
             case RenderElement.Item item -> paintItem(
                     context, textRenderer, item.value(), item.scale(), positioned.sectionScale(),
-                    positioned.anchor(), positioned.rowHeight(), x, y);
+                    x, y - 1);
             case RenderElement.Entity entity -> paintEntity(
                     context, entity.value(), entity.scale(), entity.yaw(), entity.pitch(),
                     entity.fullBright(), entity.useEntityRotation(), positioned.sectionScale(),
-                    positioned.anchor(), positioned.rowHeight(), x, y);
+                    x, y - 1);
             case RenderElement.Texture texture -> {
                 int size = RenderElementMeasurer.scaledIconSize(texture.scale(), positioned.sectionScale());
-                int textureY = anchoredIconY(positioned.anchor(), y, size, positioned.rowHeight());
-                context.drawTexture(texture.value(), x, textureY, 0, 0, size, size, size, size);
+                context.drawTexture(texture.value(), x, y - 1, 0, 0, size, size, size, size);
             }
         }
     }
@@ -73,15 +69,12 @@ final class RenderPainter {
             boolean fullBright,
             boolean useEntityRotation,
             float sectionScale,
-            Anchor anchor,
-            int rowHeight,
             int x,
-            int rowY
+            int y
     ) {
         if (entity == null || entity.isRemoved()) return;
 
         int size = RenderElementMeasurer.scaledIconSize(iconScale, sectionScale);
-        int entityY = anchoredIconY(anchor, rowY, size, rowHeight);
         float extent = Math.max(entity.getWidth(), entity.getHeight());
         if (!Float.isFinite(extent) || extent <= 0) return;
         float scale = size / extent;
@@ -103,7 +96,7 @@ final class RenderPainter {
             float yawRadians = (float) Math.toRadians(yaw);
             float pitchRadians = (float) Math.toRadians(pitch);
             Quaternionf verticalRotation = new Quaternionf().rotateX(pitchRadians);
-            matrices.translate(x + size / 2f, entityY + size / 2f, 50);
+            matrices.translate(x + size / 2f, y + size / 2f, 50);
             matrices.scale(scale, scale, -scale);
             matrices.translate(0, entity.getHeight() / 2f, 0);
             matrices.multiply(new Quaternionf()
@@ -182,28 +175,19 @@ final class RenderPainter {
             ItemStack stack,
             float iconScale,
             float sectionScale,
-            Anchor anchor,
-            int rowHeight,
             int x,
-            int rowY
+            int y
     ) {
         if (stack == null || stack.isEmpty()) return;
 
         float scale = RenderElementMeasurer.effectiveIconScale(iconScale, sectionScale);
-        int size = RenderElementMeasurer.scaledIconSize(iconScale, sectionScale);
         float matrixScale = (RenderDimensions.BASE_ICON_SIZE / 16f) * scale;
-        int itemY = anchoredIconY(anchor, rowY, size, rowHeight);
-
         context.getMatrices().push();
-        context.getMatrices().translate(x, itemY, 0);
+        context.getMatrices().translate(x, y, 0);
         context.getMatrices().scale(matrixScale, matrixScale, 1f);
         context.drawItem(stack, 0, 0);
         context.drawItemInSlot(textRenderer, stack, 0, 0);
         context.getMatrices().pop();
-    }
-
-    static int anchoredIconY(Anchor anchor, int rowY, int size, int rowHeight) {
-        return anchor.bottom() ? rowY + rowHeight - size - 1 : rowY - 1;
     }
 
     private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {

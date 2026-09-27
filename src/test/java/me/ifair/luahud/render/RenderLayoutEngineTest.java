@@ -157,6 +157,12 @@ class RenderLayoutEngineTest {
         assertEquals(22, elements.get(2).rowY());
     }
 
+    @Test void inlineAlignmentPositionsShortElementsWithinTheTallestElement() {
+        assertEquals(2, shortElementY(InlineAlignment.TOP));
+        assertEquals(9, shortElementY(InlineAlignment.CENTER));
+        assertEquals(16, shortElementY(InlineAlignment.BOTTOM));
+    }
+
     @Test void automaticEmptyRowsUseTheDefaultRowHeight() {
         RenderSection section = autoSection(Anchor.TOP_LEFT, RowDirection.TOP_TO_BOTTOM);
         section.newLine();
@@ -187,6 +193,15 @@ class RenderLayoutEngineTest {
         return layout(section, 100, 60).get(1).backgroundX();
     }
 
+    private int shortElementY(InlineAlignment alignment) {
+        RenderSection section = new RenderSection(new SectionLayout(
+                Anchor.TOP_LEFT, 2, 2, RowAlignment.LEFT, alignment,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1f, 12, true));
+        section.add(text("12345678901234567890"), false);
+        section.add(text("123456"), true);
+        return layout(section, 100, 60).get(1).contentY();
+    }
+
     private List<RenderLayout.PositionedElement> layout(RenderSection section, int width, int height) {
         return engine.layout(List.of(section), TEXT_WIDTH, TEXT_HEIGHT, width, height).elements();
     }
@@ -209,12 +224,12 @@ class RenderLayoutEngineTest {
             int rowHeight
     ) {
         return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
-                alignment, inlineDirection, rowDirection, scale, rowHeight, false));
+                alignment, InlineAlignment.CENTER, inlineDirection, rowDirection, scale, rowHeight, false));
     }
 
     private static RenderSection autoSection(Anchor anchor, RowDirection rowDirection) {
         return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
-                anchor.defaultRowAlignment(), InlineDirection.LEFT_TO_RIGHT, rowDirection,
+                anchor.defaultRowAlignment(), InlineAlignment.CENTER, InlineDirection.LEFT_TO_RIGHT, rowDirection,
                 1f, 12, true));
     }
 
