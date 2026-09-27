@@ -156,6 +156,9 @@ public final class RenderModule {
                 fields.optional("scale", LuaType.number(),
                         section ? "Scale applied to the entire section" : "Scale relative to the section");
             }
+            if (!section && !text && !entity) {
+                fields.optional("newLine", LuaType.bool(), "Advance to the next line after drawing; defaults to false");
+            }
             if (stack) {
                 fields.optional("showDurabilityBar", LuaType.bool(), "Show durability bar")
                         .optional("showCount", LuaType.bool(), "Show stack count")
@@ -246,7 +249,7 @@ public final class RenderModule {
             value.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, options.bool("showGlint", true));
         }
         RenderBuffer.addStack(value, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
-                offset(options, "offsetX"), offset(options, "offsetY"), false, drawAir);
+                offset(options, "offsetX"), offset(options, "offsetY"), newLine(options), drawAir);
     }
 
     private static void drawItem(Object reference, LuaTableValue options) {
@@ -254,7 +257,7 @@ public final class RenderModule {
                 ? stack.getItem()
                 : Registries.ITEM.get(itemIdentifier((String) reference, Registries.ITEM::containsId));
         RenderBuffer.addItem(new ItemStack(item), iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
-                offset(options, "offsetX"), offset(options, "offsetY"), false);
+                offset(options, "offsetX"), offset(options, "offsetY"), newLine(options));
     }
 
     static Identifier itemIdentifier(String id, Predicate<Identifier> itemExists) {
@@ -311,7 +314,7 @@ public final class RenderModule {
         Identifier texture = textureIdentifier(path,
                 identifier -> client.getResourceManager().getResource(identifier).isPresent());
         RenderBuffer.addTexture(texture, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
-                offset(options, "offsetX"), offset(options, "offsetY"), false);
+                offset(options, "offsetX"), offset(options, "offsetY"), newLine(options));
     }
 
     static Identifier textureIdentifier(String path, Predicate<Identifier> resourceExists) {
@@ -337,6 +340,10 @@ public final class RenderModule {
 
     static boolean bool(LuaTableValue options, String key, boolean fallback) {
         return options == null ? fallback : options.bool(key, fallback);
+    }
+
+    static boolean newLine(LuaTableValue options) {
+        return bool(options, "newLine", false);
     }
 
     private static float scale(LuaTableValue options, String key, float fallback) {

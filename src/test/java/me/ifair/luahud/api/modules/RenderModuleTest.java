@@ -48,6 +48,8 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field damageLeft? integer Remaining durability"));
         assertTrue(stub.contains("---@field enchantments? table<string, integer>"));
         assertTrue(stub.contains("---@field maxDamage? integer Maximum durability"));
+        assertTrue(stub.contains("---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
+        assertEquals(2, count(stub, "---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
     }
 
     @Test void entityAnglesDefaultNormalizeAndRejectNonFiniteValues() {
@@ -67,6 +69,16 @@ class RenderModuleTest {
         ));
         assertFalse(RenderModule.bool(options, "fullBright", true));
         assertTrue(RenderModule.bool(options, "useEntityRotation", false));
+    }
+
+    @Test void iconNewLineDefaultsToFalseAndCanBeEnabled() {
+        assertFalse(RenderModule.newLine(null));
+        assertFalse(RenderModule.newLine(new LuaTableValue(Map.of())));
+        assertTrue(RenderModule.newLine(new LuaTableValue(Map.of("newLine", true))));
+    }
+
+    private static int count(String value, String part) {
+        return (value.length() - value.replace(part, "").length()) / part.length();
     }
 
     @Test void texturePathsMustBeValidAndReferToAnExistingResource() {
