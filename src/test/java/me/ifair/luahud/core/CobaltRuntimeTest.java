@@ -23,7 +23,8 @@ class CobaltRuntimeTest {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("fixture");
         ModelBuilder<Data> model = api.model("Data", Data.class)
-                .string("label", "", Data::label).integer("count", "", Data::count);
+                .string("label", "", Data::label).optionalInteger("count", "", Data::count)
+                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 0)));
         api.root().namespace("nested", nested -> nested
                 .integer("next", "", sequence::incrementAndGet)
                 .value("nullable", LuaType.optional(LuaType.string()), LuaDoc.NONE, () -> null)
@@ -42,12 +43,12 @@ class CobaltRuntimeTest {
         capture.call(args -> { captured.set(args.get(data)); return null; });
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
-        runtime.execute("a=lh.nested.next; b=lh.nested.next; held=lh.nested.model; label=held.label; count=held.count; lh.capture(held); sum=lh.add(5,7); nullable=lh.nested.nullable; listv=lh.nested.list[2]; listed=lh.nested.modelList[1].label; zeroNil=lh.nested.modelList[0]==nil; mapv=lh.nested.map.yes; mapped=lh.nested.modelMap.entry.label", "test");
+        runtime.execute("a=lh.nested.next; b=lh.nested.next; held=lh.nested.model; label=held.label; count=held.count; held.count=10; lh.capture(held); sum=lh.add(5,7); nullable=lh.nested.nullable; listv=lh.nested.list[2]; listed=lh.nested.modelList[1].label; zeroNil=lh.nested.modelList[0]==nil; mapv=lh.nested.map.yes; mapped=lh.nested.modelMap.entry.label", "test");
         assertEquals(1, runtime.global("a").checkInteger());
         assertEquals(2, runtime.global("b").checkInteger());
         assertEquals("ok", runtime.global("label").checkString());
         assertEquals(5, runtime.global("count").checkInteger());
-        assertEquals(new Data("ok", 6), captured.get());
+        assertEquals(new Data("ok", 10), captured.get());
         assertEquals(12, runtime.global("sum").checkInteger());
         assertTrue(runtime.global("nullable").isNil());
         assertEquals(3, runtime.global("listv").checkInteger());
@@ -100,7 +101,8 @@ class CobaltRuntimeTest {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("fixture");
         ModelBuilder<Data> model = api.model("Data", Data.class)
-                .string("label", "", Data::label).integer("count", "", Data::count);
+                .string("label", "", Data::label).integer("count", "", Data::count)
+                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 0)));
         api.root().value("data", model.type(), LuaDoc.NONE, () -> supplied);
         FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
         LuaParameter<Object> value = capture.parameter(
@@ -115,6 +117,54 @@ class CobaltRuntimeTest {
         runtime.execute("lh.capture('minecraft:stone'); lh.capture(lh.data)", "union-model");
 
         assertEquals(List.of("minecraft:stone", supplied), captured);
+    }
+
+    @Test void modelsAcceptPlainTablesAndEnforceOnlyRequiredFields() throws Exception {
+        AtomicReference<Data> captured = new AtomicReference<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        LuaApiRegistrar api = registry.registrar("fixture");
+        ModelBuilder<Data> model = api.model("Data", Data.class)
+                .string("label", "", Data::label)
+                .optionalInteger("count", "", Data::count)
+                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 1)));
+        FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
+        LuaParameter<Data> data = capture.parameter("data", model.type(), "");
+        capture.call(arguments -> { captured.set(arguments.get(data)); return null; });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+
+        runtime.execute("lh.capture({label='plain'})", "plain-model");
+        assertEquals(new Data("plain", 1), captured.get());
+
+        LuaError error = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture({count=4})", "missing-model-field"));
+        assertTrue(error.getMessage().contains("missing field 'label'"));
+    }
+
+    @Test void untouchedAndOverriddenModelFieldsStayLazy() throws Exception {
+        AtomicInteger expensiveReads = new AtomicInteger();
+        AtomicReference<Data> captured = new AtomicReference<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        LuaApiRegistrar api = registry.registrar("fixture");
+        ModelBuilder<Data> model = api.model("Data", Data.class)
+                .string("label", "", Data::label)
+                .optionalInteger("count", "", value -> {
+                    expensiveReads.incrementAndGet();
+                    return value.count();
+                })
+                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 1)));
+        api.root().value("data", model.type(), LuaDoc.NONE, () -> new Data("lazy", 7));
+        FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
+        LuaParameter<Data> data = capture.parameter("data", model.type(), "");
+        capture.call(arguments -> { captured.set(arguments.get(data)); return null; });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+
+        runtime.execute("value=lh.data; label=value.label; value.count=10; lh.capture(value)", "lazy-model");
+
+        assertEquals("lazy", runtime.global("label").checkString());
+        assertEquals(new Data("lazy", 10), captured.get());
+        assertEquals(0, expensiveReads.get());
     }
 
     @Test void publicApiStringsAreUtf8InBothDirections() throws Exception {

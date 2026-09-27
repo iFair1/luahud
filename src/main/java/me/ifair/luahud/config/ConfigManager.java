@@ -24,6 +24,7 @@ public class ConfigManager {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static final AtomicBoolean profileReloadNeeded = new AtomicBoolean(false);
     private static ConfigData config = new ConfigData();
+    private static long profileRevision;
     private static long profileKeybindRevision;
 
     public static synchronized void load() {
@@ -46,6 +47,7 @@ public class ConfigManager {
             ErrorManager.reportSystem("config read", e);
             config = new ConfigData();
         }
+        profileRevision++;
         profileKeybindRevision++;
     }
 
@@ -76,6 +78,7 @@ public class ConfigManager {
 
         config.showHiddenFiles = value;
         save();
+        profileRevision++;
     }
 
     public static synchronized void setGenerateExampleProfiles(boolean value) {
@@ -96,6 +99,7 @@ public class ConfigManager {
         config.profiles.add(profile);
         save();
         profileReloadNeeded.set(true);
+        profileRevision++;
         profileKeybindRevision++;
     }
 
@@ -123,6 +127,7 @@ public class ConfigManager {
 
         save();
         profileReloadNeeded.set(true);
+        profileRevision++;
         profileKeybindRevision++;
     }
 
@@ -138,6 +143,7 @@ public class ConfigManager {
         try {
             Files.deleteIfExists(profileFile);
             profileReloadNeeded.set(true);
+            profileRevision++;
             profileKeybindRevision++;
         } catch (IOException e) {
             save();
@@ -153,6 +159,7 @@ public class ConfigManager {
         Collections.swap(config.profiles, index, target);
         save();
         profileReloadNeeded.set(true);
+        profileRevision++;
     }
 
     public static synchronized void setProfileActive(String name, boolean active) {
@@ -162,6 +169,7 @@ public class ConfigManager {
         profile.setActive(active);
         save();
         profileReloadNeeded.set(true);
+        profileRevision++;
     }
 
     public static synchronized void toggleProfileActive(String name) {
@@ -176,6 +184,7 @@ public class ConfigManager {
 
         profile.setHidden(hidden);
         save();
+        profileRevision++;
     }
 
     public static synchronized void setProfileKeybind(String name, String keybind) {
@@ -185,6 +194,7 @@ public class ConfigManager {
 
         profile.setKeybind(keybind);
         save();
+        profileRevision++;
         profileKeybindRevision++;
     }
 
@@ -207,6 +217,7 @@ public class ConfigManager {
             Files.move(oldFile, newFile);
             save();
             profileReloadNeeded.set(true);
+            profileRevision++;
             profileKeybindRevision++;
         } catch (IOException e) {
             ErrorManager.reportSystem("profile rename", e);
@@ -215,6 +226,10 @@ public class ConfigManager {
 
     public static boolean consumeProfileReloadSignal() {
         return profileReloadNeeded.compareAndSet(true, false);
+    }
+
+    public static synchronized long getProfileRevision() {
+        return profileRevision;
     }
 
     public static synchronized long getProfileKeybindRevision() {

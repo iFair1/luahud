@@ -43,6 +43,7 @@ public class LuaHUDScreen extends Screen {
     public void tick() {
         super.tick();
         if (header != null) header.tick();
+        if (profileList != null) profileList.refreshIfChanged();
     }
 
     @Override

@@ -25,7 +25,7 @@ public final class StubGenerator {
             Object definition = entry.getKey(); String name = entry.getValue();
             out.append("---@class ").append(name).append('\n');
             if (definition instanceof ModelBuilder<?> model) {
-                model.fields().stream().sorted(Comparator.comparing(ModelBuilder.Field::name)).forEach(field -> field(out, field.name(), context.type(field.type(), model.providerId()), field.doc().description(), false));
+                model.fields().stream().sorted(Comparator.comparing(ModelBuilder.Field::name)).forEach(field -> field(out, field.name(), context.type(field.type(), model.providerId()), field.doc().description(), field.optional()));
             } else if (definition instanceof LuaType<?> input) {
                 input.inputFields().values().stream().sorted(Comparator.comparing(LuaType.InputField::name)).forEach(field -> field(out, field.name(), context.type(field.type(), context.owners.get(input)), field.doc().description(), field.optional()));
             }

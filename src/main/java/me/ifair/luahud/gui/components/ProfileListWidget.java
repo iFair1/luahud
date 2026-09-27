@@ -11,6 +11,7 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
     private static final int BOTTOM_MARGIN = FooterWidget.MARGIN * 2 + HeaderWidget.BUTTON_SIZE;
 
     private final LuaHUDScreen screen;
+    private long profileRevision = -1;
 
    public ProfileListWidget(LuaHUDScreen screen) {
        super(
@@ -29,6 +30,7 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
    }
 
     public void reloadProfiles() {
+        long reloadedRevision = ConfigManager.getProfileRevision();
         ProfileEntry focused = getFocused();
         if (focused != null) focused.setFocused(null);
         setFocused(null);
@@ -41,6 +43,11 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
                 .forEach(profile -> {
                     addEntry(new ProfileEntry(this, profile));
                 });
+        profileRevision = reloadedRevision;
+    }
+
+    public void refreshIfChanged() {
+        if (profileRevision != ConfigManager.getProfileRevision()) reloadProfiles();
     }
 
     public void selectKeybind(ProfileEntry entry) {

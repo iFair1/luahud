@@ -42,6 +42,12 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field rowHeight? integer | \"auto\" Fixed unscaled row height"));
         assertTrue(stub.contains("---@param count? integer Number of line breaks; defaults to 1"));
         assertTrue(stub.contains("function lh.newline(count) end"));
+        assertTrue(stub.contains("---@field id string Namespaced item ID"));
+        assertTrue(stub.contains("---@field count? integer Stack count; defaults to 1 for input tables"));
+        assertTrue(stub.contains("---@field damage? integer Current item damage"));
+        assertTrue(stub.contains("---@field damageLeft? integer Remaining durability"));
+        assertTrue(stub.contains("---@field enchantments? table<string, integer>"));
+        assertTrue(stub.contains("---@field maxDamage? integer Maximum durability"));
     }
 
     @Test void entityAnglesDefaultNormalizeAndRejectNonFiniteValues() {
@@ -88,6 +94,19 @@ class RenderModuleTest {
                 () -> runtime.execute("lh.drawTexture('minecraft:Invalid Path')", "invalid-texture"));
 
         assertTrue(error.getMessage().contains("Invalid texture path: minecraft:Invalid Path"));
+    }
+
+    @Test void itemIdsMustBeValidAndReferToARegisteredItem() {
+        Identifier expected = Identifier.of("minecraft", "stone");
+
+        assertEquals(expected, RenderModule.itemIdentifier(expected.toString(), expected::equals));
+        IllegalArgumentException malformed = assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.itemIdentifier("minecraft:Invalid ID", ignored -> true));
+        IllegalArgumentException missing = assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.itemIdentifier("minecraft:doesntexist", ignored -> false));
+
+        assertTrue(malformed.getMessage().contains("Invalid item ID: minecraft:Invalid ID"));
+        assertTrue(missing.getMessage().contains("Item not found: minecraft:doesntexist"));
     }
 
     @Test void numericColorsAreStrictArgb() {

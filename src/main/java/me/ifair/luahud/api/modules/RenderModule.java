@@ -14,7 +14,6 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
@@ -251,13 +250,22 @@ public final class RenderModule {
     }
 
     private static void drawItem(Object reference, LuaTableValue options) {
-        String id = reference instanceof ItemStack stack
-                ? Registries.ITEM.getId(stack.getItem()).toString()
-                : (String) reference;
-        Identifier identifier = Identifier.tryParse(id);
-        Item item = identifier == null ? Items.AIR : Registries.ITEM.get(identifier);
+        Item item = reference instanceof ItemStack stack
+                ? stack.getItem()
+                : Registries.ITEM.get(itemIdentifier((String) reference, Registries.ITEM::containsId));
         RenderBuffer.addItem(new ItemStack(item), iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), false);
+    }
+
+    static Identifier itemIdentifier(String id, Predicate<Identifier> itemExists) {
+        Identifier identifier = Identifier.tryParse(id);
+        if (identifier == null) {
+            throw new IllegalArgumentException("Invalid item ID: " + id);
+        }
+        if (!itemExists.test(identifier)) {
+            throw new IllegalArgumentException("Item not found: " + id);
+        }
+        return identifier;
     }
 
     private static void drawEntity(Object reference, LuaTableValue options) {

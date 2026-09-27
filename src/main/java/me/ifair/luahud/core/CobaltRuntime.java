@@ -17,6 +17,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** All Cobalt-specific binding and callback state lives behind this package-private adapter. */
@@ -198,7 +199,7 @@ public final class CobaltRuntime {
                 for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) table.rawset(luaString(String.valueOf(entry.getKey())), toLua(entry.getValue(), type.elementType(), path, provider));
                 yield table;
             }
-            case MODEL -> modelTable((Supplier<Object>) () -> value, (ModelBuilder) type.model(), path, provider);
+            case MODEL -> modelTable(() -> value, (ModelBuilder) type.model(), path, provider);
             case INPUT_TABLE -> tableValueToLua((LuaTableValue) value, type, path, provider);
             case ANY -> anyToLua(value, path, provider);
             case FUNCTION -> throw new LuaError("callbacks cannot cross the public addon API");
@@ -279,13 +280,55 @@ public final class CobaltRuntime {
 
     private Object modelFromLua(LuaValue value, LuaType<?> type) throws LuaError {
         LuaTable table = value.checkTable();
-        ModelValue model = modelValues.get(table);
-        if (model == null || model.model() != type.model()) {
-            throw new LuaError("expected " + type.displayName() + " model");
+        ModelBuilder<?> model = type.model();
+        Map<String, Object> fields = new LinkedHashMap<>();
+        Set<String> lazyKeys = new LinkedHashSet<>();
+        ModelValue source = modelValues.get(table);
+        boolean matchingSource = source != null && source.model() == model;
+        Supplier<Object> sourceInstance = matchingSource ? memoize(source.supplier()) : () -> null;
+        Function<String, Object> sourceField = matchingSource
+                ? key -> resolveModelField(source.model(), sourceInstance.get(), key)
+                : ignored -> null;
+        for (ModelBuilder.Field<?, ?> field : model.fields()) {
+            LuaValue fieldValue = table.rawget(field.name());
+            if (!fieldValue.isNil()) {
+                fields.put(field.name(), fromLua(fieldValue, field.type()));
+            } else if (matchingSource) {
+                lazyKeys.add(field.name());
+            } else if (!field.optional()) {
+                throw new LuaError("missing field '" + field.name() + "'");
+            }
         }
-        Object result = model.supplier().get();
-        if (result == null) throw new LuaError(type.displayName() + " model is unavailable");
-        return result;
+        try {
+            if (!model.canDecode() && matchingSource) return sourceInstance.get();
+            return model.decode(new LuaTableValue(fields, lazyKeys, sourceField));
+        } catch (Throwable error) {
+            String message = error.getMessage();
+            throw new LuaError(message == null ? "invalid " + type.displayName() + " model" : message);
+        }
+    }
+
+    private Object resolveModelField(ModelBuilder<Object> model, Object instance, String key) {
+        if (instance == null) return null;
+        for (ModelBuilder.Field<? super Object, ?> field : model.fields()) {
+            if (field.name().equals(key)) return field.accessor().apply(instance);
+        }
+        return null;
+    }
+
+    private static <T> Supplier<T> memoize(Supplier<T> supplier) {
+        return new Supplier<>() {
+            private boolean resolved;
+            private T value;
+
+            @Override public T get() {
+                if (!resolved) {
+                    value = supplier.get();
+                    resolved = true;
+                }
+                return value;
+            }
+        };
     }
 
     private Object unionFromLua(LuaValue value, LuaType<?> type) throws LuaError {
@@ -312,7 +355,8 @@ public final class CobaltRuntime {
             case FUNCTION -> value.type() == Constants.TFUNCTION;
             case OPTIONAL -> value.isNil() || matchesLua(value, type.elementType());
             case UNION -> type.alternatives().stream().anyMatch(alternative -> matchesLua(value, alternative));
-            case ANY, MODEL -> true;
+            case ANY -> true;
+            case MODEL -> value.type() == Constants.TTABLE;
         };
     }
 

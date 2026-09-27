@@ -4,9 +4,9 @@ import me.ifair.luahud.error.ErrorManager;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 import static me.ifair.luahud.config.ConfigManager.*;
 
@@ -25,7 +25,7 @@ public class ConfigInstaller {
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
             final String profileDir = source + "lua/";
-            copyFromResource(profileDir + "Example Profile.lua", MOD_CONFIG_DIR);
+            copyFromResourceIfAbsent(profileDir + "Example Profile.lua", MOD_CONFIG_DIR);
             // other default profiles will come here
 
             ConfigManager.setGenerateExampleProfiles(false);
@@ -41,7 +41,7 @@ public class ConfigInstaller {
         copyFromResourceIfAbsent(source + "lua/.luarc.json", luaDir);
     }
 
-    private static void copyFromResource(String resourcePath, Path targetDir) {
+    static void copyFromResourceIfAbsent(String resourcePath, Path targetDir) {
         try (InputStream stream = ConfigInstaller.class.getResourceAsStream(resourcePath)) {
             if (stream == null) throw new IllegalStateException("Resource not found: " + resourcePath); // If it's null, then me (the developer) made the mistake, so I should fail-fast
 
@@ -51,14 +51,11 @@ public class ConfigInstaller {
 
             Path targetFile = targetDir.resolve(fileName);
 
-            Files.copy(stream, targetFile, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(stream, targetFile);
+        } catch (FileAlreadyExistsException ignored) {
+            // Preserve user changes to files installed on an earlier run.
         } catch (IOException e) {
             ErrorManager.reportSystem("default config", e);
         }
-    }
-
-    private static void copyFromResourceIfAbsent(String resourcePath, Path targetDir) {
-        String fileName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
-        if (Files.notExists(targetDir.resolve(fileName))) copyFromResource(resourcePath, targetDir);
     }
 }
