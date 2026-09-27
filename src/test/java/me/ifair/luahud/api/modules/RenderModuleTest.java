@@ -10,6 +10,7 @@ import me.ifair.luahud.render.InlineAlignment;
 import me.ifair.luahud.render.InlineDirection;
 import me.ifair.luahud.render.RowAlignment;
 import me.ifair.luahud.render.RowDirection;
+import me.ifair.luahud.render.RenderBuffer;
 import me.ifair.luahud.render.SectionState;
 import net.minecraft.util.Identifier;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RenderModuleTest {
+    @Test void sectionStateDoesNotLeakBetweenProfileCallbacks() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.addEventFunctions();
+        var api = registry.registrar("luahud");
+        RenderModule.register(api, CoreModels.register(api));
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry, RenderModule::resetSection);
+        runtime.start();
+
+        try {
+            runtime.execute("lh.on('tick', function() lh.section({anchor='topRight'}) end)", "profile-a");
+            runtime.execute("lh.on('tick', function() lh.draw('B') end)", "profile-b");
+            runtime.fireEvent("tick");
+
+            SectionState state = RenderModule.currentSectionState();
+            assertEquals(Anchor.TOP_LEFT, state.anchor());
+            assertEquals(RowAlignment.LEFT, state.rowAlignment());
+        } finally {
+            RenderBuffer.clear();
+            RenderModule.resetSection();
+        }
+    }
+
     @Test void itemAndEntityDrawFunctionsAcceptIdsOrModels() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");

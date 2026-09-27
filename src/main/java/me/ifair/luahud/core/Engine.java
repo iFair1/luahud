@@ -2,6 +2,7 @@ package me.ifair.luahud.core;
 
 import me.ifair.luahud.LuaHUD;
 import me.ifair.luahud.api.core.ApiRegistry;
+import me.ifair.luahud.api.modules.RenderModule;
 import me.ifair.luahud.config.ConfigData;
 import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.config.FileWatcher;
@@ -19,7 +20,11 @@ public final class Engine {
     public void init() { fileWatcher.start(); reloadAll(); }
     public void reloadAll() {
         ErrorManager.beginProfileReload();
-        try { CobaltRuntime replacement = new CobaltRuntime(registry); replacement.start(); runtime = replacement; }
+        try {
+            CobaltRuntime replacement = new CobaltRuntime(registry, RenderModule::resetSection);
+            replacement.start();
+            runtime = replacement;
+        }
         catch (Exception error) { runtime = null; ErrorManager.reportSystem("runtime", error); return; }
         for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) if (profile.isActive()) runProfile(profile.getName());
         fireEvent("init");

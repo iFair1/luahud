@@ -3,7 +3,6 @@ package me.ifair.luahud;
 import me.ifair.luahud.api.core.ApiRegistry;
 import me.ifair.luahud.api.core.CoreApi;
 import me.ifair.luahud.api.core.StubGenerator;
-import me.ifair.luahud.api.modules.RenderModule;
 import me.ifair.luahud.config.ConfigInstaller;
 import me.ifair.luahud.config.ConfigManager;
 import me.ifair.luahud.core.Engine;
@@ -82,7 +81,6 @@ public class LuaHUD implements ClientModInitializer {
 			TimerManager.tick();
 
 			RenderBuffer.clear();
-			RenderModule.resetSection();
 			EventDispatcher.fireEvent("tick");
 		});
 

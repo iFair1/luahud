@@ -39,6 +39,10 @@ public final class RenderModule {
         setSection(SectionState.defaults());
     }
 
+    static SectionState currentSectionState() {
+        return currentState;
+    }
+
     public static void register(LuaApiRegistrar api, CoreModels models) {
         LuaType<Object> color = LuaType.union(LuaType.string(), LuaType.integer());
         LuaType<LuaTableValue> sectionOptions = optionsType("SectionOptions", color, true, true, false, false);

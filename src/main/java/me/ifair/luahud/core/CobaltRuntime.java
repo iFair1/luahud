@@ -26,6 +26,7 @@ public final class CobaltRuntime {
     private record Timer(int interval, Callback callback, int[] elapsed) {}
 
     private final ApiRegistry registry;
+    private final Runnable invocationBoundary;
     private final Map<String, List<Callback>> listeners = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
     private final Map<LuaTable, ModelValue> modelValues = new IdentityHashMap<>();
@@ -38,8 +39,13 @@ public final class CobaltRuntime {
     private record ModelValue(Supplier<Object> supplier, ModelBuilder<Object> model) {}
 
     public CobaltRuntime(ApiRegistry registry) {
+        this(registry, () -> {});
+    }
+
+    public CobaltRuntime(ApiRegistry registry, Runnable invocationBoundary) {
         if (!registry.isFrozen()) throw new IllegalArgumentException("Lua API registry must be frozen before starting Cobalt");
         this.registry = registry;
+        this.invocationBoundary = Objects.requireNonNull(invocationBoundary, "invocationBoundary");
     }
 
     public void start() throws LuaError {
@@ -64,6 +70,7 @@ public final class CobaltRuntime {
         String previousProfile = currentProfile;
         currentProfile = profile;
         try {
+            invocationBoundary.run();
             return LuaThread.runMain(state, LoadState.load(state, source, name, state.globals()));
         } finally {
             currentProfile = previousProfile;
@@ -91,6 +98,7 @@ public final class CobaltRuntime {
         String previousProfile = currentProfile;
         currentProfile = callback.profile;
         try {
+            invocationBoundary.run();
             LuaThread.run(new LuaThread(state, callback.function), Constants.NONE);
         } catch (LuaError error) {
             ErrorManager.reportProfile(callback.profile, cooldownKey == null ? "timer" : cooldownKey, error);
