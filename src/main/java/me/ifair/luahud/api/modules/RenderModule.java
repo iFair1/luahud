@@ -154,7 +154,9 @@ public final class RenderModule {
                         .optional("iconScale", LuaType.number(),
                                 "Default item, stack, entity, and texture scale relative to the section")
                         .optional("rowHeight", LuaType.union(LuaType.integer(), LuaType.literal("auto")),
-                                "Fixed unscaled row height, or auto to fit the tallest element; defaults to auto");
+                                "Fixed unscaled row height, or auto to fit the tallest element; defaults to auto")
+                        .optional("lineSpacing", LuaType.integer(),
+                                "Unscaled background spacing around each row, favoring the top; defaults to 2");
             }
             if (section || text) {
                 fields.optional("textColor", color, "Text color")
@@ -221,7 +223,8 @@ public final class RenderModule {
                 scale(options, "scale", defaults.scale()),
                 scale(options, "iconScale", defaults.iconScale()),
                 rowHeight.value(),
-                rowHeight.auto()
+                rowHeight.auto(),
+                options == null ? defaults.lineSpacing() : options.integer("lineSpacing", defaults.lineSpacing())
         );
     }
 

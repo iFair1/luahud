@@ -12,7 +12,8 @@ public record SectionLayout(
         RowDirection rowDirection,
         float scale,
         int rowHeight,
-        boolean autoRowHeight
+        boolean autoRowHeight,
+        int lineSpacing
 ) {
     public SectionLayout {
         Objects.requireNonNull(anchor, "anchor");
@@ -24,6 +25,7 @@ public record SectionLayout(
             throw new IllegalArgumentException("Scale must be finite and greater than zero");
         }
         if (rowHeight <= 0) throw new IllegalArgumentException("Row height must be greater than zero");
+        if (lineSpacing < 0) throw new IllegalArgumentException("Line spacing cannot be negative");
     }
 
     public static SectionLayout defaults(Anchor anchor, int offsetX, int offsetY) {
@@ -37,11 +39,26 @@ public record SectionLayout(
                 RowDirection.TOP_TO_BOTTOM,
                 1.0f,
                 RenderDimensions.DEFAULT_ROW_HEIGHT,
-                true
+                true,
+                RenderDimensions.DEFAULT_LINE_SPACING
         );
     }
 
     public int scaledRowHeight() {
         return RenderDimensions.scaleLength(rowHeight, scale);
+    }
+
+    public int spacingAbove() {
+        int unscaled = Math.min(lineSpacing, lineSpacing / 2 + 1);
+        return RenderDimensions.scaleLength(unscaled, scale);
+    }
+
+    public int spacingBelow() {
+        int unscaled = lineSpacing - Math.min(lineSpacing, lineSpacing / 2 + 1);
+        return RenderDimensions.scaleLength(unscaled, scale);
+    }
+
+    public int scaledLineSpacing() {
+        return spacingAbove() + spacingBelow();
     }
 }

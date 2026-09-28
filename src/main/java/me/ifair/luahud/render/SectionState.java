@@ -16,7 +16,8 @@ public record SectionState(
         float scale,
         float iconScale,
         int rowHeight,
-        boolean autoRowHeight
+        boolean autoRowHeight,
+        int lineSpacing
 ) {
     public SectionState {
         Objects.requireNonNull(anchor, "anchor");
@@ -31,6 +32,7 @@ public record SectionState(
             throw new IllegalArgumentException("Icon scale must be finite and greater than zero");
         }
         if (rowHeight <= 0) throw new IllegalArgumentException("Row height must be greater than zero");
+        if (lineSpacing < 0) throw new IllegalArgumentException("Line spacing cannot be negative");
     }
 
     public static SectionState defaults() {
@@ -49,13 +51,14 @@ public record SectionState(
                 1.0f,
                 1.0f,
                 RenderDimensions.DEFAULT_ROW_HEIGHT,
-                true
+                true,
+                RenderDimensions.DEFAULT_LINE_SPACING
         );
     }
 
     public SectionLayout layout() {
         return new SectionLayout(
                 anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
-                scale, rowHeight, autoRowHeight);
+                scale, rowHeight, autoRowHeight, lineSpacing);
     }
 }

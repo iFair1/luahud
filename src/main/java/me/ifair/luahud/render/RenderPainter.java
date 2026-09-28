@@ -22,9 +22,9 @@ final class RenderPainter {
                     context,
                     element.backgroundColor(),
                     positioned.backgroundX(),
-                    positioned.rowY(),
+                    positioned.backgroundY(),
                     positioned.backgroundX() + positioned.backgroundWidth(),
-                    positioned.rowY() + positioned.rowHeight()
+                    positioned.backgroundY() + positioned.rowHeight()
             );
             paintContent(context, textRenderer, positioned);
         }
@@ -191,6 +191,6 @@ final class RenderPainter {
     }
 
     private static void drawBackground(DrawContext context, int color, int x1, int y1, int x2, int y2) {
-        if ((color >>> 24) > 0) context.fill(x1, y1 - 1, x2, y2 - 1, color);
+        if ((color >>> 24) > 0) context.fill(x1, y1, x2, y2, color);
     }
 }

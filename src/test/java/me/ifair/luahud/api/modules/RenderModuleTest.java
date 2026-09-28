@@ -65,6 +65,7 @@ class RenderModuleTest {
                 + "Use the entity's current rotation as the base for yaw and pitch offsets"));
         assertTrue(stub.contains("function lh.drawEntity(uuid, options) end"));
         assertTrue(stub.contains("---@field rowHeight? integer | \"auto\" Fixed unscaled row height"));
+        assertTrue(stub.contains("---@field lineSpacing? integer Unscaled background spacing around each row, favoring the top; defaults to 2"));
         assertTrue(stub.contains("---@field inlineAlign? \"top\" | \"center\" | \"bottom\" "
                 + "Vertical alignment of elements within a row; defaults to center"));
         assertTrue(stub.contains("---@param count? integer Number of line breaks; defaults to 1"));
@@ -167,6 +168,7 @@ class RenderModuleTest {
         assertEquals(InlineAlignment.CENTER, state.inlineAlignment());
         assertEquals(RowDirection.TOP_TO_BOTTOM, state.rowDirection());
         assertTrue(state.autoRowHeight());
+        assertEquals(2, state.lineSpacing());
     }
 
     @Test void rightAnchorsKeepTheirInsetAndDeriveRightRowAlignment() {
@@ -198,11 +200,12 @@ class RenderModuleTest {
                 () -> RenderModule.sectionState(new LuaTableValue(Map.of("scale", Double.POSITIVE_INFINITY))));
     }
 
-    @Test void sectionScaleIconScaleAndRowHeightAreIndependentOptions() {
+    @Test void sectionScaleIconScaleRowHeightAndLineSpacingAreIndependentOptions() {
         SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of(
                 "scale", 2,
                 "iconScale", 1.5,
-                "rowHeight", 10
+                "rowHeight", 10,
+                "lineSpacing", 3
         )));
 
         assertEquals(2f, state.scale());
@@ -210,6 +213,10 @@ class RenderModuleTest {
         assertEquals(10, state.rowHeight());
         assertFalse(state.autoRowHeight());
         assertEquals(20, state.layout().scaledRowHeight());
+        assertEquals(3, state.lineSpacing());
+        assertEquals(4, state.layout().spacingAbove());
+        assertEquals(2, state.layout().spacingBelow());
+        assertEquals(6, state.layout().scaledLineSpacing());
     }
 
     @Test void automaticRowHeightIsTheDefaultAndCanBeRequestedExplicitly() {
@@ -221,10 +228,12 @@ class RenderModuleTest {
         assertEquals(12, explicit.rowHeight());
     }
 
-    @Test void iconScaleAndRowHeightMustBePositive() {
+    @Test void iconScaleAndRowHeightMustBePositiveAndLineSpacingCannotBeNegative() {
         assertThrows(IllegalArgumentException.class,
                 () -> RenderModule.sectionState(new LuaTableValue(Map.of("iconScale", 0))));
         assertThrows(IllegalArgumentException.class,
                 () -> RenderModule.sectionState(new LuaTableValue(Map.of("rowHeight", 0))));
+        assertThrows(IllegalArgumentException.class,
+                () -> RenderModule.sectionState(new LuaTableValue(Map.of("lineSpacing", -1))));
     }
 }

@@ -10,6 +10,7 @@ record RenderLayout(List<PositionedElement> elements) {
     record PositionedElement(
             RenderElement element,
             int backgroundX,
+            int backgroundY,
             int rowY,
             int contentY,
             int contentX,

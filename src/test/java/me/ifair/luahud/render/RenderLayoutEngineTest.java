@@ -67,10 +67,10 @@ class RenderLayoutEngineTest {
         List<RenderLayout.PositionedElement> normal = layout(topToBottom, 100, 60);
         List<RenderLayout.PositionedElement> reversed = layout(bottomToTop, 100, 60);
 
-        assertEquals(34, normal.get(0).rowY());
-        assertEquals(46, normal.get(1).rowY());
-        assertEquals(46, reversed.get(0).rowY());
-        assertEquals(34, reversed.get(1).rowY());
+        assertEquals(30, normal.get(0).rowY());
+        assertEquals(44, normal.get(1).rowY());
+        assertEquals(44, reversed.get(0).rowY());
+        assertEquals(30, reversed.get(1).rowY());
     }
 
     @Test void zeroWidthElementsDoNotStealOuterPadding() {
@@ -109,7 +109,7 @@ class RenderLayoutEngineTest {
 
         RenderLayout.PositionedElement visible = layout(section, 100, 60).getFirst();
 
-        assertEquals(14, visible.rowY());
+        assertEquals(16, visible.rowY());
     }
 
     @Test void sectionScaleAffectsWidthsPaddingAndRowHeight() {
@@ -125,8 +125,8 @@ class RenderLayoutEngineTest {
         assertEquals(47, elements.get(0).contentX());
         assertEquals(2, elements.get(0).rowY());
         assertEquals(45, elements.get(1).backgroundX());
-        assertEquals(22, elements.get(1).rowY());
-        assertEquals(20, elements.get(1).rowHeight());
+        assertEquals(26, elements.get(1).rowY());
+        assertEquals(24, elements.get(1).rowHeight());
     }
 
     @Test void sectionScaleAffectsLocalElementOffsets() {
@@ -149,12 +149,12 @@ class RenderLayoutEngineTest {
 
         List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
 
-        assertEquals(20, elements.get(0).rowHeight());
+        assertEquals(22, elements.get(0).rowHeight());
         assertEquals(2, elements.get(0).rowY());
-        assertEquals(20, elements.get(1).rowHeight());
+        assertEquals(22, elements.get(1).rowHeight());
         assertEquals(2, elements.get(1).rowY());
-        assertEquals(6, elements.get(2).rowHeight());
-        assertEquals(22, elements.get(2).rowY());
+        assertEquals(8, elements.get(2).rowHeight());
+        assertEquals(24, elements.get(2).rowY());
     }
 
     @Test void inlineAlignmentPositionsShortElementsWithinTheTallestElement() {
@@ -170,8 +170,8 @@ class RenderLayoutEngineTest {
 
         RenderLayout.PositionedElement visible = layout(section, 100, 60).getFirst();
 
-        assertEquals(14, visible.rowY());
-        assertEquals(6, visible.rowHeight());
+        assertEquals(16, visible.rowY());
+        assertEquals(8, visible.rowHeight());
     }
 
     @Test void bottomToTopDirectionAccountsForDifferentAutomaticRowHeights() {
@@ -181,8 +181,34 @@ class RenderLayoutEngineTest {
 
         List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
 
-        assertEquals(52, elements.get(0).rowY());
-        assertEquals(32, elements.get(1).rowY());
+        assertEquals(50, elements.get(0).rowY());
+        assertEquals(28, elements.get(1).rowY());
+    }
+
+    @Test void lineSpacingFavorsTheTopWithoutChangingTheDistanceBetweenRows() {
+        RenderSection section = new RenderSection(new SectionLayout(
+                Anchor.TOP_LEFT, 2, 2, RowAlignment.LEFT, InlineAlignment.CENTER,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1f, 12, false, 3));
+        section.add(text("x"), true);
+        section.add(text("y"), true);
+
+        List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
+
+        assertEquals(0, elements.get(0).backgroundY());
+        assertEquals(15, elements.get(0).rowHeight());
+        assertEquals(17, elements.get(1).rowY());
+        assertEquals(15, elements.get(1).backgroundY());
+    }
+
+    @Test void defaultLineSpacingMovesBothPixelsAboveTheRow() {
+        RenderSection section = section(Anchor.TOP_LEFT, RowAlignment.LEFT,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM);
+        section.add(text("x"), true);
+
+        RenderLayout.PositionedElement element = layout(section, 100, 60).getFirst();
+
+        assertEquals(0, element.backgroundY());
+        assertEquals(14, element.rowHeight());
     }
 
     private int shortRowX(RowAlignment alignment) {
@@ -196,7 +222,7 @@ class RenderLayoutEngineTest {
     private int shortElementY(InlineAlignment alignment) {
         RenderSection section = new RenderSection(new SectionLayout(
                 Anchor.TOP_LEFT, 2, 2, RowAlignment.LEFT, alignment,
-                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1f, 12, true));
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1f, 12, true, 2));
         section.add(text("12345678901234567890"), false);
         section.add(text("123456"), true);
         return layout(section, 100, 60).get(1).contentY();
@@ -224,13 +250,13 @@ class RenderLayoutEngineTest {
             int rowHeight
     ) {
         return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
-                alignment, InlineAlignment.CENTER, inlineDirection, rowDirection, scale, rowHeight, false));
+                alignment, InlineAlignment.CENTER, inlineDirection, rowDirection, scale, rowHeight, false, 2));
     }
 
     private static RenderSection autoSection(Anchor anchor, RowDirection rowDirection) {
         return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
                 anchor.defaultRowAlignment(), InlineAlignment.CENTER, InlineDirection.LEFT_TO_RIGHT, rowDirection,
-                1f, 12, true));
+                1f, 12, true, 2));
     }
 
     private static RenderElement.Text text(String value) {

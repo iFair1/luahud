@@ -2,6 +2,7 @@ package me.ifair.luahud.render;
 
 final class RenderDimensions {
     static final int DEFAULT_ROW_HEIGHT = 12;
+    static final int DEFAULT_LINE_SPACING = 2;
     static final int BASE_ICON_SIZE = 12;
     static final int PADDING_LEFT = 2;
     static final int PADDING_RIGHT = 2;

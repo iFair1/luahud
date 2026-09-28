@@ -20,7 +20,7 @@ final class RenderLayoutEngine {
             SectionLayout options = section.layout();
             List<MeasuredRow> rows = measure(section, widthProvider, heightProvider, options);
             int sectionWidth = rows.stream().mapToInt(MeasuredRow::width).max().orElse(0);
-            int sectionHeight = rows.stream().mapToInt(MeasuredRow::height).sum();
+            int sectionHeight = rows.stream().mapToInt(row -> occupiedHeight(row, options)).sum();
             int sectionX = options.anchor().resolveX(screenWidth, sectionWidth, options.offsetX());
             int sectionY = options.anchor().resolveY(screenHeight, sectionHeight, options.offsetY());
             int rowCursor = options.rowDirection() == RowDirection.TOP_TO_BOTTOM
@@ -32,9 +32,9 @@ final class RenderLayoutEngine {
                 int rowY;
                 if (options.rowDirection() == RowDirection.TOP_TO_BOTTOM) {
                     rowY = rowCursor;
-                    rowCursor += row.height();
+                    rowCursor += occupiedHeight(row, options);
                 } else {
-                    rowCursor -= row.height();
+                    rowCursor -= occupiedHeight(row, options);
                     rowY = rowCursor;
                 }
                 positionElements(positioned, row, rowX, rowY, row.height(), options);
@@ -68,6 +68,10 @@ final class RenderLayoutEngine {
             rows.add(new MeasuredRow(elements, contentWidth + padding, rowHeight));
         }
         return rows;
+    }
+
+    private static int occupiedHeight(MeasuredRow row, SectionLayout options) {
+        return row.height() + options.scaledLineSpacing();
     }
 
     private static int alignRow(int sectionX, int sectionWidth, int rowWidth, RowAlignment alignment) {
@@ -108,12 +112,13 @@ final class RenderLayoutEngine {
             output.add(new RenderLayout.PositionedElement(
                     element,
                     backgroundX,
+                    elementRowY - options.spacingAbove(),
                     elementRowY,
                     contentY,
                     backgroundX + leftPadding,
                     backgroundWidth,
                     options.scale(),
-                    rowHeight
+                    rowHeight + options.scaledLineSpacing()
             ));
             if (options.inlineDirection() == InlineDirection.LEFT_TO_RIGHT) cursor += backgroundWidth;
         }
