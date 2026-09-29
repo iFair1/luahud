@@ -2,6 +2,8 @@ package me.ifair.luahud.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import me.ifair.luahud.error.ErrorManager;
 import net.fabricmc.loader.api.FabricLoader;
@@ -28,18 +30,23 @@ public class ConfigManager {
     private static long profileKeybindRevision;
 
     public static synchronized void load() {
+        boolean saveNormalizedConfig = false;
         if (Files.notExists(JSON_CONFIG)) {
             ConfigInstaller.generateDefaults();
         }
 
         try (BufferedReader reader = Files.newBufferedReader(JSON_CONFIG)) {
-            ConfigData loaded = gson.fromJson(reader, ConfigData.class);
+            JsonElement document = JsonParser.parseReader(reader);
+            ConfigData loaded = gson.fromJson(document, ConfigData.class);
             config = (loaded != null) ? loaded : new ConfigData();
             if (config.profiles == null) config.profiles = new ConfigData().profiles;
             config.profiles.removeIf(profile -> profile == null
                     || profile.getName() == null
                     || profile.getName().isBlank());
-            config.normalize();
+            saveNormalizedConfig = document == null
+                    || !document.isJsonObject()
+                    || !document.getAsJsonObject().has("luaTimeoutMs");
+            saveNormalizedConfig |= config.normalize();
             config.profiles.forEach(ConfigData.ProfileData::normalize);
 
         } catch (IOException e) {
@@ -48,6 +55,7 @@ public class ConfigManager {
             ErrorManager.reportSystem("config read", e);
             config = new ConfigData();
         }
+        if (saveNormalizedConfig) save();
         profileRevision++;
         profileKeybindRevision++;
     }

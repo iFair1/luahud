@@ -18,6 +18,7 @@ class ConfigDataTest {
 
         JsonObject json = JsonParser.parseString(new Gson().toJson(config)).getAsJsonObject();
         assertTrue(json.get("profiles").isJsonArray());
+        assertEquals(ConfigData.DEFAULT_LUA_TIMEOUT_MS, json.get("luaTimeoutMs").getAsInt());
 
         JsonArray profiles = json.getAsJsonArray("profiles");
         assertEquals("second", profiles.get(0).getAsJsonObject().get("name").getAsString());

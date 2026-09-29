@@ -12,10 +12,12 @@ public final class ConfigData {
     int luaTimeoutMs = DEFAULT_LUA_TIMEOUT_MS;
     List<ProfileData> profiles = new ArrayList<>();
 
-    void normalize() {
+    boolean normalize() {
         if (luaTimeoutMs < 0 || luaTimeoutMs > MAX_LUA_TIMEOUT_MS) {
             luaTimeoutMs = DEFAULT_LUA_TIMEOUT_MS;
+            return true;
         }
+        return false;
     }
 
     public static final class ProfileData {
