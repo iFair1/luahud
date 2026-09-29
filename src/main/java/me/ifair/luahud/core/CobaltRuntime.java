@@ -29,7 +29,8 @@ public final class CobaltRuntime {
     private final Runnable invocationBoundary;
     private final Map<String, List<Callback>> listeners = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
-    private final Map<LuaTable, ModelValue> modelValues = new IdentityHashMap<>();
+    // Keep model metadata owned by each Lua table so unreachable tables remain collectible.
+    private final LuaValue modelValueKey = new LuaUserdata(new Object());
     private final CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder()
             .onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT);
@@ -49,7 +50,7 @@ public final class CobaltRuntime {
     }
 
     public void start() throws LuaError {
-        listeners.clear(); timers.clear(); modelValues.clear();
+        listeners.clear(); timers.clear();
         state = new LuaState();
         CoreLibraries.standardGlobals(state);
         state.globals().rawset("lh", namespace(registry.rootNode(), "lh"));
@@ -217,10 +218,10 @@ public final class CobaltRuntime {
 
     private LuaTable modelTable(Supplier<Object> object, ModelBuilder<Object> model, String path, String provider) throws LuaError {
         LuaTable table = new LuaTable();
-        modelValues.put(table, new ModelValue(object, model));
         Map<String, ModelBuilder.Field<? super Object, ?>> fields = new HashMap<>();
         for (ModelBuilder.Field<? super Object, ?> field : model.fields()) fields.put(field.name(), field);
         LuaTable metatable = new LuaTable();
+        metatable.rawset(modelValueKey, new LuaUserdata(new ModelValue(object, model)));
         metatable.rawset("__index", LibFunction.create((luaState, ignored, key) -> {
             ModelBuilder.Field<? super Object, ?> field = key.isString() ? fields.get(key.checkString()) : null;
             if (field == null) return Constants.NIL;
@@ -291,7 +292,7 @@ public final class CobaltRuntime {
         ModelBuilder<?> model = type.model();
         Map<String, Object> fields = new LinkedHashMap<>();
         Set<String> lazyKeys = new LinkedHashSet<>();
-        ModelValue source = modelValues.get(table);
+        ModelValue source = modelValue(table);
         boolean matchingSource = source != null && source.model() == model;
         Supplier<Object> sourceInstance = matchingSource ? memoize(source.supplier()) : () -> null;
         Function<String, Object> sourceField = matchingSource
@@ -314,6 +315,15 @@ public final class CobaltRuntime {
             String message = error.getMessage();
             throw new LuaError(message == null ? "invalid " + type.displayName() + " model" : message);
         }
+    }
+
+    private ModelValue modelValue(LuaTable table) {
+        LuaTable metatable = table.getMetatable(state);
+        if (metatable == null) return null;
+        LuaValue metadata = metatable.rawget(modelValueKey);
+        return metadata instanceof LuaUserdata userdata && userdata.userdata() instanceof ModelValue value
+                ? value
+                : null;
     }
 
     private Object resolveModelField(ModelBuilder<Object> model, Object instance, String key) {
