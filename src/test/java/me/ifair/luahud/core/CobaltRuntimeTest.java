@@ -208,6 +208,104 @@ class CobaltRuntimeTest {
         assertTrue(runtime.global("intervals").isNil());
     }
 
+    @Test void watchdogStopsLoopsAndCannotBeHiddenByPcall() throws Exception {
+        AtomicInteger clock = new AtomicInteger();
+        ApiRegistry registry = watchdogRegistry(clock);
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 25,
+                () -> clock.get() * 1_000_000L);
+        runtime.start();
+
+        LuaError direct = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.expire(); while true do end", "direct-timeout"));
+        assertTrue(direct.getMessage().contains("exceeded 25 ms"));
+
+        clock.set(0);
+        LuaError protectedCall = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.expire(); pcall(function() while true do end end)", "pcall-timeout"));
+        assertTrue(protectedCall.getMessage().contains("exceeded 25 ms"));
+
+        clock.set(0);
+        runtime.execute("watchdogRecovered = true", "healthy");
+        assertTrue(runtime.global("watchdogRecovered").checkBoolean());
+    }
+
+    @Test void zeroTimeoutDisablesTheWatchdog() throws Exception {
+        AtomicInteger clock = new AtomicInteger();
+        ApiRegistry registry = watchdogRegistry(clock);
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 0,
+                () -> clock.get() * 1_000_000L);
+        runtime.start();
+
+        runtime.execute("lh.expire(); local total=0; for i=1,100000 do total=total+i end; completed=true", "disabled");
+
+        assertTrue(runtime.global("completed").checkBoolean());
+    }
+
+    @Test void timedOutLoadRollsBackItsEventAndTimerRegistrations() throws Exception {
+        AtomicInteger clock = new AtomicInteger();
+        ApiRegistry registry = watchdogRegistry(clock);
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 25,
+                () -> clock.get() * 1_000_000L);
+        runtime.start();
+
+        assertThrows(LuaError.class, () -> runtime.execute(new java.io.ByteArrayInputStream((
+                        "events=0; timers=0; "
+                                + "lh.on('tick', function() events=events+1 end); "
+                                + "lh.setInterval(1,'ticks',function() timers=timers+1 end); "
+                                + "lh.expire(); while true do end")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8)), "@Broken.lua", "Broken"));
+
+        clock.set(0);
+        runtime.fireEvent("tick");
+        runtime.tickTimers();
+        assertEquals(0, runtime.global("events").checkInteger());
+        assertEquals(0, runtime.global("timers").checkInteger());
+    }
+
+    @Test void timedOutCallbacksAreDroppedWithoutAffectingHealthyCallbacks() throws Exception {
+        ErrorManager.beginProfileReload();
+        AtomicInteger clock = new AtomicInteger();
+        ApiRegistry registry = watchdogRegistry(clock);
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 25,
+                () -> clock.get() * 1_000_000L);
+        runtime.start();
+        runtime.execute("eventAttempts=0; healthyEvents=0; timerAttempts=0; healthyTimers=0; "
+                        + "lh.on('tick', function() eventAttempts=eventAttempts+1; lh.expire(); while true do end end); "
+                        + "lh.on('tick', function() healthyEvents=healthyEvents+1 end); "
+                        + "lh.setInterval(1,'ticks',function() timerAttempts=timerAttempts+1; lh.expire(); while true do end end); "
+                        + "lh.setInterval(1,'ticks',function() healthyTimers=healthyTimers+1 end)",
+                "callbacks");
+
+        runtime.fireEvent("tick");
+        clock.set(0);
+        runtime.fireEvent("tick");
+        clock.set(0);
+        runtime.tickTimers();
+        clock.set(0);
+        runtime.tickTimers();
+
+        assertEquals(1, runtime.global("eventAttempts").checkInteger());
+        assertEquals(2, runtime.global("healthyEvents").checkInteger());
+        assertEquals(1, runtime.global("timerAttempts").checkInteger());
+        assertEquals(2, runtime.global("healthyTimers").checkInteger());
+        assertTrue(ErrorManager.snapshot().stream()
+                .anyMatch(entry -> entry.phase().equals("tick") && entry.message().contains("exceeded 25 ms")));
+        assertTrue(ErrorManager.snapshot().stream()
+                .anyMatch(entry -> entry.phase().equals("timer") && entry.message().contains("exceeded 25 ms")));
+    }
+
+    private static ApiRegistry watchdogRegistry(AtomicInteger clock) {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.addEventFunctions();
+        registry.registrar("fixture").root().function("expire", LuaType.nil(), "")
+                .call(arguments -> {
+                    clock.set(26);
+                    return null;
+                });
+        registry.freeze();
+        return registry;
+    }
+
     @Test void callbackErrorsKeepProfileProvenanceAndDeduplicate() throws Exception {
         ErrorManager.beginProfileReload();
         ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();

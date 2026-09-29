@@ -4,9 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class ConfigData {
+    static final int DEFAULT_LUA_TIMEOUT_MS = 25;
+    static final int MAX_LUA_TIMEOUT_MS = 1000;
+
     boolean showHiddenFiles = false;
     boolean generateExampleProfiles = true;
+    int luaTimeoutMs = DEFAULT_LUA_TIMEOUT_MS;
     List<ProfileData> profiles = new ArrayList<>();
+
+    void normalize() {
+        if (luaTimeoutMs < 0 || luaTimeoutMs > MAX_LUA_TIMEOUT_MS) {
+            luaTimeoutMs = DEFAULT_LUA_TIMEOUT_MS;
+        }
+    }
 
     public static final class ProfileData {
         private String name;

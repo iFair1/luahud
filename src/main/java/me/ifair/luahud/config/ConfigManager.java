@@ -39,6 +39,7 @@ public class ConfigManager {
             config.profiles.removeIf(profile -> profile == null
                     || profile.getName() == null
                     || profile.getName().isBlank());
+            config.normalize();
             config.profiles.forEach(ConfigData.ProfileData::normalize);
 
         } catch (IOException e) {
@@ -67,6 +68,7 @@ public class ConfigManager {
 
     public static synchronized boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
     public static synchronized boolean isGenerateExampleProfilesEnabled() { return config.generateExampleProfiles; }
+    public static synchronized int getLuaTimeoutMs() { return config.luaTimeoutMs; }
     public static synchronized List<ConfigData.ProfileData> getProfiles() {
         List<ConfigData.ProfileData> snapshot = new ArrayList<>();
         config.profiles.forEach(profile -> snapshot.add(profile.copy()));

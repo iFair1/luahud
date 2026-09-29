@@ -21,7 +21,8 @@ public final class Engine {
     public void reloadAll() {
         ErrorManager.beginProfileReload();
         try {
-            CobaltRuntime replacement = new CobaltRuntime(registry, RenderModule::resetSection);
+            CobaltRuntime replacement = new CobaltRuntime(
+                    registry, RenderModule::resetSection, ConfigManager.getLuaTimeoutMs());
             replacement.start();
             runtime = replacement;
         }

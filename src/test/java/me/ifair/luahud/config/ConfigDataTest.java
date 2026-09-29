@@ -30,4 +30,27 @@ class ConfigDataTest {
 
         assertEquals("example", profile.copy().getName());
     }
+
+    @Test
+    void luaTimeoutDefaultsAndNormalizesWhileAllowingDisabledMode() {
+        ConfigData missing = new Gson().fromJson("{}", ConfigData.class);
+        assertEquals(ConfigData.DEFAULT_LUA_TIMEOUT_MS, missing.luaTimeoutMs);
+
+        ConfigData config = new ConfigData();
+        config.luaTimeoutMs = 0;
+        config.normalize();
+        assertEquals(0, config.luaTimeoutMs);
+
+        config.luaTimeoutMs = ConfigData.MAX_LUA_TIMEOUT_MS;
+        config.normalize();
+        assertEquals(ConfigData.MAX_LUA_TIMEOUT_MS, config.luaTimeoutMs);
+
+        config.luaTimeoutMs = -1;
+        config.normalize();
+        assertEquals(ConfigData.DEFAULT_LUA_TIMEOUT_MS, config.luaTimeoutMs);
+
+        config.luaTimeoutMs = ConfigData.MAX_LUA_TIMEOUT_MS + 1;
+        config.normalize();
+        assertEquals(ConfigData.DEFAULT_LUA_TIMEOUT_MS, config.luaTimeoutMs);
+    }
 }

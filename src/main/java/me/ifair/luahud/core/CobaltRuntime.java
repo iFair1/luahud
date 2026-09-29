@@ -6,6 +6,9 @@ import me.ifair.luahud.error.ErrorManager;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.LoadState;
 import org.squiddev.cobalt.compiler.CompileException;
+import org.squiddev.cobalt.debug.DebugFrame;
+import org.squiddev.cobalt.debug.DebugHook;
+import org.squiddev.cobalt.debug.DebugState;
 import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.lib.CoreLibraries;
@@ -17,16 +20,22 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.LongSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** All Cobalt-specific binding and callback state lives behind this package-private adapter. */
 public final class CobaltRuntime {
+    private static final int DEFAULT_TIMEOUT_MS = 25;
+    private static final int WATCHDOG_HOOK_INTERVAL = 1000;
+
     private record Callback(LuaFunction function, String profile) {}
     private record Timer(int interval, Callback callback, int[] elapsed) {}
 
     private final ApiRegistry registry;
     private final Runnable invocationBoundary;
+    private final int timeoutMs;
+    private final LongSupplier nanoTime;
     private final Map<String, List<Callback>> listeners = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
     // Keep model metadata owned by each Lua table so unreachable tables remain collectible.
@@ -36,22 +45,40 @@ public final class CobaltRuntime {
             .onUnmappableCharacter(CodingErrorAction.REPORT);
     private LuaState state;
     private String currentProfile;
+    private boolean watchdogActive;
+    private boolean watchdogTimedOut;
+    private long watchdogDeadline;
 
     private record ModelValue(Supplier<Object> supplier, ModelBuilder<Object> model) {}
 
     public CobaltRuntime(ApiRegistry registry) {
-        this(registry, () -> {});
+        this(registry, () -> {}, DEFAULT_TIMEOUT_MS);
     }
 
     public CobaltRuntime(ApiRegistry registry, Runnable invocationBoundary) {
+        this(registry, invocationBoundary, DEFAULT_TIMEOUT_MS);
+    }
+
+    public CobaltRuntime(ApiRegistry registry, Runnable invocationBoundary, int timeoutMs) {
+        this(registry, invocationBoundary, timeoutMs, System::nanoTime);
+    }
+
+    CobaltRuntime(ApiRegistry registry, Runnable invocationBoundary, int timeoutMs, LongSupplier nanoTime) {
         if (!registry.isFrozen()) throw new IllegalArgumentException("Lua API registry must be frozen before starting Cobalt");
+        if (timeoutMs < 0) throw new IllegalArgumentException("Lua timeout must not be negative");
         this.registry = registry;
         this.invocationBoundary = Objects.requireNonNull(invocationBoundary, "invocationBoundary");
+        this.timeoutMs = timeoutMs;
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
     public void start() throws LuaError {
         listeners.clear(); timers.clear();
         state = new LuaState();
+        if (timeoutMs > 0) {
+            state.getMainThread().getDebugState().setHook(new WatchdogHook(), false, false, false,
+                    WATCHDOG_HOOK_INTERVAL);
+        }
         CoreLibraries.standardGlobals(state);
         state.globals().rawset("lh", namespace(registry.rootNode(), "lh"));
     }
@@ -72,7 +99,17 @@ public final class CobaltRuntime {
         currentProfile = profile;
         try {
             invocationBoundary.run();
-            return LuaThread.runMain(state, LoadState.load(state, source, name, state.globals()));
+            beginWatchdog();
+            try {
+                Varargs result = LuaThread.runMain(state, LoadState.load(state, source, name, state.globals()));
+                throwIfTimedOut();
+                return result;
+            } catch (LuaError error) {
+                if (watchdogTimedOut) removeProfileRegistrations(profile);
+                throw error;
+            } finally {
+                endWatchdog();
+            }
         } finally {
             currentProfile = previousProfile;
         }
@@ -83,28 +120,82 @@ public final class CobaltRuntime {
     public void fireEvent(String eventName) {
         List<Callback> callbacks = listeners.get(eventName);
         if (callbacks == null) return;
-        for (Callback callback : List.copyOf(callbacks)) invokeCallback(callback, eventName);
+        for (Callback callback : List.copyOf(callbacks)) {
+            if (invokeCallback(callback, eventName)) callbacks.removeIf(candidate -> candidate == callback);
+        }
+        if (callbacks.isEmpty()) listeners.remove(eventName);
     }
 
     public void tickTimers() {
         for (Timer timer : List.copyOf(timers)) {
             if (++timer.elapsed[0] >= timer.interval) {
                 timer.elapsed[0] = 0;
-                invokeCallback(timer.callback, null);
+                if (invokeCallback(timer.callback, null)) timers.removeIf(candidate -> candidate == timer);
             }
         }
     }
 
-    private void invokeCallback(Callback callback, String cooldownKey) {
+    /** @return whether this callback timed out and should be removed. */
+    private boolean invokeCallback(Callback callback, String cooldownKey) {
         String previousProfile = currentProfile;
         currentProfile = callback.profile;
         try {
             invocationBoundary.run();
-            LuaThread.run(new LuaThread(state, callback.function), Constants.NONE);
-        } catch (LuaError error) {
-            ErrorManager.reportProfile(callback.profile, cooldownKey == null ? "timer" : cooldownKey, error);
+            beginWatchdog();
+            try {
+                LuaThread.run(new LuaThread(state, callback.function), Constants.NONE);
+                throwIfTimedOut();
+                return false;
+            } catch (LuaError error) {
+                ErrorManager.reportProfile(callback.profile, cooldownKey == null ? "timer" : cooldownKey, error);
+                return watchdogTimedOut;
+            } finally {
+                endWatchdog();
+            }
         } finally {
             currentProfile = previousProfile;
+        }
+    }
+
+    private void beginWatchdog() {
+        watchdogTimedOut = false;
+        if (timeoutMs == 0) return;
+        watchdogDeadline = nanoTime.getAsLong() + timeoutMs * 1_000_000L;
+        watchdogActive = true;
+    }
+
+    private void endWatchdog() {
+        watchdogActive = false;
+        watchdogTimedOut = false;
+    }
+
+    private void throwIfTimedOut() throws LuaError {
+        if (timeoutMs == 0 || watchdogTimedOut) {
+            if (watchdogTimedOut) throw timeoutError();
+            return;
+        }
+        if (nanoTime.getAsLong() - watchdogDeadline >= 0) {
+            watchdogTimedOut = true;
+            throw timeoutError();
+        }
+    }
+
+    private LuaError timeoutError() {
+        return new LuaError("Lua execution exceeded " + timeoutMs + " ms and was stopped");
+    }
+
+    private void removeProfileRegistrations(String profile) {
+        listeners.values().forEach(callbacks -> callbacks.removeIf(callback -> Objects.equals(callback.profile, profile)));
+        listeners.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        timers.removeIf(timer -> Objects.equals(timer.callback.profile, profile));
+    }
+
+    private final class WatchdogHook implements DebugHook {
+        @Override
+        public void onCount(LuaState state, DebugState debugState, DebugFrame frame) throws LuaError {
+            if (!watchdogActive || nanoTime.getAsLong() - watchdogDeadline < 0) return;
+            watchdogTimedOut = true;
+            throw timeoutError();
         }
     }
 
