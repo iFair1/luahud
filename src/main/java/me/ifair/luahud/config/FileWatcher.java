@@ -75,16 +75,20 @@ public class FileWatcher {
                     if (!fileName.endsWith(LUA_EXTENSION)) continue;
                     String profileName = stripExtension(fileName);
 
-                    if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE) {
-                        if (!ConfigManager.hasProfile(profileName)) {
-                            ConfigManager.addProfile(profileName);
+                    // Rename/delete rollbacks can leave stale events in the queue.
+                    // Wait for the config transaction, then check the current file state.
+                    synchronized (ConfigManager.class) {
+                        Path profileFile = ConfigManager.MOD_CONFIG_DIR.resolve(changedFile);
+                        if (event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
+                            if (Files.exists(profileFile)) continue;
+                            ConfigManager.removeProfile(profileName);
+                            reloadNeeded.set(true);
+                        } else if (Files.isRegularFile(profileFile)) {
+                            if (!ConfigManager.hasProfile(profileName)) {
+                                ConfigManager.addProfile(profileName);
+                            }
+                            reloadNeeded.set(true);
                         }
-                        reloadNeeded.set(true);
-                    } else if (event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
-                        ConfigManager.removeProfile(profileName);
-                        reloadNeeded.set(true);
-                    } else if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-                        reloadNeeded.set(true);
                     }
                 }
                 boolean valid = key.reset();

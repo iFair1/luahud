@@ -9,7 +9,9 @@ import me.ifair.luahud.error.ErrorManager;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.*;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,10 +63,57 @@ public class ConfigManager {
     }
 
     private static void save() {
-        try (BufferedWriter writer = Files.newBufferedWriter(JSON_CONFIG)) {
-            gson.toJson(config, writer);
+        persist(config);
+    }
+
+    private static boolean persist(ConfigData candidate) {
+        Path temporaryFile = null;
+        try {
+            temporaryFile = Files.createTempFile(CONFIG_DIR, "luahud-", ".json.tmp");
+            try (BufferedWriter writer = Files.newBufferedWriter(temporaryFile)) {
+                gson.toJson(candidate, writer);
+            }
+            try {
+                Files.move(temporaryFile, JSON_CONFIG,
+                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporaryFile, JSON_CONFIG, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return true;
         } catch (IOException e) {
             ErrorManager.reportSystem("config write", e);
+            return false;
+        } finally {
+            if (temporaryFile != null) {
+                try {
+                    Files.deleteIfExists(temporaryFile);
+                } catch (IOException e) {
+                    ErrorManager.reportSystem("config temporary file cleanup", e);
+                }
+            }
+        }
+    }
+
+    private static boolean commit(ConfigData candidate) {
+        if (!persist(candidate)) return false;
+        config = candidate;
+        return true;
+    }
+
+    private static ConfigData copyConfig() {
+        ConfigData copy = new ConfigData();
+        copy.showHiddenFiles = config.showHiddenFiles;
+        copy.generateExampleProfiles = config.generateExampleProfiles;
+        copy.luaTimeoutMs = config.luaTimeoutMs;
+        config.profiles.forEach(profile -> copy.profiles.add(profile.copy()));
+        return copy;
+    }
+
+    private static void restoreFile(Path source, Path target, String component) {
+        try {
+            Files.move(source, target);
+        } catch (IOException e) {
+            ErrorManager.reportSystem(component + " rollback", e);
         }
     }
 
@@ -86,16 +135,18 @@ public class ConfigManager {
     public static synchronized void setShowHiddenFiles(boolean value) {
         if (config.showHiddenFiles == value) return;
 
-        config.showHiddenFiles = value;
-        save();
+        ConfigData candidate = copyConfig();
+        candidate.showHiddenFiles = value;
+        if (!commit(candidate)) return;
         profileRevision++;
     }
 
     public static synchronized void setGenerateExampleProfiles(boolean value) {
         if (config.generateExampleProfiles == value) return;
 
-        config.generateExampleProfiles = value;
-        save();
+        ConfigData candidate = copyConfig();
+        candidate.generateExampleProfiles = value;
+        commit(candidate);
     }
 
     public static synchronized boolean hasProfile(String name) {
@@ -106,8 +157,12 @@ public class ConfigManager {
         while (ConfigManager.hasProfile(name)) {
             name = incrementSuffix(name);
         }
-        config.profiles.add(profile);
-        save();
+        ConfigData candidate = copyConfig();
+        ConfigData.ProfileData added = profile.copy();
+        added.setName(name);
+        added.normalize();
+        candidate.profiles.add(added);
+        if (!commit(candidate)) return;
         profileReloadNeeded.set(true);
         profileRevision++;
         profileKeybindRevision++;
@@ -133,9 +188,9 @@ public class ConfigManager {
     public static synchronized void removeProfile(String name) {
         int index = indexOfProfile(name);
         if (index < 0) return;
-        config.profiles.remove(index);
-
-        save();
+        ConfigData candidate = copyConfig();
+        candidate.profiles.remove(index);
+        if (!commit(candidate)) return;
         profileReloadNeeded.set(true);
         profileRevision++;
         profileKeybindRevision++;
@@ -146,18 +201,38 @@ public class ConfigManager {
         if (index < 0) return;
 
         Path profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
-
-        config.profiles.remove(index);
-        save();
-
+        ConfigData candidate = copyConfig();
+        candidate.profiles.remove(index);
+        Path stagedFile = null;
+        boolean deleteStagedFile = true;
         try {
-            Files.deleteIfExists(profileFile);
+            if (Files.exists(profileFile)) {
+                if (!Files.isRegularFile(profileFile)) {
+                    throw new IOException("Profile is not a regular file: " + profileFile);
+                }
+                stagedFile = Files.createTempFile(MOD_CONFIG_DIR, "luahud-delete-", ".tmp");
+                Files.move(profileFile, stagedFile, StandardCopyOption.REPLACE_EXISTING);
+                deleteStagedFile = false;
+            }
+            if (!commit(candidate)) {
+                if (stagedFile != null) restoreFile(stagedFile, profileFile, "profile delete");
+                return;
+            }
+            deleteStagedFile = true;
             profileReloadNeeded.set(true);
             profileRevision++;
             profileKeybindRevision++;
         } catch (IOException e) {
-            save();
             ErrorManager.reportSystem("profile delete", e);
+        } finally {
+            // A failed rollback must retain the staged file for recovery.
+            if (stagedFile != null && deleteStagedFile) {
+                try {
+                    Files.deleteIfExists(stagedFile);
+                } catch (IOException e) {
+                    ErrorManager.reportSystem("profile delete cleanup", e);
+                }
+            }
         }
     }
 
@@ -166,8 +241,9 @@ public class ConfigManager {
         int target = index + offset;
         if (index < 0 || target < 0 || target >= config.profiles.size()) return;
 
-        Collections.swap(config.profiles, index, target);
-        save();
+        ConfigData candidate = copyConfig();
+        Collections.swap(candidate.profiles, index, target);
+        if (!commit(candidate)) return;
         profileReloadNeeded.set(true);
         profileRevision++;
     }
@@ -176,8 +252,9 @@ public class ConfigManager {
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null || profile.isActive() == active) return;
 
-        profile.setActive(active);
-        save();
+        ConfigData candidate = copyConfig();
+        candidate.profiles.get(indexOfProfile(name)).setActive(active);
+        if (!commit(candidate)) return;
         profileReloadNeeded.set(true);
         profileRevision++;
     }
@@ -192,8 +269,9 @@ public class ConfigManager {
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null || profile.isHidden() == hidden) return;
 
-        profile.setHidden(hidden);
-        save();
+        ConfigData candidate = copyConfig();
+        candidate.profiles.get(indexOfProfile(name)).setHidden(hidden);
+        if (!commit(candidate)) return;
         profileRevision++;
     }
 
@@ -202,8 +280,9 @@ public class ConfigManager {
         if (profile == null) return;
         if (profile.getKeybind().equals(keybind)) return;
 
-        profile.setKeybind(keybind);
-        save();
+        ConfigData candidate = copyConfig();
+        candidate.profiles.get(indexOfProfile(name)).setKeybind(keybind);
+        if (!commit(candidate)) return;
         profileRevision++;
         profileKeybindRevision++;
     }
@@ -221,11 +300,15 @@ public class ConfigManager {
         Path oldFile = MOD_CONFIG_DIR.resolve(oldName + ".lua").normalize();
         Path newFile = MOD_CONFIG_DIR.resolve(newName + ".lua").normalize();
 
-        profile.setName(newName);
+        ConfigData candidate = copyConfig();
+        candidate.profiles.get(indexOfProfile(oldName)).setName(newName);
 
         try {
             Files.move(oldFile, newFile);
-            save();
+            if (!commit(candidate)) {
+                restoreFile(newFile, oldFile, "profile rename");
+                return;
+            }
             profileReloadNeeded.set(true);
             profileRevision++;
             profileKeybindRevision++;
