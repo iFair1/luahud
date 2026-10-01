@@ -17,7 +17,8 @@ public record SectionState(
         float iconScale,
         int rowHeight,
         boolean autoRowHeight,
-        int lineSpacing
+        int lineSpacing,
+        int inlineSpacing
 ) {
     public SectionState {
         Objects.requireNonNull(anchor, "anchor");
@@ -33,6 +34,17 @@ public record SectionState(
         }
         if (rowHeight <= 0) throw new IllegalArgumentException("Row height must be greater than zero");
         if (lineSpacing < 0) throw new IllegalArgumentException("Line spacing cannot be negative");
+        if (inlineSpacing < 0) throw new IllegalArgumentException("Inline spacing cannot be negative");
+    }
+
+    public SectionState(
+            Anchor anchor, int offsetX, int offsetY, RowAlignment rowAlignment,
+            InlineAlignment inlineAlignment, InlineDirection inlineDirection, RowDirection rowDirection,
+            boolean shadow, int textColor, int backgroundColor, float scale, float iconScale,
+            int rowHeight, boolean autoRowHeight, int lineSpacing
+    ) {
+        this(anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
+                shadow, textColor, backgroundColor, scale, iconScale, rowHeight, autoRowHeight, lineSpacing, 0);
     }
 
     public static SectionState defaults() {
@@ -52,13 +64,14 @@ public record SectionState(
                 1.0f,
                 RenderDimensions.DEFAULT_ROW_HEIGHT,
                 true,
-                RenderDimensions.DEFAULT_LINE_SPACING
+                RenderDimensions.DEFAULT_LINE_SPACING,
+                0
         );
     }
 
     public SectionLayout layout() {
         return new SectionLayout(
                 anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
-                scale, rowHeight, autoRowHeight, lineSpacing);
+                scale, rowHeight, autoRowHeight, lineSpacing, inlineSpacing);
     }
 }

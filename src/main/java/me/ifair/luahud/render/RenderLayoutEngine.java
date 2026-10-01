@@ -59,13 +59,15 @@ final class RenderLayoutEngine {
                             Math.max(0, heightProvider.height(element, options.scale()))))
                     .toList();
             int contentWidth = elements.stream().mapToInt(MeasuredElement::width).sum();
+            int visibleCount = (int) elements.stream().filter(element -> element.width() > 0).count();
+            int inlineSpacing = Math.max(0, visibleCount - 1) * options.scaledInlineSpacing();
             int padding = contentWidth == 0 ? 0
                     : RenderDimensions.scaleOffset(RenderDimensions.PADDING_LEFT, options.scale())
                     + RenderDimensions.scaleOffset(RenderDimensions.PADDING_RIGHT, options.scale());
             int rowHeight = options.autoRowHeight() && !elements.isEmpty()
                     ? elements.stream().mapToInt(MeasuredElement::height).max().orElse(0)
                     : options.scaledRowHeight();
-            rows.add(new MeasuredRow(elements, contentWidth + padding, rowHeight));
+            rows.add(new MeasuredRow(elements, contentWidth + padding + inlineSpacing, rowHeight));
         }
         return rows;
     }
@@ -102,6 +104,13 @@ final class RenderLayoutEngine {
                     ? RenderDimensions.scaleOffset(RenderDimensions.PADDING_LEFT, options.scale()) : 0;
             int rightPadding = index == (options.inlineDirection() == InlineDirection.LEFT_TO_RIGHT ? lastVisible : firstVisible)
                     ? RenderDimensions.scaleOffset(RenderDimensions.PADDING_RIGHT, options.scale()) : 0;
+            if (index != lastVisible) {
+                if (options.inlineDirection() == InlineDirection.LEFT_TO_RIGHT) {
+                    rightPadding += options.scaledInlineSpacing();
+                } else {
+                    leftPadding += options.scaledInlineSpacing();
+                }
+            }
             int backgroundWidth = leftPadding + measured.width() + rightPadding;
 
             if (options.inlineDirection() == InlineDirection.RIGHT_TO_LEFT) cursor -= backgroundWidth;

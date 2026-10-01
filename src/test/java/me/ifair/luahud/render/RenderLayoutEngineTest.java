@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RenderLayoutEngineTest {
     private static final ElementWidthProvider TEXT_WIDTH = (element, sectionScale) -> RenderDimensions.scaleLength(
@@ -209,6 +210,103 @@ class RenderLayoutEngineTest {
 
         assertEquals(0, element.backgroundY());
         assertEquals(14, element.rowHeight());
+    }
+
+    @Test void inlineSpacingOnlyFillsGapsAndRespectsAnchorsDirectionsAndScale() {
+        for (Anchor anchor : Anchor.values()) {
+            for (InlineDirection direction : InlineDirection.values()) {
+                for (float scale : new float[] {0.5f, 1f, 1.5f, 2f}) {
+                    SectionLayout options = new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
+                            anchor.defaultRowAlignment(), InlineAlignment.CENTER, direction,
+                            RowDirection.TOP_TO_BOTTOM, scale, 12, false, 2, 2);
+                    RenderSection section = new RenderSection(options);
+                    section.add(text("xx"), false);
+                    section.add(text("yyyy"), true);
+
+                    List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
+                    int spacing = RenderDimensions.scaleLength(2, scale);
+                    int padding = RenderDimensions.scaleOffset(2, scale);
+                    int firstWidth = RenderDimensions.scaleLength(2, scale);
+                    int secondWidth = RenderDimensions.scaleLength(4, scale);
+                    int rowWidth = firstWidth + secondWidth + 2 * padding + spacing;
+                    int rowX = anchor.resolveX(100, rowWidth, anchor.defaultOffsetX());
+                    RenderLayout.PositionedElement first = elements.get(0);
+                    RenderLayout.PositionedElement second = elements.get(1);
+
+                    assertEquals(firstWidth + padding + spacing, first.backgroundWidth());
+                    assertEquals(secondWidth + padding, second.backgroundWidth());
+                    if (direction == InlineDirection.LEFT_TO_RIGHT) {
+                        assertEquals(rowX, first.backgroundX());
+                        assertEquals(first.backgroundX() + first.backgroundWidth(), second.backgroundX());
+                        assertEquals(rowX + rowWidth, second.backgroundX() + second.backgroundWidth());
+                        assertEquals(spacing, second.contentX() - first.contentX() - firstWidth);
+                    } else {
+                        assertEquals(rowX, second.backgroundX());
+                        assertEquals(second.backgroundX() + second.backgroundWidth(), first.backgroundX());
+                        assertEquals(rowX + rowWidth, first.backgroundX() + first.backgroundWidth());
+                        assertEquals(spacing, first.contentX() - second.contentX() - secondWidth);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test void inlineSpacingCountsOnlyVisibleElementsWhenAligningRows() {
+        for (RowAlignment alignment : RowAlignment.values()) {
+            RenderSection section = new RenderSection(new SectionLayout(
+                    Anchor.TOP_CENTER, 0, 2, alignment, InlineAlignment.CENTER,
+                    InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1f, 12, true, 2, 2));
+            section.add(text(""), false);
+            section.add(text("xx"), false);
+            section.add(text(""), false);
+            section.add(text("yyyy"), false);
+            section.add(text(""), true);
+            section.add(text("zz"), true);
+
+            List<RenderLayout.PositionedElement> elements = layout(section, 100, 60);
+            assertEquals(3, elements.size());
+            assertEquals(44, elements.get(0).backgroundX());
+            assertEquals(50, elements.get(1).backgroundX());
+            int shortRowX = switch (alignment) {
+                case LEFT -> 44;
+                case CENTER -> 47;
+                case RIGHT -> 50;
+            };
+            assertEquals(shortRowX, elements.get(2).backgroundX());
+            assertEquals(6, elements.get(2).backgroundWidth());
+            assertEquals(8, elements.get(0).rowY() + elements.get(0).rowHeight());
+        }
+    }
+
+    @Test void inlineSpacingUsesSectionScaleWithDifferentElementScalesAndOffsets() {
+        RenderSection section = new RenderSection(new SectionLayout(
+                Anchor.TOP_LEFT, 2, 2, RowAlignment.LEFT, InlineAlignment.BOTTOM,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1.5f, 12, true, 2, 1));
+        RenderElement.Texture icon = new RenderElement.Texture(null, 2f, 0, 3, 2);
+        section.add(icon, false);
+        section.add(text("yyyy"), true);
+        ElementWidthProvider widths = (element, scale) -> element instanceof RenderElement.Texture texture
+                ? RenderDimensions.scaleLength(RenderDimensions.BASE_ICON_SIZE, scale * texture.scale())
+                : TEXT_WIDTH.width(element, scale);
+        ElementHeightProvider heights = (element, scale) -> element instanceof RenderElement.Texture texture
+                ? RenderDimensions.scaleLength(RenderDimensions.BASE_ICON_SIZE, scale * texture.scale())
+                : TEXT_HEIGHT.height(element, scale);
+        List<RenderLayout.PositionedElement> elements = engine.layout(
+                List.of(section), widths, heights, 100, 60).elements();
+
+        assertEquals(7, elements.get(0).backgroundX());
+        assertEquals(10, elements.get(0).contentX());
+        assertEquals(41, elements.get(0).backgroundWidth());
+        assertEquals(43, elements.get(1).backgroundX());
+        assertEquals(9, elements.get(1).backgroundWidth());
+        assertEquals(32, elements.get(1).contentY());
+        assertEquals(39, elements.get(0).rowHeight());
+    }
+
+    @Test void layoutRejectsNegativeInlineSpacing() {
+        assertThrows(IllegalArgumentException.class, () -> new SectionLayout(
+                Anchor.TOP_LEFT, 2, 2, RowAlignment.LEFT, InlineAlignment.CENTER,
+                InlineDirection.LEFT_TO_RIGHT, RowDirection.TOP_TO_BOTTOM, 1f, 12, true, 2, -1));
     }
 
     private int shortRowX(RowAlignment alignment) {
