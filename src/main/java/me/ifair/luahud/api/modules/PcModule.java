@@ -4,16 +4,12 @@ import com.sun.management.OperatingSystemMXBean;
 import me.ifair.luahud.api.LuaApiRegistrar;
 import me.ifair.luahud.api.core.CachedValue;
 import net.minecraft.client.MinecraftClient;
-import oshi.PlatformEnum;
+import net.minecraft.client.gl.GlTimer;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GraphicsCard;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
-import java.nio.file.Files;
 import java.util.List;
 
 public final class PcModule {
@@ -30,7 +26,7 @@ public final class PcModule {
             double load = os.getProcessCpuLoad();
             return load < 0 ? 0 : (int) Math.round(load * 100);
         });
-        CachedValue<Integer> gpuUsage = new CachedValue<>(2000, PcModule::gpuUsage);
+        CachedValue<Integer> gpuUsage = new CachedValue<>(1000, () -> getGpuUsage(client));
         Runtime runtime = Runtime.getRuntime();
 
         api.root().namespace("pc", pc -> {
@@ -41,7 +37,7 @@ public final class PcModule {
                     .integer("usage", "Minecraft process CPU usage percent", cpuUsage));
             pc.namespace("gpu", gpu -> gpu
                     .string("name", "Primary graphics card name", () -> cards.isEmpty() ? "Unknown GPU" : cards.getFirst().getName())
-                    .integer("usage", "GPU usage percent, or -1 when unavailable", gpuUsage));
+                    .integer("usage", "Minecraft GPU usage percent, or -1 when unavailable", gpuUsage));
             pc.namespace("memory", memory -> memory
                     .integer("used", "Memory used in MiB", () -> (int) ((runtime.totalMemory() - runtime.freeMemory()) / MIB))
                     .integer("allocated", "Memory allocated in MiB", () -> (int) (runtime.totalMemory() / MIB))
@@ -55,29 +51,10 @@ public final class PcModule {
         });
     }
 
-    private static int gpuUsage() {
-        try {
-            if (SystemInfo.getCurrentPlatform() == PlatformEnum.LINUX) {
-                int nvidia = nvidiaUsage();
-                if (nvidia >= 0) return nvidia;
-                File usage = new File("/sys/class/drm/card0/device/gpu_busy_percent");
-                if (usage.exists()) return Integer.parseInt(Files.readString(usage.toPath()).trim());
-            } else if (SystemInfo.getCurrentPlatform() == PlatformEnum.WINDOWS) {
-                return nvidiaUsage();
-            }
-        } catch (Exception ignored) {}
-        return -1;
-    }
-
-    private static int nvidiaUsage() {
-        try {
-            Process process = new ProcessBuilder("nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits").start();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line = reader.readLine();
-                return line == null ? -1 : Integer.parseInt(line.trim());
-            }
-        } catch (Exception ignored) {
-            return -1;
-        }
+    private static int getGpuUsage(MinecraftClient client) {
+        if (GlTimer.getInstance().isEmpty()) return -1;
+        double usage = client.getGpuUtilizationPercentage();
+        if (!Double.isFinite(usage) || usage < 0) return -1;
+        return (int) Math.round(Math.min(100, usage));
     }
 }

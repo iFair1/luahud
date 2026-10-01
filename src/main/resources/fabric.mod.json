@@ -22,6 +22,9 @@
 			"me.ifair.luahud.ModMenuIntegration"
 		]
 	},
+	"mixins": [
+		"luahud.mixins.json"
+	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
 		"minecraft": "~1.21",
