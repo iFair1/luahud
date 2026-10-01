@@ -51,7 +51,7 @@ final class RenderPainter {
             case RenderElement.Entity entity -> paintEntity(
                     context, entity.value(), entity.scale(), entity.yaw(), entity.pitch(),
                     entity.fullBright(), entity.useEntityRotation(), positioned.sectionScale(),
-                    x, y - 1);
+                    x, y);
             case RenderElement.Texture texture -> {
                 int size = RenderElementMeasurer.scaledIconSize(texture.scale(), positioned.sectionScale());
                 context.drawTexture(texture.value(), x, y - 1, 0, 0, size, size, size, size);
