@@ -17,9 +17,9 @@ public final class FacingModule {
 
     public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models) {
         api.root().namespace("facing", facing -> facing
-                .string("direction", "Horizontal facing direction", () -> client.player == null ? "" : client.player.getHorizontalFacing().asString())
-                .number("yaw", "Wrapped yaw in degrees", () -> client.player == null ? 0.0 : (double) MathHelper.wrapDegrees(client.player.getYaw()))
-                .number("pitch", "Pitch in degrees", () -> client.player == null ? 0.0 : (double) client.player.getPitch())
+                .string("direction", "Horizontal facing direction", () -> client.player.getHorizontalFacing().asString())
+                .number("yaw", "Wrapped yaw in degrees", () -> (double) MathHelper.wrapDegrees(client.player.getYaw()))
+                .number("pitch", "Pitch in degrees", () -> (double) client.player.getPitch())
                 .value("targetBlock", LuaType.optional(models.block().type()), LuaDoc.of("Block under the crosshair"), () -> targetBlock(client))
                 .value("targetEntity", LuaType.optional(models.entity().type()), LuaDoc.of("Entity under the crosshair"), () -> targetEntity(client)));
     }

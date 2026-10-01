@@ -51,8 +51,8 @@ public record CoreModels(
                 .optionalNumber("z", "Z coordinate", Entity::getZ)
                 .optionalString("name", "Localized display name", value -> value.getDisplayName() == null ? "" : value.getDisplayName().getString())
                 .optionalString("uuid", "World entity UUID", Entity::getUuidAsString)
-                .optionalInteger("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getHealth() : 0.0)
-                .optionalInteger("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0.0)
+                .optionalInteger("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getHealth() : 0)
+                .optionalInteger("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0)
                 .optionalField("effects", LuaType.map(statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects)
                 .fromTable(CoreModels::entity);
 

@@ -75,9 +75,8 @@ public class LuaHUD implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			ErrorNotifications.flush(client);
 			handleKeybinds(client);
-			if (client.player == null || !engine.isReady()) return;
-
 			engine.checkForUpdates();
+			if (!engine.isReady()) return;
 			TimerManager.tick();
 
 			RenderBuffer.clear();
@@ -87,7 +86,7 @@ public class LuaHUD implements ClientModInitializer {
 		HudRenderCallback.EVENT.register(((drawContext, tickCounter) -> {
 			MinecraftClient client = MinecraftClient.getInstance();
 
-			if (client.player == null || !engine.isReady()) return; // Return if not in a world
+			if (!engine.isReady()) return;
 
 			// Java does the drawing
 			int width = client.getWindow().getScaledWidth();

@@ -29,7 +29,7 @@ public final class FunctionsModule {
     private static BlockPos resolveCoordinates(String value, ClientPlayerEntity player) {
         try {
             PosArgument argument = Vec3ArgumentType.vec3().parse(new StringReader(value));
-            return player == null ? null : argument.toAbsoluteBlockPos(player.getCommandSource());
+            return argument.toAbsoluteBlockPos(player.getCommandSource());
         } catch (Exception error) {
             throw new IllegalArgumentException(value + " is not a valid position", error);
         }

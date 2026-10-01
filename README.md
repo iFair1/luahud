@@ -26,6 +26,14 @@ public final class ExampleApi implements LuaHudApiEntrypoint {
 Register during this entrypoint only. Definitions are frozen after addon discovery;
 provider failures are isolated and conflicting paths use the first definition.
 
+## Profile lifecycle
+
+Lua profiles run only while a world and player are loaded. Active profiles are
+loaded on the first in-world client tick, then `init` runs before timers and
+`tick` callbacks. Reloading profiles in-world also fires `init`. Leaving a world
+discards the Lua runtime and HUD contents; joining again loads fresh profiles.
+Changes made from the main menu take effect on the next world entry.
+
 ## Lua execution timeout
 
 LuaHUD stops a profile invocation when it runs for more than 25 milliseconds so

@@ -11,13 +11,11 @@ public final class WeatherModule {
         api.root().namespace("weather", weather -> weather
                 .bool("raining", "Whether rain falls at the player", () -> precipitation(client, Biome.Precipitation.RAIN))
                 .bool("snowing", "Whether snow falls at the player", () -> precipitation(client, Biome.Precipitation.SNOW))
-                .bool("thundering", "Whether the world is thundering", () -> client.world != null && client.world.isThundering()));
+                .bool("thundering", "Whether the world is thundering", () -> client.world.isThundering()));
     }
 
     private static boolean precipitation(MinecraftClient client, Biome.Precipitation expected) {
-        return client.world != null
-                && client.player != null
-                && client.world.isRaining()
+        return client.world.isRaining()
                 && client.world.getBiome(client.player.getBlockPos()).value().getPrecipitation(client.player.getBlockPos()) == expected;
     }
 }

@@ -20,7 +20,7 @@ public final class TimeModule {
     }
 
     private static long worldTime(MinecraftClient client) {
-        return client.world == null ? 0 : client.world.getTimeOfDay();
+        return client.world.getTimeOfDay();
     }
 
     private static long shiftedTime(MinecraftClient client) {

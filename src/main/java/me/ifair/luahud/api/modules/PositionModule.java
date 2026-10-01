@@ -18,8 +18,7 @@ public final class PositionModule {
         ModelBuilder<CoreModels.BlockView> block = models.block();
         api.root().namespace("pos", pos -> {
             pos.namespace("biome", biome -> biome
-                    .string("id", "Namespaced biome ID", () -> client.world == null || client.player == null
-                            ? "" : client.world.getBiome(client.player.getBlockPos()).getIdAsString())
+                    .string("id", "Namespaced biome ID", () -> client.world.getBiome(client.player.getBlockPos()).getIdAsString())
                     .string("name", "Localized biome name", () -> biomeName(client)));
 
             pos.namespace("chunk", chunk -> chunk
@@ -31,7 +30,6 @@ public final class PositionModule {
     }
 
     private static String biomeName(MinecraftClient client) {
-        if (client.world == null || client.player == null) return "";
         return client.world.getBiome(client.player.getBlockPos()).getKey()
                 .map(key -> Text.translatable(Util.createTranslationKey("biome", key.getValue())).getString())
                 .orElse("");
