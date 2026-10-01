@@ -22,6 +22,7 @@ public final class CoreApi {
         WeatherModule.register(api, client);
         PositionModule.register(api, client, models);
         PlayerModule.register(api, client, models);
+        SlotsModule.register(api, client, models);
         SessionModule.register(api, client);
         FunctionsModule.register(api, client, models);
         registry.addEventFunctions();
