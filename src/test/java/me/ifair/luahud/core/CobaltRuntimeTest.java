@@ -197,7 +197,7 @@ class CobaltRuntimeTest {
     @Test void eventsTimersReloadAndSafeLibrariesWork() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
-        runtime.execute("ticks=0; intervals=0; lh.on('tick', function() ticks=ticks+1 end); lh.setInterval(2,'ticks',function() intervals=intervals+1 end); unsafe=(io~=nil or os~=nil or package~=nil or debug~=nil or luajava~=nil)", "callbacks");
+        runtime.execute("ticks=0; intervals=0; lh.on('tick', function() ticks=ticks+1 end); lh.setInterval(2,'ticks',function() intervals=intervals+1 end); unsafe=(io~=nil or os~=nil or debug~=nil or luajava~=nil)", "callbacks");
         runtime.fireEvent("tick"); runtime.tickTimers(); runtime.tickTimers();
         assertEquals(1, runtime.global("ticks").checkInteger());
         assertEquals(1, runtime.global("intervals").checkInteger());

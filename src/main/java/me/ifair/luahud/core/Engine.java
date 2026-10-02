@@ -22,12 +22,14 @@ public final class Engine {
     private final Supplier<CobaltRuntime> runtimeFactory;
     private final Consumer<Engine> profileLoader;
     private final BooleanSupplier reloadRequested;
+    private final Supplier<Path> scriptsDirectory;
     private boolean worldActive;
     private boolean reloadPending = true;
     private final FileWatcher fileWatcher = new FileWatcher();
     private CobaltRuntime runtime;
 
     public Engine(ApiRegistry registry) {
+        scriptsDirectory = ConfigManager::getScriptsDir;
         inWorld = () -> {
             MinecraftClient client = MinecraftClient.getInstance();
             return client.world != null && client.player != null;
@@ -52,6 +54,7 @@ public final class Engine {
         this.runtimeFactory = runtimeFactory;
         this.profileLoader = profileLoader;
         this.reloadRequested = reloadRequested;
+        this.scriptsDirectory = () -> null;
     }
 
     public void init() { fileWatcher.start(); }
@@ -64,7 +67,7 @@ public final class Engine {
         ErrorManager.beginProfileReload();
         try {
             CobaltRuntime replacement = runtimeFactory.get();
-            replacement.start();
+            replacement.start(scriptsDirectory.get());
             runtime = replacement;
         } catch (Exception error) {
             runtime = null;

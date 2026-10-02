@@ -19,6 +19,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.LongSupplier;
 import java.util.function.Function;
@@ -73,6 +74,10 @@ public final class CobaltRuntime {
     }
 
     public void start() throws LuaError {
+        start(null);
+    }
+
+    public void start(Path scriptsDirectory) throws LuaError {
         listeners.clear(); timers.clear();
         state = new LuaState();
         if (timeoutMs > 0) {
@@ -80,6 +85,7 @@ public final class CobaltRuntime {
                     WATCHDOG_HOOK_INTERVAL);
         }
         CoreLibraries.standardGlobals(state);
+        LuaModules.install(state, scriptsDirectory);
         state.globals().rawset("lh", namespace(registry.rootNode(), "lh"));
     }
 
