@@ -40,8 +40,8 @@ public record CoreModels(
                 .string("id", "Namespaced status effect ID", value -> Registries.STATUS_EFFECT.getId(value.getEffectType().value()).toString())
                 .string("name", "Localized effect name", value -> value.getEffectType().value().getName().getString())
                 .integer("level", "Effect level", value -> value.getAmplifier() + 1)
-                .integer("duration", "Remaining duration in seconds (-1 if infinite)", effect -> effect.getDuration() / 20)
-                .integer("durationInTick", "Remaining duration in ticks (-1 if infinite)", StatusEffectInstance::getDuration)
+                .integer("durationInSeconds", "Remaining duration in seconds (-1 if infinite)", effect -> effect.getDuration() / 20)
+                .integer("durationInTicks", "Remaining duration in ticks (-1 if infinite)", StatusEffectInstance::getDuration)
                 .fromTable(CoreModels::statusEffect);
 
         ModelBuilder<Entity> entity = api.model("Entity", Entity.class)
