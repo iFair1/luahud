@@ -185,6 +185,30 @@ public class ConfigManager {
         addProfile(name, new ConfigData.ProfileData(name));
     }
 
+    public static synchronized void createProfile(String name) {
+        Path profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
+        while (hasProfile(name) || Files.exists(profileFile)) {
+            name = incrementSuffix(name);
+            profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
+        }
+
+        ConfigData candidate = copyConfig();
+        candidate.profiles.add(new ConfigData.ProfileData(name));
+
+        try {
+            Files.createFile(profileFile);
+            if (!commit(candidate)) {
+                Files.deleteIfExists(profileFile);
+                return;
+            }
+            profileReloadNeeded.set(true);
+            profileRevision++;
+            profileKeybindRevision++;
+        } catch (IOException e) {
+            ErrorManager.reportSystem("profile create", e);
+        }
+    }
+
     public static synchronized void removeProfile(String name) {
         int index = indexOfProfile(name);
         if (index < 0) return;

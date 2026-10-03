@@ -5,7 +5,7 @@ import me.ifair.luahud.gui.LuaHUDScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.widget.ElementListWidget;
 
-public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
+public class ProfileListWidget extends ElementListWidget<ProfileListEntry> {
     private static final int MAX_ROW_WIDTH = 400;
     private static final int TOP_MARGIN = HeaderWidget.MARGIN * 2 + HeaderWidget.BUTTON_SIZE;
     private static final int BOTTOM_MARGIN = FooterWidget.MARGIN * 2 + HeaderWidget.BUTTON_SIZE;
@@ -31,7 +31,7 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
 
     public void reloadProfiles() {
         long reloadedRevision = ConfigManager.getProfileRevision();
-        ProfileEntry focused = getFocused();
+        ProfileListEntry focused = getFocused();
         if (focused != null) focused.setFocused(null);
         setFocused(null);
         clearEntries();
@@ -43,6 +43,7 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
                 .forEach(profile -> {
                     addEntry(new ProfileEntry(this, profile));
                 });
+        addEntry(new NewProfileEntry(this));
         profileRevision = reloadedRevision;
     }
 
@@ -54,14 +55,19 @@ public class ProfileListWidget extends ElementListWidget<ProfileEntry> {
         screen.selectKeybind(entry);
     }
 
+    public void createProfile() {
+        ConfigManager.createProfile("New Profile");
+        reloadProfiles();
+    }
+
    public void moveProfile(String name, int offset) {
        ConfigManager.moveProfile(name, offset);
        reloadProfiles();
    }
 
    public boolean cancelNameEdit() {
-       ProfileEntry focused = getFocused();
-       return (focused != null) && focused.cancelNameEditIfFocused();
+       ProfileListEntry focused = getFocused();
+       return focused instanceof ProfileEntry profile && profile.cancelNameEditIfFocused();
    }
 
    @Override

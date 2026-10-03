@@ -180,6 +180,29 @@ class ConfigManagerTest {
         assertCommittedProfilesAndSignals();
     }
 
+    @Test
+    void createdProfileHasUniqueNameAndEmptyScript() throws Exception {
+        Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("New Profile.lua"), "unregistered");
+
+        ConfigManager.createProfile("New Profile");
+
+        assertEquals(List.of("First", "Second", "New Profile (1)"), names());
+        Path script = ConfigManager.MOD_CONFIG_DIR.resolve("New Profile (1).lua");
+        assertTrue(Files.isRegularFile(script));
+        assertEquals("", Files.readString(script));
+        assertCommittedProfilesAndSignals();
+    }
+
+    @Test
+    void failedJsonWriteRemovesCreatedScript() throws Exception {
+        blockJsonWrite();
+
+        ConfigManager.createProfile("New Profile");
+
+        assertUnchanged();
+        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("New Profile.lua")));
+    }
+
     private void blockJsonWrite() throws Exception {
         // A nonempty directory fails replacement even when tests run as root.
         Files.delete(ConfigManager.JSON_CONFIG);

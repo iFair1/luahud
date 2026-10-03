@@ -9,7 +9,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
@@ -19,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
-public class ProfileEntry extends ElementListWidget.Entry<ProfileEntry> {
+public class ProfileEntry extends ProfileListEntry {
     public static final int ROW_HEIGHT = 20;
     private static final int BUTTON_SIZE = 16;
     private static final int GAP = ROW_HEIGHT - BUTTON_SIZE;
