@@ -21,8 +21,9 @@ class SoundModuleTest {
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@field mood number"));
         assertTrue(stub.contains("---@field record PlayingRecord?"));
-        for (String field : new String[] {"length", "elapsed", "remaining"}) {
-            assertTrue(stub.contains("---@field " + field + " number"));
+        assertTrue(stub.contains("---@field length number"));
+        for (String field : new String[] {"elapsed", "remaining"}) {
+            assertTrue(stub.contains("---@field " + field + " integer"));
         }
         for (String field : new String[] {"id", "name"}) {
             assertTrue(stub.contains("---@field " + field + " string"));
@@ -41,9 +42,16 @@ class SoundModuleTest {
         CobaltRuntime runtime = new CobaltRuntime(registry);
         runtime.start();
         runtime.execute("assert(lh.testRecord == nil)", "empty-record");
-        current.set(new RecordTracker.PlayingRecord("minecraft:music_disc_cat", "C418 - cat", 185, 25.5));
+        current.set(new RecordTracker.PlayingRecord("minecraft:music_disc_cat", "C418 - cat", 185, 25));
         runtime.execute("local r=lh.testRecord; assert(r.id == 'minecraft:music_disc_cat'); "
                 + "assert(r.name == 'C418 - cat'); assert(r.length == 185); "
-                + "assert(r.elapsed == 25.5); assert(r.remaining == 159.5)", "playing-record");
+                + "assert(r.elapsed == 25); assert(r.remaining == 160); "
+                + "assert(tostring(r.elapsed) == '25'); assert(tostring(r.remaining) == '160')", "playing-record");
+        current.set(new RecordTracker.PlayingRecord("minecraft:music_disc_cat", "C418 - cat", 185, 0));
+        runtime.execute("assert(lh.testRecord.elapsed == 0); assert(lh.testRecord.remaining == 185)", "before-first-second");
+        current.set(new RecordTracker.PlayingRecord("minecraft:music_disc_cat", "C418 - cat", 185, 1));
+        runtime.execute("assert(lh.testRecord.elapsed == 1); assert(lh.testRecord.remaining == 184)", "first-second");
+        current.set(new RecordTracker.PlayingRecord("minecraft:music_disc_cat", "C418 - cat", 185, 185));
+        runtime.execute("assert(lh.testRecord.elapsed == 185); assert(lh.testRecord.remaining == 0)", "finished-record");
     }
 }

@@ -49,14 +49,14 @@ public abstract class WorldRendererMixin implements SoundState {
         luahud$records.stop(pos);
     }
 
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void luahud$tickRecords(CallbackInfo ci) {
-        luahud$records.tick();
-    }
-
     @Inject(method = "setWorld", at = @At("HEAD"))
     private void luahud$clearRecords(ClientWorld world, CallbackInfo ci) {
         luahud$records.clear();
+    }
+
+    @Override
+    public void luahud$setSoundPaused(boolean paused) {
+        luahud$records.setPaused(paused);
     }
 
     @Override
