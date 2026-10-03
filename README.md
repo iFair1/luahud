@@ -26,6 +26,89 @@ public final class ExampleApi implements LuaHudApiEntrypoint {
 Register during this entrypoint only. Definitions are frozen after addon discovery;
 provider failures are isolated and conflicting paths use the first definition.
 
+## Models
+
+Define each field once and use its typed handle in the decoder. Fields are
+output-only by default. Input presence (`inputRequired`, `inputOptional`, or
+`inputDefault`) is independent of output nullability (`optionalInteger`, etc.).
+Use `type()` for returned values and `inputType()` for function arguments.
+
+```java
+record Counter(String label, Integer count) {}
+
+ModelBuilder<Counter> counter = api.model("Counter", Counter.class);
+var label = counter.string("label", "Display label", Counter::label)
+    .inputRequired();
+var count = counter.integer("count", "Count; defaults to 1", Counter::count)
+    .inputDefault(1);
+counter.fromFields(fields -> new Counter(fields.get(label), fields.get(count)));
+
+var echo = api.root().function("echoCounter", counter.type(), "Echo a counter");
+var argument = echo.parameter("counter", counter.inputType(), "Counter or input table");
+echo.call(arguments -> arguments.get(argument));
+```
+
+The generated stub describes `Counter` and `CounterInput` separately, using the
+same field definitions. Plain tables accept only input-capable fields; unknown
+and output-only fields produce a Lua error. A decoder cannot read an unrelated
+model's field handle or an output-only field.
+
+Model proxies keep lazy access to Java values. An unchanged proxy passed to a
+function returns its original Java object. When Lua overrides input fields,
+the decoder receives explicit values first and lazily resolves the remaining
+input fields from the source. `fields.isExplicit(field)` distinguishes overrides
+from source values and defaults. `fields.source()` returns the original Java
+object, or null for plain tables, allowing a decoder to preserve native state.
+Assignments affect the Lua proxy; they do not directly mutate the Java object.
+Writing an output-only field and passing that proxy to a function is rejected.
+
+Models without a decoder accept their own unchanged proxies as arguments but
+do not accept plain tables. For example, `PlacedBlock` and `Horse` expose output
+properties, while `EntityInput` resolves a loaded entity using only `uuid`.
+`ItemStackInput` requires only `id`; `count` defaults to 1. Its optional inputs
+are `damage`, `damageLeft`, and `enchantments`. Explicit `damage` wins over
+`damageLeft`; either override wins over lazy source durability. Stack overrides
+copy the source stack and preserve unrelated components.
+
+`StatusEffectInput` requires `id`, defaults `level` to 1, and accepts
+`durationInTicks` or `durationInSeconds` (default duration: 0). Explicit ticks
+win over explicit seconds; either wins over source duration. Both duration
+outputs preserve -1 for infinite effects.
+
+### Horse-family properties
+
+`lh.player.horse` is the currently ridden horse-family animal's `Horse` model,
+or nil when the player is not riding one. `Entity.horse` exposes the same model
+for horse-family entities, including horses, donkeys, mules, skeleton/zombie
+horses, llamas, and camels. Other entities have nil in this field.
+
+`Horse` has `movementSpeed`, `jumpStrength`, `isSaddled`, `isTamed`, `hasChest`,
+and optional `rider`. Speed and jump strength are effective, client-synchronized
+attribute values, rather than blocks per second or jump height. Saddle, tame,
+and chest values come from tracked entity state. `rider` is the first passenger
+as an `Entity`, including passengers that are not players, and is nil when
+unoccupied. `hasChest` is false for species that cannot carry a chest.
+
+```lua
+lh.on("tick", function()
+    local horse = lh.player.horse
+    if horse then
+        lh.drawln("Speed: " .. horse.movementSpeed)
+        lh.drawln("Jump: " .. horse.jumpStrength)
+        if horse.rider then
+            lh.drawln("Rider: " .. horse.rider.name)
+        end
+    end
+end)
+```
+
+Migration from the previous model builder: declare the model separately, keep
+field handles instead of chaining field declarations, and replace `fromTable`
+string lookups with `fromFields` and `fields.get(handle)`. Mark accepted inputs
+explicitly and change function parameters to `inputType()`. Custom construction
+and registry resolution remain in the decoder; no additional DTO is required
+when exposing an existing Java class.
+
 ## Profile lifecycle
 
 Lua profiles run only while a world and player are loaded. Active profiles are

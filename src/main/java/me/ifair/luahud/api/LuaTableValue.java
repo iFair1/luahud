@@ -23,6 +23,7 @@ public final class LuaTableValue {
         this.resolver = resolver;
     }
 
+    public boolean isExplicit(String key) { return values.containsKey(key); }
     public boolean contains(String key) { return values.containsKey(key) || lazyKeys.contains(key); }
     public Object get(String key) { return values.containsKey(key) ? values.get(key) : lazyKeys.contains(key) ? resolver.apply(key) : null; }
     public String string(String key, String fallback) { return value(key, String.class, fallback); }

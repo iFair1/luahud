@@ -3,27 +3,21 @@ package me.ifair.luahud.api.modules;
 import me.ifair.luahud.api.LuaApiRegistrar;
 import me.ifair.luahud.api.LuaDoc;
 import me.ifair.luahud.api.LuaType;
-import me.ifair.luahud.api.ModelBuilder;
 import me.ifair.luahud.api.models.CoreModels;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.GameMode;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 public final class PlayerModule {
     private PlayerModule() {}
 
     public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models) {
-        ModelBuilder<ItemStack> stack = models.itemStack();
         api.root().namespace("player", player -> {
             player.string("id", "Namespaced player entity type", () -> Registries.ENTITY_TYPE.getId(client.player.getType()).toString())
                     .string("name", "Player display name", () -> client.player.getDisplayName().getString())
@@ -38,7 +32,9 @@ public final class PlayerModule {
                     .bool("sprintHeld", "Whether the sprint key is held", () -> client.options.sprintKey.isPressed())
                     .string("gamemode", "Current game mode", () -> gameMode(client))
                     .value("effects", LuaType.map(models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
-                            () -> CoreModels.statusEffects(client.player));
+                            () -> CoreModels.statusEffects(client.player))
+                    .value("horse", LuaType.optional(models.horse().type()), LuaDoc.of("Currently ridden horse-family animal, or nil"),
+                            () -> CoreModels.horse(client.player.getVehicle()));
             player.namespace("hunger", hunger -> hunger
                     .number("food", "Food level", () -> (double) client.player.getHungerManager().getFoodLevel())
                     .number("saturation", "Saturation level", () -> (double) client.player.getHungerManager().getSaturationLevel()));

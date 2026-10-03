@@ -55,8 +55,8 @@ class RenderModuleTest {
         registry.freeze();
 
         String stub = StubGenerator.generate(registry);
-        assertTrue(stub.contains("---@param id string | ItemStack Namespaced item ID or ItemStack model"));
-        assertTrue(stub.contains("---@param uuid string | Entity Entity UUID or Entity model"));
+        assertTrue(stub.contains("---@param id string | ItemStack | ItemStackInput Namespaced item ID or ItemStack model"));
+        assertTrue(stub.contains("---@param uuid string | Entity | EntityInput Entity UUID or Entity model"));
         assertTrue(stub.contains("---@param options? EntityOptions Rendering options"));
         assertTrue(stub.contains("---@field pitch? number Vertical viewing angle offset in degrees"));
         assertTrue(stub.contains("---@field yaw? number Horizontal viewing angle offset in degrees"));

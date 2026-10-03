@@ -46,18 +46,22 @@ class ApiRegistryTest {
     @Test void freezeRejectsLateNamespaceAndModelMutation() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("core");
-        ModelBuilder<String> model = api.model("Value", String.class).string("text", "", value -> value);
+        ModelBuilder<String> model = api.model("Value", String.class);
+        var field = model.string("text", "", value -> value);
         var root = api.root();
         registry.freeze();
         assertThrows(IllegalStateException.class, () -> root.integer("late", "", () -> 1));
         assertThrows(IllegalStateException.class, () -> model.string("late", "", value -> value));
+        assertThrows(IllegalStateException.class, field::inputRequired);
     }
 
     @Test void modelsComposeInheritedFields() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("core");
-        ModelBuilder<CharSequence> base = api.model("Base", CharSequence.class).integer("length", "", CharSequence::length);
-        ModelBuilder<String> child = api.model("Child", String.class).include(base).string("value", "", value -> value);
+        ModelBuilder<CharSequence> base = api.model("Base", CharSequence.class);
+        base.integer("length", "", CharSequence::length);
+        ModelBuilder<String> child = api.model("Child", String.class).include(base);
+        child.string("value", "", value -> value);
         assertEquals(List.of("length", "value"), child.fields().stream().map(ModelBuilder.Field::name).toList());
     }
 }

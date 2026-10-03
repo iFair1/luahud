@@ -305,7 +305,7 @@ public final class CobaltRuntime {
                 for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) table.rawset(luaString(String.valueOf(entry.getKey())), toLua(entry.getValue(), type.elementType(), path, provider));
                 yield table;
             }
-            case MODEL -> modelTable(() -> value, (ModelBuilder) type.model(), path, provider);
+            case MODEL, MODEL_INPUT -> modelTable(() -> value, (ModelBuilder) type.model(), path, provider);
             case INPUT_TABLE -> tableValueToLua((LuaTableValue) value, type, path, provider);
             case ANY -> anyToLua(value, path, provider);
             case FUNCTION -> throw new LuaError("callbacks cannot cross the public addon API");
@@ -361,6 +361,7 @@ public final class CobaltRuntime {
             case NUMBER -> value instanceof Number;
             case BOOLEAN -> value instanceof Boolean;
             case NIL -> value == null;
+            case MODEL, MODEL_INPUT -> type.model().javaType().isInstance(value);
             default -> true;
         };
     }
@@ -379,7 +380,7 @@ public final class CobaltRuntime {
             case LIST -> listFromLua(value.checkTable(), type.elementType());
             case MAP -> mapFromLua(value.checkTable(), type.elementType());
             case INPUT_TABLE -> inputTable(value.checkTable(), type);
-            case MODEL -> modelFromLua(value, type);
+            case MODEL, MODEL_INPUT -> modelFromLua(value, type);
             case FUNCTION -> throw new LuaError("callbacks cannot cross the public addon API");
         };
     }
@@ -395,23 +396,49 @@ public final class CobaltRuntime {
         Function<String, Object> sourceField = matchingSource
                 ? key -> resolveModelField(source.model(), sourceInstance.get(), key)
                 : ignored -> null;
+        LuaValue key = Constants.NIL;
+        while (true) {
+            Varargs next = table.next(key);
+            key = next.arg(1);
+            if (key.isNil()) break;
+            String fieldName = key.type() == Constants.TSTRING ? javaString(key) : null;
+            ModelBuilder.Field<?, ?> field = model.fields().stream()
+                    .filter(candidate -> candidate.name().equals(fieldName)).findFirst().orElse(null);
+            if (field == null) throw new LuaError("unknown field '" + key.toString() + "' in " + model.name());
+            if (field.inputMode() == ModelBuilder.InputMode.OUTPUT_ONLY) {
+                throw new LuaError("field '" + field.name() + "' is output-only in " + model.name());
+            }
+        }
         for (ModelBuilder.Field<?, ?> field : model.fields()) {
+            if (field.inputMode() == ModelBuilder.InputMode.OUTPUT_ONLY) continue;
             LuaValue fieldValue = table.rawget(field.name());
             if (!fieldValue.isNil()) {
-                fields.put(field.name(), fromLua(fieldValue, field.type()));
+                try {
+                    fields.put(field.name(), fromLua(fieldValue, field.type()));
+                } catch (LuaError error) {
+                    throw new LuaError("field '" + field.name() + "': " + error.getMessage());
+                }
             } else if (matchingSource) {
                 lazyKeys.add(field.name());
-            } else if (!field.optional()) {
+            } else if (field.inputMode() == ModelBuilder.InputMode.REQUIRED) {
                 throw new LuaError("missing field '" + field.name() + "'");
             }
         }
         try {
-            if (!model.canDecode() && matchingSource) return sourceInstance.get();
-            return model.decode(new LuaTableValue(fields, lazyKeys, sourceField));
+            if (matchingSource && fields.isEmpty()) {
+                Object instance = sourceInstance.get();
+                if (instance == null) throw new IllegalStateException("Source " + model.name() + " is no longer available");
+                return instance;
+            }
+            return decodeModel(model, new LuaTableValue(fields, lazyKeys, sourceField), sourceInstance);
         } catch (Throwable error) {
             String message = error.getMessage();
             throw new LuaError(message == null ? "invalid " + type.displayName() + " model" : message);
         }
+    }
+
+    private static <T> T decodeModel(ModelBuilder<T> model, LuaTableValue fields, Supplier<Object> source) {
+        return model.decode(fields, () -> model.javaType().cast(source.get()));
     }
 
     private ModelValue modelValue(LuaTable table) {
@@ -471,7 +498,7 @@ public final class CobaltRuntime {
             case OPTIONAL -> value.isNil() || matchesLua(value, type.elementType());
             case UNION -> type.alternatives().stream().anyMatch(alternative -> matchesLua(value, alternative));
             case ANY -> true;
-            case MODEL -> value.type() == Constants.TTABLE;
+            case MODEL, MODEL_INPUT -> value.type() == Constants.TTABLE;
         };
     }
 

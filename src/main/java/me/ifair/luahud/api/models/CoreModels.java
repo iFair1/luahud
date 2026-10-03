@@ -2,17 +2,20 @@ package me.ifair.luahud.api.models;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import me.ifair.luahud.api.LuaApiRegistrar;
-import me.ifair.luahud.api.LuaTableValue;
 import me.ifair.luahud.api.LuaType;
 import me.ifair.luahud.api.ModelBuilder;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.passive.AbstractDonkeyEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
@@ -31,51 +34,133 @@ public record CoreModels(
         ModelBuilder<BlockView> block,
         ModelBuilder<Entity> entity,
         ModelBuilder<ItemStack> itemStack,
-        ModelBuilder<StatusEffectInstance> statusEffect
+        ModelBuilder<StatusEffectInstance> statusEffect,
+        ModelBuilder<AbstractHorseEntity> horse
 ) {
     public record BlockView(ClientWorld world, BlockPos pos) {}
 
     public static CoreModels register(LuaApiRegistrar api) {
-        ModelBuilder<StatusEffectInstance> statusEffect = api.model("StatusEffect", StatusEffectInstance.class)
-                .string("id", "Namespaced status effect ID", value -> Registries.STATUS_EFFECT.getId(value.getEffectType().value()).toString())
-                .string("name", "Localized effect name", value -> value.getEffectType().value().getName().getString())
-                .integer("level", "Effect level", value -> value.getAmplifier() + 1)
-                .integer("durationInSeconds", "Remaining duration in seconds (-1 if infinite)", effect -> effect.getDuration() / 20)
-                .integer("durationInTicks", "Remaining duration in ticks (-1 if infinite)", StatusEffectInstance::getDuration)
-                .fromTable(CoreModels::statusEffect);
+        ModelBuilder<StatusEffectInstance> statusEffect = registerStatusEffect(api);
+        ModelBuilder<Entity> entity = api.model("Entity", Entity.class);
+        ModelBuilder<AbstractHorseEntity> horse = registerHorse(api, entity);
+        registerEntityFields(entity, statusEffect, horse);
 
-        ModelBuilder<Entity> entity = api.model("Entity", Entity.class)
-                .string("id", "Namespaced entity type", value -> Registries.ENTITY_TYPE.getId(value.getType()).toString())
-                .number("x", "X coordinate", Entity::getX)
-                .number("y", "Y coordinate", Entity::getY)
-                .number("z", "Z coordinate", Entity::getZ)
-                .string("name", "Localized display name", value -> value.getDisplayName() == null ? "" : value.getDisplayName().getString())
-                .string("uuid", "World entity UUID", Entity::getUuidAsString)
-                .integer("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getHealth() : 0)
-                .integer("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0)
-                .optionalField("effects", LuaType.map(statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects)
-                .bool("isLiving", "Whether the entity is a living-entity or not", value -> value instanceof LivingEntity)
-                .fromTable(CoreModels::entity);
+        ModelBuilder<BlockView> block = api.model("PlacedBlock", BlockView.class);
+        block.string("id", "Namespaced block ID", CoreModels::blockId);
+        block.string("name", "Localized block name", CoreModels::blockName);
+        block.integer("x", "Block X coordinate", value -> value.pos() == null ? 0 : value.pos().getX());
+        block.integer("y", "Block Y coordinate", value -> value.pos() == null ? 0 : value.pos().getY());
+        block.integer("z", "Block Z coordinate", value -> value.pos() == null ? 0 : value.pos().getZ());
 
-        ModelBuilder<BlockView> block = api.model("PlacedBlock", BlockView.class)
-                .string("id", "Namespaced block ID", CoreModels::blockId)
-                .string("name", "Localized block name", CoreModels::blockName)
-                .integer("x", "Block X coordinate", value -> value.pos() == null ? 0 : value.pos().getX())
-                .integer("y", "Block Y coordinate", value -> value.pos() == null ? 0 : value.pos().getY())
-                .integer("z", "Block Z coordinate", value -> value.pos() == null ? 0 : value.pos().getZ())
-                .fromTable(CoreModels::block);
+        return new CoreModels(block, entity, registerItemStack(api), statusEffect, horse);
+    }
 
-        ModelBuilder<ItemStack> itemStack = api.model("ItemStack", ItemStack.class)
-                .string("id", "Namespaced item ID", value -> Registries.ITEM.getId(value.getItem()).toString())
-                .string("name", "Localized item name", value -> value.getName().getString())
-                .integer("count", "Stack count; defaults to 1 for input tables", ItemStack::getCount)
-                .optionalInteger("damage", "Current item damage", value -> value.isDamageable() ? value.getDamage() : null)
-                .optionalInteger("damageLeft", "Remaining durability", value -> value.isDamageable() ? value.getMaxDamage() - value.getDamage() : null)
-                .optionalInteger("maxDamage", "Maximum durability", value -> value.isDamageable() ? value.getMaxDamage() : null)
-                .optionalField("enchantments", LuaType.map(LuaType.integer()), "Enchantments keyed by namespaced ID", CoreModels::enchantments)
-                .fromTable(CoreModels::itemStack);
+    private static ModelBuilder<StatusEffectInstance> registerStatusEffect(LuaApiRegistrar api) {
+        ModelBuilder<StatusEffectInstance> model = api.model("StatusEffect", StatusEffectInstance.class);
+        var id = model.string("id", "Namespaced status effect ID",
+                value -> Registries.STATUS_EFFECT.getId(value.getEffectType().value()).toString()).inputRequired();
+        model.string("name", "Localized effect name", value -> value.getEffectType().value().getName().getString());
+        var level = model.integer("level", "Effect level; defaults to 1 for input tables",
+                value -> value.getAmplifier() + 1).inputDefault(1);
+        var seconds = model.integer("durationInSeconds", "Remaining duration in seconds (-1 if infinite)",
+                effect -> durationInSeconds(effect.getDuration())).inputOptional();
+        var ticks = model.integer("durationInTicks", "Remaining duration in ticks (-1 if infinite); takes precedence over seconds for input tables",
+                StatusEffectInstance::getDuration).inputOptional();
+        model.fromFields(fields -> {
+            StatusEffect effect = registryValue(Registries.STATUS_EFFECT, fields.get(id), "status effect");
+            Integer durationTicks;
+            if (fields.isExplicit(ticks)) {
+                durationTicks = fields.get(ticks);
+            } else if (fields.isExplicit(seconds)) {
+                durationTicks = durationInTicks(fields.get(seconds));
+            } else {
+                durationTicks = fields.get(ticks);
+                if (durationTicks == null) {
+                    Integer durationSeconds = fields.get(seconds);
+                    durationTicks = durationSeconds == null ? 0 : durationInTicks(durationSeconds);
+                }
+            }
+            int effectLevel = fields.get(level);
+            if (effectLevel < 1) throw new IllegalArgumentException("Effect level must be at least 1");
+            if (durationTicks < StatusEffectInstance.INFINITE) throw new IllegalArgumentException("Effect duration must be -1 or non-negative");
+            StatusEffectInstance source = fields.source();
+            return new StatusEffectInstance(Registries.STATUS_EFFECT.getEntry(effect), durationTicks, effectLevel - 1,
+                    source != null && source.isAmbient(), source == null || source.shouldShowParticles(),
+                    source == null || source.shouldShowIcon());
+        });
+        return model;
+    }
 
-        return new CoreModels(block, entity, itemStack, statusEffect);
+    private static void registerEntityFields(ModelBuilder<Entity> model, ModelBuilder<StatusEffectInstance> statusEffect,
+                                             ModelBuilder<AbstractHorseEntity> horse) {
+        model.string("id", "Namespaced entity type", value -> Registries.ENTITY_TYPE.getId(value.getType()).toString());
+        model.number("x", "X coordinate", Entity::getX);
+        model.number("y", "Y coordinate", Entity::getY);
+        model.number("z", "Z coordinate", Entity::getZ);
+        model.string("name", "Localized display name", value -> value.getDisplayName() == null ? "" : value.getDisplayName().getString());
+        var uuid = model.string("uuid", "World entity UUID", Entity::getUuidAsString).inputRequired();
+        model.integer("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getHealth() : 0);
+        model.integer("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0);
+        model.field("effects", LuaType.map(statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects);
+        model.bool("isLiving", "Whether the entity is a living entity", value -> value instanceof LivingEntity);
+        model.optionalField("horse", horse.type(), "Horse-family properties, or nil for other entities", CoreModels::horse);
+        model.fromFields(fields -> entity(fields.get(uuid)));
+    }
+
+    private static ModelBuilder<AbstractHorseEntity> registerHorse(LuaApiRegistrar api, ModelBuilder<Entity> entity) {
+        ModelBuilder<AbstractHorseEntity> model = api.model("Horse", AbstractHorseEntity.class);
+        model.number("movementSpeed", "Effective movement-speed attribute (not blocks per second)",
+                value -> value.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
+        model.number("jumpStrength", "Effective jump-strength attribute (not jump height)",
+                value -> value.getAttributeValue(EntityAttributes.GENERIC_JUMP_STRENGTH));
+        model.bool("isSaddled", "Whether a saddle is equipped", value -> value.isSaddled());
+        model.bool("isTamed", "Whether the animal is tamed", value -> value.isTame());
+        model.optionalField("rider", entity.type(), "First passenger, or nil when unoccupied", Entity::getFirstPassenger);
+        model.bool("hasChest", "Whether a chest is attached", value -> value instanceof AbstractDonkeyEntity donkey && donkey.hasChest());
+        return model;
+    }
+
+    /** Includes horses, donkeys, mules, and other AbstractHorseEntity species. */
+    public static AbstractHorseEntity horse(Entity entity) {
+        return entity instanceof AbstractHorseEntity horse ? horse : null;
+    }
+
+    private static ModelBuilder<ItemStack> registerItemStack(LuaApiRegistrar api) {
+        ModelBuilder<ItemStack> model = api.model("ItemStack", ItemStack.class);
+        var id = model.string("id", "Namespaced item ID", value -> Registries.ITEM.getId(value.getItem()).toString()).inputRequired();
+        model.string("name", "Localized item name", value -> value.getName().getString());
+        var count = model.integer("count", "Stack count; defaults to 1 for input tables", ItemStack::getCount).inputDefault(1);
+        var damage = model.optionalInteger("damage", "Current item damage", value -> value.isDamageable() ? value.getDamage() : null).inputOptional();
+        var damageLeft = model.optionalInteger("damageLeft", "Remaining durability", value -> value.isDamageable() ? value.getMaxDamage() - value.getDamage() : null).inputOptional();
+        model.optionalInteger("maxDamage", "Maximum durability", value -> value.isDamageable() ? value.getMaxDamage() : null);
+        var enchantments = model.optionalField("enchantments", LuaType.map(LuaType.integer()), "Enchantments keyed by namespaced ID", CoreModels::enchantments).inputOptional();
+        model.fromFields(fields -> {
+            Item item = registryValue(Registries.ITEM, fields.get(id), "item");
+            ItemStack source = fields.source();
+            ItemStack stack = source != null && source.isOf(item) ? source.copy() : new ItemStack(item);
+            stack.setCount(fields.get(count));
+            Integer itemDamage;
+            if (fields.isExplicit(damage)) {
+                itemDamage = fields.get(damage);
+            } else if (fields.isExplicit(damageLeft)) {
+                itemDamage = stack.getMaxDamage() - fields.get(damageLeft);
+            } else if (source != null && source.isOf(item)) {
+                itemDamage = null;
+            } else {
+                itemDamage = fields.get(damage);
+                if (itemDamage == null) {
+                    Integer remaining = fields.get(damageLeft);
+                    if (remaining != null) itemDamage = stack.getMaxDamage() - remaining;
+                }
+            }
+            if (itemDamage != null) stack.setDamage(itemDamage);
+            if (source == null || !source.isOf(item) || fields.isExplicit(enchantments)) {
+                if (fields.isExplicit(enchantments)) stack.set(DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
+                addEnchantments(stack, fields.get(enchantments));
+            }
+            return stack;
+        });
+        return model;
     }
 
     private static String blockId(BlockView value) {
@@ -88,17 +173,7 @@ public record CoreModels(
         return value.world().getBlockState(value.pos()).getBlock().getName().getString();
     }
 
-    private static BlockView block(LuaTableValue value) {
-        registryValue(Registries.BLOCK, value.string("id", null), "block");
-        MinecraftClient client = MinecraftClient.getInstance();
-        return new BlockView(client.world, new BlockPos(
-                value.integer("x", 0), value.integer("y", 0), value.integer("z", 0)));
-    }
-
-    private static Entity entity(LuaTableValue value) {
-        registryValue(Registries.ENTITY_TYPE, value.string("id", null), "entity");
-        String uuidValue = value.string("uuid", null);
-        if (uuidValue == null) throw new IllegalArgumentException("Entity model requires field 'uuid'");
+    private static Entity entity(String uuidValue) {
         UUID uuid;
         try {
             uuid = UUID.fromString(uuidValue);
@@ -113,42 +188,25 @@ public record CoreModels(
         throw new IllegalArgumentException("No loaded entity found for UUID: " + uuidValue);
     }
 
-    private static StatusEffectInstance statusEffect(LuaTableValue value) {
-        StatusEffect effect = registryValue(Registries.STATUS_EFFECT, value.string("id", null), "status effect");
-        RegistryEntry<StatusEffect> entry = Registries.STATUS_EFFECT.getEntry(effect);
-        int duration = value.contains("durationInTick")
-                ? value.integer("durationInTick", 0)
-                : durationInTicks(value.integer("duration", 0));
-        return new StatusEffectInstance(entry, duration, value.integer("level", 1) - 1);
-    }
-
     private static int durationInTicks(int seconds) {
-        return seconds == StatusEffectInstance.INFINITE ? StatusEffectInstance.INFINITE : seconds * 20;
+        return seconds == StatusEffectInstance.INFINITE ? StatusEffectInstance.INFINITE : Math.multiplyExact(seconds, 20);
     }
 
-    private static ItemStack itemStack(LuaTableValue value) {
-        Item item = registryValue(Registries.ITEM, value.string("id", null), "item");
-        ItemStack stack = new ItemStack(item, value.integer("count", 1));
-        if (value.contains("damage")) {
-            stack.setDamage(value.integer("damage", 0));
-        } else if (value.contains("damageLeft")) {
-            stack.setDamage(stack.getMaxDamage() - value.integer("damageLeft", stack.getMaxDamage()));
-        }
-        addEnchantments(stack, value.get("enchantments"));
-        return stack;
+    private static int durationInSeconds(int ticks) {
+        return ticks == StatusEffectInstance.INFINITE ? StatusEffectInstance.INFINITE : ticks / 20;
     }
 
-    private static void addEnchantments(ItemStack stack, Object value) {
-        if (!(value instanceof Map<?, ?> enchantments) || enchantments.isEmpty()) return;
+    private static void addEnchantments(ItemStack stack, Map<String, Integer> enchantments) {
+        if (enchantments == null || enchantments.isEmpty()) return;
         ClientWorld world = MinecraftClient.getInstance().world;
         if (world == null) throw new IllegalStateException("Cannot resolve enchantments without a loaded world");
         Registry<Enchantment> registry = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
-        for (Map.Entry<?, ?> entry : enchantments.entrySet()) {
-            String id = String.valueOf(entry.getKey());
+        for (Map.Entry<String, Integer> entry : enchantments.entrySet()) {
+            String id = entry.getKey();
             Identifier identifier = identifier(id, "enchantment");
             RegistryEntry.Reference<Enchantment> enchantment = registry.getEntry(identifier)
                     .orElseThrow(() -> new IllegalArgumentException("Enchantment not found: " + id));
-            stack.addEnchantment(enchantment, ((Number) entry.getValue()).intValue());
+            stack.addEnchantment(enchantment, entry.getValue());
         }
     }
 

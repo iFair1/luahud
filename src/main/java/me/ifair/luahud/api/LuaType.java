@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public final class LuaType<T> {
-    public enum Kind { NIL, ANY, STRING, INTEGER, NUMBER, BOOLEAN, LITERAL, UNION, OPTIONAL, LIST, MAP, MODEL, INPUT_TABLE, FUNCTION }
+    public enum Kind { NIL, ANY, STRING, INTEGER, NUMBER, BOOLEAN, LITERAL, UNION, OPTIONAL, LIST, MAP, MODEL, MODEL_INPUT, INPUT_TABLE, FUNCTION }
 
     public record InputField(String name, LuaType<?> type, LuaDoc doc, boolean optional) {}
 
@@ -85,6 +85,10 @@ public final class LuaType<T> {
         return new LuaType<>(Kind.MODEL, model.name(), null, null, Objects.requireNonNull(model), null);
     }
 
+    public static <T> LuaType<T> modelInput(ModelBuilder<T> model) {
+        return new LuaType<>(Kind.MODEL_INPUT, model.name() + "Input", null, null, Objects.requireNonNull(model), null);
+    }
+
     public static LuaType<LuaTableValue> inputTable(String name, Consumer<InputTableBuilder> definition) {
         InputTableBuilder builder = new InputTableBuilder();
         definition.accept(builder);
@@ -113,7 +117,7 @@ public final class LuaType<T> {
             case OPTIONAL -> elementType.luaName() + "?";
             case LIST -> elementType.luaName() + "[]";
             case MAP -> "table<string, " + elementType.luaName() + ">";
-            case MODEL, INPUT_TABLE -> displayName;
+            case MODEL, MODEL_INPUT, INPUT_TABLE -> displayName;
         };
     }
 

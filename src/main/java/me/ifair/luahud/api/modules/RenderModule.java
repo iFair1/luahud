@@ -73,7 +73,7 @@ public final class RenderModule {
         registerDraw(api, "drawln", true, textOptions);
 
         FunctionBuilder<Void> drawStack = api.root().function("drawStack", LuaType.nil(), "Draw an item stack.");
-        LuaParameter<ItemStack> stackArg = drawStack.parameter("stack", models.itemStack().type(), "Item stack");
+        LuaParameter<ItemStack> stackArg = drawStack.parameter("stack", models.itemStack().inputType(), "Item stack");
         LuaParameter<LuaTableValue> stackOpts = drawStack.optionalParameter("options", stackOptions, "Rendering options");
         drawStack.call(arguments -> {
             drawStack(arguments.get(stackArg), arguments.get(stackOpts));
@@ -83,7 +83,7 @@ public final class RenderModule {
         FunctionBuilder<Void> drawItem = api.root().function(
                 "drawItem", LuaType.nil(), "Draw an item by namespaced ID or ItemStack model.");
         LuaParameter<Object> itemId = drawItem.parameter(
-                "id", LuaType.union(LuaType.string(), models.itemStack().type()), "Namespaced item ID or ItemStack model");
+                "id", LuaType.union(LuaType.string(), models.itemStack().inputType()), "Namespaced item ID or ItemStack model");
         LuaParameter<LuaTableValue> itemOpts = drawItem.optionalParameter("options", iconOptions, "Rendering options");
         drawItem.call(arguments -> {
             drawItem(arguments.get(itemId), arguments.get(itemOpts));
@@ -93,7 +93,7 @@ public final class RenderModule {
         FunctionBuilder<Void> drawEntity = api.root().function(
                 "drawEntity", LuaType.nil(), "Draw a loaded entity by UUID or Entity model.");
         LuaParameter<Object> entityUuid = drawEntity.parameter(
-                "uuid", LuaType.union(LuaType.string(), models.entity().type()), "Entity UUID or Entity model");
+                "uuid", LuaType.union(LuaType.string(), models.entity().inputType()), "Entity UUID or Entity model");
         LuaParameter<LuaTableValue> entityOpts = drawEntity.optionalParameter("options", entityOptions, "Rendering options");
         drawEntity.call(arguments -> {
             drawEntity(arguments.get(entityUuid), arguments.get(entityOpts));

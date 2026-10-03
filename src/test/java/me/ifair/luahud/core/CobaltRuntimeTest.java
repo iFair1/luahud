@@ -22,9 +22,10 @@ class CobaltRuntimeTest {
         AtomicInteger modelSequence = new AtomicInteger(3);
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("fixture");
-        ModelBuilder<Data> model = api.model("Data", Data.class)
-                .string("label", "", Data::label).optionalInteger("count", "", Data::count)
-                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 0)));
+        ModelBuilder<Data> model = api.model("Data", Data.class);
+        var labelField = model.string("label", "", Data::label).inputRequired();
+        var countField = model.optionalInteger("count", "", Data::count).inputDefault(0);
+        model.fromFields(fields -> new Data(fields.get(labelField), fields.get(countField)));
         api.root().namespace("nested", nested -> nested
                 .integer("next", "", sequence::incrementAndGet)
                 .value("nullable", LuaType.optional(LuaType.string()), LuaDoc.NONE, () -> null)
@@ -39,7 +40,7 @@ class CobaltRuntimeTest {
         add.call(args -> args.get(left) + args.get(right));
         AtomicReference<Data> captured = new AtomicReference<>();
         FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
-        LuaParameter<Data> data = capture.parameter("data", model.type(), "");
+        LuaParameter<Data> data = capture.parameter("data", model.inputType(), "");
         capture.call(args -> { captured.set(args.get(data)); return null; });
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
@@ -100,13 +101,14 @@ class CobaltRuntimeTest {
         List<Object> captured = new java.util.ArrayList<>();
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("fixture");
-        ModelBuilder<Data> model = api.model("Data", Data.class)
-                .string("label", "", Data::label).integer("count", "", Data::count)
-                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 0)));
+        ModelBuilder<Data> model = api.model("Data", Data.class);
+        var labelField = model.string("label", "", Data::label).inputRequired();
+        var countField = model.integer("count", "", Data::count).inputRequired();
+        model.fromFields(fields -> new Data(fields.get(labelField), fields.get(countField)));
         api.root().value("data", model.type(), LuaDoc.NONE, () -> supplied);
         FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
         LuaParameter<Object> value = capture.parameter(
-                "value", LuaType.union(LuaType.string(), model.type()), "");
+                "value", LuaType.union(LuaType.string(), model.inputType()), "");
         capture.call(arguments -> {
             captured.add(arguments.get(value));
             return null;
@@ -123,12 +125,12 @@ class CobaltRuntimeTest {
         AtomicReference<Data> captured = new AtomicReference<>();
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("fixture");
-        ModelBuilder<Data> model = api.model("Data", Data.class)
-                .string("label", "", Data::label)
-                .optionalInteger("count", "", Data::count)
-                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 1)));
+        ModelBuilder<Data> model = api.model("Data", Data.class);
+        var labelField = model.string("label", "", Data::label).inputRequired();
+        var countField = model.optionalInteger("count", "", Data::count).inputDefault(1);
+        model.fromFields(fields -> new Data(fields.get(labelField), fields.get(countField)));
         FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
-        LuaParameter<Data> data = capture.parameter("data", model.type(), "");
+        LuaParameter<Data> data = capture.parameter("data", model.inputType(), "");
         capture.call(arguments -> { captured.set(arguments.get(data)); return null; });
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
@@ -146,16 +148,16 @@ class CobaltRuntimeTest {
         AtomicReference<Data> captured = new AtomicReference<>();
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         LuaApiRegistrar api = registry.registrar("fixture");
-        ModelBuilder<Data> model = api.model("Data", Data.class)
-                .string("label", "", Data::label)
-                .optionalInteger("count", "", value -> {
+        ModelBuilder<Data> model = api.model("Data", Data.class);
+        var labelField = model.string("label", "", Data::label).inputRequired();
+        var countField = model.optionalInteger("count", "", value -> {
                     expensiveReads.incrementAndGet();
                     return value.count();
-                })
-                .fromTable(value -> new Data(value.string("label", ""), value.integer("count", 1)));
+                }).inputDefault(1);
+        model.fromFields(fields -> new Data(fields.get(labelField), fields.get(countField)));
         api.root().value("data", model.type(), LuaDoc.NONE, () -> new Data("lazy", 7));
         FunctionBuilder<Void> capture = api.root().function("capture", LuaType.nil(), "");
-        LuaParameter<Data> data = capture.parameter("data", model.type(), "");
+        LuaParameter<Data> data = capture.parameter("data", model.inputType(), "");
         capture.call(arguments -> { captured.set(arguments.get(data)); return null; });
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
@@ -165,6 +167,52 @@ class CobaltRuntimeTest {
         assertEquals("lazy", runtime.global("label").checkString());
         assertEquals(new Data("lazy", 10), captured.get());
         assertEquals(0, expensiveReads.get());
+    }
+
+    @Test void plainTablesRejectUnknownAndOutputOnlyFieldsWithFieldDiagnostics() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        ModelBuilder<Data> model = api.model("Data", Data.class);
+        var label = model.string("label", "", Data::label).inputRequired();
+        var count = model.integer("count", "", Data::count).inputDefault(1);
+        model.string("display", "", Data::label);
+        model.fromFields(fields -> new Data(fields.get(label), fields.get(count)));
+        var capture = api.root().function("capture", LuaType.nil(), "");
+        capture.parameter("data", model.inputType(), "");
+        capture.call(args -> null);
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        LuaError unknown = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture({label='ok', counnt=2})", "typo"));
+        assertTrue(unknown.getMessage().contains("unknown field 'counnt'"));
+        LuaError output = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture({label='ok', display='ignored'})", "readonly"));
+        assertTrue(output.getMessage().contains("output-only"));
+        LuaError invalid = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture({label='ok', count=false})", "wrong-type"));
+        assertTrue(invalid.getMessage().contains("field 'count'"));
+    }
+
+    @Test void unchangedProxyPassesOriginalObjectWithoutReadingFields() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        AtomicInteger reads = new AtomicInteger();
+        ModelBuilder<Data> model = api.model("Data", Data.class);
+        model.string("label", "", value -> { reads.incrementAndGet(); return value.label(); });
+        Data original = new Data("source", 7);
+        api.root().value("data", model.type(), LuaDoc.NONE, () -> original);
+        AtomicReference<Data> captured = new AtomicReference<>();
+        var capture = api.root().function("capture", LuaType.nil(), "");
+        var argument = capture.parameter("data", model.inputType(), "");
+        capture.call(args -> { captured.set(args.get(argument)); return null; });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        runtime.execute("lh.capture(lh.data)", "reference");
+        assertSame(original, captured.get());
+        assertEquals(0, reads.get());
+        assertThrows(LuaError.class, () -> runtime.execute("lh.capture({})", "plain-output-model"));
     }
 
     @Test void publicApiStringsAreUtf8InBothDirections() throws Exception {

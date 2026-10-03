@@ -47,6 +47,21 @@ class StubGeneratorTest {
         assertFalse(StubGenerator.generate(coreOnly).contains("lh.zed"));
     }
 
+    @Test void inputContractsGroupUnionsInsideListsAndOptionalFields() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        var model = api.model("Value", String.class);
+        var text = model.string("text", "", value -> value).inputRequired();
+        model.fromFields(fields -> fields.get(text));
+        var echo = api.root().function("echo", LuaType.optional(model.inputType()), "");
+        echo.parameter("values", LuaType.list(model.inputType()), "");
+        echo.call(args -> null);
+        registry.freeze();
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@param values (fixture_Value | fixture_ValueInput)[]"));
+        assertTrue(stub.contains("---@return (fixture_Value | fixture_ValueInput)?"));
+    }
+
     private static ApiRegistry fixture() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").root().namespace("example", table -> {

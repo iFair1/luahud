@@ -1,4 +1,4 @@
-package me.ifair.luahud.mixin;
+package me.ifair.luahud.core;
 
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// Mixin reserves its package for mixin classes, so this inspection test lives outside it.
 class MinecraftClientMixinTest {
     @Test void gpuMeasurementHookHasOneUnambiguousTargetInMinecraftRender() throws Exception {
         // Inspect the actual mapped Minecraft bytecode without initializing the client or OpenGL.
