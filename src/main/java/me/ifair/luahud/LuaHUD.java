@@ -5,18 +5,17 @@ import me.ifair.luahud.api.core.CoreApi;
 import me.ifair.luahud.api.core.StubGenerator;
 import me.ifair.luahud.config.ConfigInstaller;
 import me.ifair.luahud.config.ConfigManager;
+import me.ifair.luahud.command.LuaHUDCommands;
 import me.ifair.luahud.core.Engine;
 import me.ifair.luahud.core.EventDispatcher;
 import me.ifair.luahud.core.ProfileKeybindManager;
 import me.ifair.luahud.core.TimerManager;
 import me.ifair.luahud.error.ErrorManager;
 import me.ifair.luahud.error.ErrorNotifications;
-import me.ifair.luahud.gui.LuaHUDErrorsScreen;
 import me.ifair.luahud.gui.LuaHUDScreen;
 import me.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
 
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -27,10 +26,6 @@ import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.mojang.brigadier.arguments.LongArgumentType.getLong;
-import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
 public class LuaHUD implements ClientModInitializer {
 	public static final String MOD_ID = "luahud";
@@ -64,13 +59,7 @@ public class LuaHUD implements ClientModInitializer {
 		TimerManager.attach(engine);
 		engine.init();
 
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
-				literal("luahud").then(literal("errors")
-						.executes(context -> openErrorsScreen(null))
-						.then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
-								.argument("entry", longArg(1))
-								.executes(context -> openErrorsScreen(getLong(context, "entry")))))
-		));
+		LuaHUDCommands.register(engine);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			ErrorNotifications.flush(client);
@@ -105,9 +94,4 @@ public class LuaHUD implements ClientModInitializer {
 		ProfileKeybindManager.tick(client);
 	}
 
-	private static int openErrorsScreen(Long entryId) {
-		MinecraftClient client = MinecraftClient.getInstance();
-		client.send(() -> client.setScreen(new LuaHUDErrorsScreen(null, entryId)));
-		return 1;
-	}
 }

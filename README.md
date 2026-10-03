@@ -1,5 +1,21 @@
 # LuaHUD
 
+## Commands
+
+- `/luahud` or `/luahud menu` opens the main menu.
+- `/luahud errors` opens the error browser. `/luahud errors <entry>` selects a specific error.
+- `/luahud reload` reloads active profiles and Lua modules, then runs `init` again.
+- `/luahud report system <phase> <message>` creates a system error.
+- `/luahud report profile <profile> <phase> <message>` creates a profile error.
+  Quote profile names or phases containing spaces. The message consumes the
+  rest of the command. Errors use the usual browser, notifications and duplicate
+  counting; profile errors are cleared on reload.
+
+```text
+/luahud report system "config read" Test system error
+/luahud report profile "My Profile" tick My Profile.lua:12: Test profile error
+```
+
 ## Addon API
 
 Addons can contribute engine-neutral values and synchronous functions through the

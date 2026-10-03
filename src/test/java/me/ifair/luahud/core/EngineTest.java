@@ -102,6 +102,28 @@ class EngineTest {
         assertEquals(1, current.get().global("initialized").checkInteger());
     }
 
+    @Test void manualReloadReadsEditedProfilesWithoutAFileWatcherSignal() throws Exception {
+        Path profile = directory.resolve("Profile.lua");
+        Files.writeString(profile, "version=1");
+        AtomicBoolean inWorld = new AtomicBoolean(true);
+        AtomicBoolean reloadRequested = new AtomicBoolean();
+        AtomicInteger creations = new AtomicInteger();
+        AtomicReference<CobaltRuntime> current = new AtomicReference<>();
+        Engine engine = engine(inWorld, reloadRequested, creations, current, profile);
+        engine.checkForUpdates();
+        CobaltRuntime first = current.get();
+
+        Files.writeString(profile, "version=2; initialized=0; lh.on('init', function() initialized=initialized+1 end)");
+        engine.reloadAll();
+        engine.checkForUpdates();
+
+        assertTrue(engine.isReady());
+        assertEquals(2, creations.get());
+        assertNotSame(first, current.get());
+        assertEquals(2, current.get().global("version").checkInteger());
+        assertEquals(1, current.get().global("initialized").checkInteger());
+    }
+
     @Test void reloadSignalsCanRecoverAnUnreadyRuntime() throws Exception {
         Path profile = directory.resolve("Profile.lua");
         Files.writeString(profile, "loaded=true");
