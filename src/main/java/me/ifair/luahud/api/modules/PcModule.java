@@ -17,12 +17,15 @@ public final class PcModule {
 
     private PcModule() {}
 
+    private static final class Hardware {
+        private static final SystemInfo INFO = new SystemInfo();
+        private static final CentralProcessor PROCESSOR = INFO.getHardware().getProcessor();
+        private static final List<GraphicsCard> CARDS = INFO.getHardware().getGraphicsCards();
+    }
+
     public static void register(LuaApiRegistrar api, MinecraftClient client) {
-        SystemInfo info = new SystemInfo();
-        CentralProcessor processor = info.getHardware().getProcessor();
-        List<GraphicsCard> cards = info.getHardware().getGraphicsCards();
-        OperatingSystemMXBean os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
         CachedValue<Integer> cpuUsage = new CachedValue<>(1000, () -> {
+            OperatingSystemMXBean os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
             double load = os.getProcessCpuLoad();
             return load < 0 ? 0 : (int) Math.round(load * 100);
         });
@@ -31,12 +34,12 @@ public final class PcModule {
 
         api.root().namespace("pc", pc -> {
             pc.namespace("cpu", cpu -> cpu
-                    .string("name", "Processor name", () -> processor.getProcessorIdentifier().getName())
-                    .integer("cores", "Physical core count", processor::getPhysicalProcessorCount)
-                    .integer("threads", "Logical processor count", processor::getLogicalProcessorCount)
+                    .string("name", "Processor name", () -> Hardware.PROCESSOR.getProcessorIdentifier().getName())
+                    .integer("cores", "Physical core count", () -> Hardware.PROCESSOR.getPhysicalProcessorCount())
+                    .integer("threads", "Logical processor count", () -> Hardware.PROCESSOR.getLogicalProcessorCount())
                     .integer("usage", "Minecraft process CPU usage percent", cpuUsage));
             pc.namespace("gpu", gpu -> gpu
-                    .string("name", "Primary graphics card name", () -> cards.isEmpty() ? "Unknown GPU" : cards.getFirst().getName())
+                    .string("name", "Primary graphics card name", () -> Hardware.CARDS.isEmpty() ? "Unknown GPU" : Hardware.CARDS.getFirst().getName())
                     .integer("usage", "Minecraft GPU usage percent, or -1 when unavailable", gpuUsage));
             pc.namespace("memory", memory -> memory
                     .integer("used", "Memory used in MiB", () -> (int) ((runtime.totalMemory() - runtime.freeMemory()) / MIB))

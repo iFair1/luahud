@@ -10,8 +10,12 @@ public final class CoreApi {
     private CoreApi() {}
 
     public static void register(ApiRegistry registry) {
+        register(registry, MinecraftClient.getInstance());
+    }
+
+    /** Registers metadata with deferred runtime bindings; the exporter passes no client. */
+    static void register(ApiRegistry registry, MinecraftClient client) {
         LuaApiRegistrar api = registry.registrar("luahud");
-        MinecraftClient client = MinecraftClient.getInstance();
         CoreModels models = CoreModels.register(api);
 
         RenderModule.register(api, models);
