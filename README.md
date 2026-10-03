@@ -16,6 +16,25 @@
 /luahud report profile "My Profile" tick My Profile.lua:12: Test profile error
 ```
 
+## Sound API
+
+`lh.sound.mood` is the ambient mood percentage (0–100), matching the F3 display.
+`lh.sound.record` is `nil` when no jukebox disc is playing within 64 blocks.
+If several discs are playing, it returns the nearest one:
+
+- `id`: namespaced disc item ID, such as `minecraft:music_disc_cat` (falls back to
+  the song ID for songs without a matching item).
+- `name`: localized song name.
+- `length`, `elapsed`, `remaining`: total, elapsed, and remaining time in seconds.
+  Playback time advances with client ticks and pauses with the game.
+
+```lua
+local record = lh.sound.record
+if record then
+    lh.drawln(record.name .. " — " .. math.ceil(record.remaining) .. "s")
+end
+```
+
 ## Addon API
 
 Addons can contribute engine-neutral values and synchronous functions through the

@@ -3,7 +3,8 @@
     "package": "me.ifair.luahud.mixin",
     "compatibilityLevel": "JAVA_21",
     "client": [
-        "MinecraftClientMixin"
+        "MinecraftClientMixin",
+        "WorldRendererMixin"
     ],
     "injectors": {
         "defaultRequire": 1
