@@ -54,6 +54,7 @@ public record CoreModels(
                 .integer("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getHealth() : 0)
                 .integer("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0)
                 .optionalField("effects", LuaType.map(statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects)
+                .bool("isLiving", "Whether the entity is a living-entity or not", value -> value instanceof LivingEntity)
                 .fromTable(CoreModels::entity);
 
         ModelBuilder<BlockView> block = api.model("PlacedBlock", BlockView.class)
