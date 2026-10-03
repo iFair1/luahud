@@ -9,7 +9,7 @@ public final class PerformanceModule {
 
     public static void register(LuaApiRegistrar api, MinecraftClient client) {
         api.root().namespace("perf", perf -> perf
-                .integer("fps", "Current rendered frames per second", client::getCurrentFps)
+                .integer("fps", "Current rendered frames per second", () -> client.getCurrentFps())
                 .integer("ping", "Player latency in milliseconds", () -> ping(client))
                 .number("tps", "Integrated-server ticks per second", () -> tps(client)));
     }

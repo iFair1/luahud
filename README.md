@@ -42,6 +42,21 @@ public final class ExampleApi implements LuaHudApiEntrypoint {
 Register during this entrypoint only. Definitions are frozen after addon discovery;
 provider failures are isolated and conflicting paths use the first definition.
 
+## Generated API reference
+
+Run `./gradlew generateApiDocs` to export the built-in Lua API to
+`build/generated/api/api.json` for the documentation site. The task runs without
+launching Minecraft or discovering user addons. Copy the JSON into the site's
+data directory to generate searchable property, function, and model pages;
+write guides separately in Markdown.
+
+The JSON contains `schemaVersion`, `root`, `namespaces`, `properties`,
+`functions`, and `types`. Entries include descriptions and provider IDs;
+functions include ordered parameters and return types. Type expressions include
+display strings, nested element/union types, and references to named models.
+Model fields describe output nullability and input presence separately.
+Descriptions and type names share the same registry as the Lua stub.
+
 ## Models
 
 Define each field once and use its typed handle in the decoder. Fields are

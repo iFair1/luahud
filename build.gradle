@@ -50,6 +50,26 @@ test {
 	useJUnitPlatform()
 }
 
+sourceSets {
+	documentation {
+		compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+		runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+	}
+}
+
+tasks.register('generateApiDocs', JavaExec) {
+	group = 'documentation'
+	description = 'Export the built-in Lua API as JSON for the documentation site.'
+	dependsOn tasks.named('documentationClasses')
+	classpath = sourceSets.documentation.runtimeClasspath
+	mainClass = 'me.ifair.luahud.api.core.DocumentationExportLauncher'
+	def outputFile = layout.buildDirectory.file('generated/api/api.json')
+	inputs.files(sourceSets.main.output, sourceSets.documentation.output)
+	outputs.file(outputFile)
+	args outputFile.get().asFile.absolutePath
+	systemProperty 'java.awt.headless', 'true'
+}
+
 processResources {
 	def version = project.version
 	inputs.property "version", version
