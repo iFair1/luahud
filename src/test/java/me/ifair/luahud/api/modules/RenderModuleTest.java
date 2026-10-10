@@ -56,7 +56,7 @@ class RenderModuleTest {
 
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@param id string | ItemStack | ItemStackInput Namespaced item ID or ItemStack model"));
-        assertTrue(stub.contains("---@param uuid string | Entity | EntityInput Entity UUID or Entity model"));
+        assertTrue(stub.contains("---@param uuid string | Entity | EntityInput Entity UUID or any table with a string uuid field"));
         assertTrue(stub.contains("---@param options? EntityOptions Rendering options"));
         assertTrue(stub.contains("---@field pitch? number Vertical viewing angle offset in degrees"));
         assertTrue(stub.contains("---@field yaw? number Horizontal viewing angle offset in degrees"));
@@ -80,6 +80,19 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field maxDamage? integer Maximum durability"));
         assertTrue(stub.contains("---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
         assertEquals(2, count(stub, "---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
+    }
+
+    @Test void drawingOptionsRejectMisspelledFields() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        RenderModule.register(api, CoreModels.register(api));
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+
+        LuaError error = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.section({inlineSpcing=2})", "misspelled-options"));
+        assertTrue(error.getMessage().contains("unknown field 'inlineSpcing' in SectionOptions"));
     }
 
     @Test void entityAnglesDefaultNormalizeAndRejectNonFiniteValues() {

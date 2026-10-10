@@ -118,10 +118,17 @@ var argument = echo.parameter("counter", counter.inputType(), "Counter or input 
 echo.call(arguments -> arguments.get(argument));
 ```
 
-The generated stub describes `Counter` and `CounterInput` separately, using the
-same field definitions. Plain tables accept only input-capable fields; unknown
-and output-only fields produce a Lua error. A decoder cannot read an unrelated
-model's field handle or an output-only field.
+Models are table schemas on the Lua side; scripts do not need constructors or
+class instances. The generated stub keeps names such as `CounterInput` for
+input schemas, using the same field definitions as the returned `Counter` view.
+A function consumes only its schema's input-capable fields. Additional fields,
+including output-only fields, are ignored. Required fields and the types of
+consumed fields are still validated. Ordinary Lua lookup (`__index`) is supported,
+so namespaces and other model views can satisfy a schema too. A decoder cannot
+read an unrelated model's field handle or an output-only field.
+
+Options defined with `LuaType.inputTable`, including drawing and section options,
+are strict: undeclared keys produce a Lua error, helping catch misspelled options.
 
 Model proxies keep lazy access to Java values. An unchanged proxy passed to a
 function returns its original Java object. When Lua overrides input fields,
@@ -130,17 +137,27 @@ input fields from the source. `fields.isExplicit(field)` distinguishes overrides
 from source values and defaults. `fields.source()` returns the original Java
 object, or null for plain tables, allowing a decoder to preserve native state.
 Assignments affect the Lua proxy; they do not directly mutate the Java object.
-Writing an output-only field and passing that proxy to a function is rejected.
+Output-only and additional fields on a proxy are ignored when it is passed to a
+function; they do not change the source Java object.
 
 Models without a decoder accept their own unchanged proxies as arguments but
 do not accept plain tables. For example, `PlacedBlock` and `Horse` expose output
-properties, while `EntityInput` resolves a loaded entity using only `uuid`.
-`ItemStackInput` requires only `id`; `count` defaults to 1. Its optional inputs
+properties. Entity arguments accept any table with a string `uuid` field and
+resolve an already loaded entity; other fields do not configure that entity.
+For example, all of these calls identify the same player:
+
+```lua
+lh.drawEntity(lh.player)
+lh.drawEntity({ uuid = lh.player.uuid })
+lh.drawEntity(lh.player.uuid)
+```
+
+Item stack arguments require only `id`; `count` defaults to 1. Their optional inputs
 are `damage`, `damageLeft`, and `enchantments`. Explicit `damage` wins over
 `damageLeft`; either override wins over lazy source durability. Stack overrides
 copy the source stack and preserve unrelated components.
 
-`StatusEffectInput` requires `id`, defaults `level` to 1, and accepts
+Status effect arguments require `id`, default `level` to 1, and accept
 `durationInTicks` or `durationInSeconds` (default duration: 0). Explicit ticks
 win over explicit seconds; either wins over source duration. Both duration
 outputs preserve -1 for infinite effects.

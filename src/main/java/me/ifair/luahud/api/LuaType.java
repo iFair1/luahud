@@ -89,6 +89,7 @@ public final class LuaType<T> {
         return new LuaType<>(Kind.MODEL_INPUT, model.name() + "Input", null, null, Objects.requireNonNull(model), null);
     }
 
+    /** Defines a strict options table which rejects undeclared keys. */
     public static LuaType<LuaTableValue> inputTable(String name, Consumer<InputTableBuilder> definition) {
         InputTableBuilder builder = new InputTableBuilder();
         definition.accept(builder);

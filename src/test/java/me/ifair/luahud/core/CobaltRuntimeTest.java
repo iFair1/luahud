@@ -169,7 +169,7 @@ class CobaltRuntimeTest {
         assertEquals(0, expensiveReads.get());
     }
 
-    @Test void plainTablesRejectUnknownAndOutputOnlyFieldsWithFieldDiagnostics() throws Exception {
+    @Test void modelTablesIgnoreExtraFieldsAndValidateConsumedFields() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("fixture");
         ModelBuilder<Data> model = api.model("Data", Data.class);
@@ -178,20 +178,83 @@ class CobaltRuntimeTest {
         model.string("display", "", Data::label);
         model.fromFields(fields -> new Data(fields.get(label), fields.get(count)));
         var capture = api.root().function("capture", LuaType.nil(), "");
-        capture.parameter("data", model.inputType(), "");
+        var argument = capture.parameter("data", model.inputType(), "");
+        AtomicReference<Data> captured = new AtomicReference<>();
+        capture.call(args -> { captured.set(args.get(argument)); return null; });
+        api.root().value("data", model.type(), LuaDoc.NONE, () -> new Data("source", 5));
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        runtime.execute("lh.capture({label='ok', counnt=2, display=false, [1]='extra'})", "wide-table");
+        assertEquals(new Data("ok", 1), captured.get());
+        runtime.execute("value=lh.data; value.display=false; value.extra=42; lh.capture(value)", "wide-proxy");
+        assertEquals(new Data("source", 5), captured.get());
+        LuaError invalid = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture({label='ok', count=false})", "wrong-type"));
+        assertTrue(invalid.getMessage().contains("field 'count'"));
+    }
+
+    @Test void modelInputsAcceptNamespacesAndOtherModelSchemas() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        var model = api.model("Data", Data.class);
+        var label = model.string("label", "", Data::label).inputRequired();
+        var count = model.integer("count", "", Data::count).inputDefault(1);
+        model.fromFields(fields -> new Data(fields.get(label), fields.get(count)));
+        api.root().namespace("player", player -> {
+            player.string("label", "", () -> "player");
+            player.namespace("xp", xp -> xp.integer("level", "", () -> 3));
+        });
+        var wider = api.model("WiderData", Data.class);
+        wider.string("label", "", Data::label);
+        wider.integer("count", "", Data::count);
+        wider.bool("extra", "", value -> true);
+        api.root().model("wider", wider, "", () -> new Data("wider", 7));
+        var capture = api.root().function("capture", LuaType.nil(), "");
+        var argument = capture.parameter("data", model.inputType(), "");
+        AtomicReference<Data> captured = new AtomicReference<>();
+        capture.call(args -> { captured.set(args.get(argument)); return null; });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+
+        runtime.execute("lh.capture(lh.player)", "namespace-input");
+        assertEquals(new Data("player", 1), captured.get());
+        runtime.execute("lh.capture(lh.wider)", "different-model-input");
+        assertEquals(new Data("wider", 7), captured.get());
+        runtime.execute("lh.capture(setmetatable({count=8}, {__index={label='inherited'}}))", "table-index");
+        assertEquals(new Data("inherited", 8), captured.get());
+        runtime.execute("lh.capture(setmetatable({}, {__index=function(_, key) if key=='label' then return 'computed' end end}))", "function-index");
+        assertEquals(new Data("computed", 1), captured.get());
+        LuaError missing = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture({count=2, extra=true})", "missing-required"));
+        assertTrue(missing.getMessage().contains("missing field 'label'"));
+        LuaError invalid = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture(setmetatable({}, {__index={label='ok', count=false}}))", "invalid-index"));
+        assertTrue(invalid.getMessage().contains("field 'count'"));
+        LuaError lookup = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.capture(setmetatable({}, {__index=function() error('lookup failed') end}))", "failed-index"));
+        assertTrue(lookup.getMessage().contains("field 'label'"));
+        assertTrue(lookup.getMessage().contains("lookup failed"));
+    }
+
+    @Test void optionsTablesRejectUnknownAndNonStringKeys() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        var options = LuaType.inputTable("Options", fields -> fields.optional("count", LuaType.integer(), ""));
+        var capture = api.root().function("capture", LuaType.nil(), "");
+        capture.parameter("options", options, "");
         capture.call(args -> null);
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry);
         runtime.start();
+
+        runtime.execute("lh.capture({count=2}); lh.capture({})", "valid-options");
         LuaError unknown = assertThrows(LuaError.class,
-                () -> runtime.execute("lh.capture({label='ok', counnt=2})", "typo"));
-        assertTrue(unknown.getMessage().contains("unknown field 'counnt'"));
-        LuaError output = assertThrows(LuaError.class,
-                () -> runtime.execute("lh.capture({label='ok', display='ignored'})", "readonly"));
-        assertTrue(output.getMessage().contains("output-only"));
-        LuaError invalid = assertThrows(LuaError.class,
-                () -> runtime.execute("lh.capture({label='ok', count=false})", "wrong-type"));
-        assertTrue(invalid.getMessage().contains("field 'count'"));
+                () -> runtime.execute("lh.capture({counnt=2})", "unknown-option"));
+        assertTrue(unknown.getMessage().contains("unknown field 'counnt' in Options"));
+        assertThrows(LuaError.class, () -> runtime.execute("lh.capture({[1]=2})", "numeric-option"));
+        assertThrows(LuaError.class, () -> runtime.execute("lh.capture({count=false})", "invalid-option"));
     }
 
     @Test void unchangedProxyPassesOriginalObjectWithoutReadingFields() throws Exception {

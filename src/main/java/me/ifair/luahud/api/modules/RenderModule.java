@@ -91,9 +91,9 @@ public final class RenderModule {
         });
 
         FunctionBuilder<Void> drawEntity = api.root().function(
-                "drawEntity", LuaType.nil(), "Draw a loaded entity by UUID or Entity model.");
+                "drawEntity", LuaType.nil(), "Draw a loaded entity by UUID or a table with a uuid field (including lh.player).");
         LuaParameter<Object> entityUuid = drawEntity.parameter(
-                "uuid", LuaType.union(LuaType.string(), models.entity().inputType()), "Entity UUID or Entity model");
+                "uuid", LuaType.union(LuaType.string(), models.entity().inputType()), "Entity UUID or any table with a string uuid field");
         LuaParameter<LuaTableValue> entityOpts = drawEntity.optionalParameter("options", entityOptions, "Rendering options");
         drawEntity.call(arguments -> {
             drawEntity(arguments.get(entityUuid), arguments.get(entityOpts));

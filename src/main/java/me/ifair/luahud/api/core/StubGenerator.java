@@ -22,6 +22,9 @@ public final class StubGenerator {
 
         context.namedTypes.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(entry -> {
             Object definition = entry.getKey(); String name = entry.getValue();
+            if (definition instanceof ApiTypeContext.InputModel) {
+                out.append("---Table schema: additional fields are accepted; no constructor is required.\n");
+            }
             out.append("---@class ").append(name).append('\n');
             if (definition instanceof ModelBuilder<?> model) {
                 model.fields().stream().sorted(Comparator.comparing(ModelBuilder.Field::name)).forEach(field -> field(out, field.name(), context.type(field.type(), model.providerId()), field.doc().description(), field.optional()));

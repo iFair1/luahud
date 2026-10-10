@@ -396,22 +396,11 @@ public final class CobaltRuntime {
         Function<String, Object> sourceField = matchingSource
                 ? key -> resolveModelField(source.model(), sourceInstance.get(), key)
                 : ignored -> null;
-        LuaValue key = Constants.NIL;
-        while (true) {
-            Varargs next = table.next(key);
-            key = next.arg(1);
-            if (key.isNil()) break;
-            String fieldName = key.type() == Constants.TSTRING ? javaString(key) : null;
-            ModelBuilder.Field<?, ?> field = model.fields().stream()
-                    .filter(candidate -> candidate.name().equals(fieldName)).findFirst().orElse(null);
-            if (field == null) throw new LuaError("unknown field '" + key.toString() + "' in " + model.name());
-            if (field.inputMode() == ModelBuilder.InputMode.OUTPUT_ONLY) {
-                throw new LuaError("field '" + field.name() + "' is output-only in " + model.name());
-            }
-        }
         for (ModelBuilder.Field<?, ?> field : model.fields()) {
             if (field.inputMode() == ModelBuilder.InputMode.OUTPUT_ONLY) continue;
-            LuaValue fieldValue = table.rawget(field.name());
+            // Own proxies keep explicit overrides separate from lazy source fields.
+            // Other tables follow ordinary Lua lookup, including their __index.
+            LuaValue fieldValue = matchingSource ? table.rawget(field.name()) : modelInputField(table, field.name());
             if (!fieldValue.isNil()) {
                 try {
                     fields.put(field.name(), fromLua(fieldValue, field.type()));
@@ -434,6 +423,16 @@ public final class CobaltRuntime {
         } catch (Throwable error) {
             String message = error.getMessage();
             throw new LuaError(message == null ? "invalid " + type.displayName() + " model" : message);
+        }
+    }
+
+    private LuaValue modelInputField(LuaTable table, String name) throws LuaError {
+        try {
+            return OperationHelper.getTable(state, table, luaString(name));
+        } catch (UnwindThrowable error) {
+            throw new LuaError("model input field '" + name + "' cannot yield");
+        } catch (LuaError error) {
+            throw new LuaError("field '" + name + "': " + error.getMessage());
         }
     }
 
@@ -519,6 +518,15 @@ public final class CobaltRuntime {
 
     private LuaTableValue inputTable(LuaTable table, LuaType<?> type) throws LuaError {
         Map<String, Object> result = new LinkedHashMap<>();
+        LuaValue key = Constants.NIL;
+        while (true) {
+            Varargs next = table.next(key);
+            key = next.arg(1);
+            if (key.isNil()) break;
+            if (key.type() != Constants.TSTRING || !type.inputFields().containsKey(javaString(key))) {
+                throw new LuaError("unknown field '" + key + "' in " + type.displayName());
+            }
+        }
         for (LuaType.InputField field : type.inputFields().values()) {
             LuaValue value = table.rawget(field.name());
             if (value.isNil() && field.optional()) continue;

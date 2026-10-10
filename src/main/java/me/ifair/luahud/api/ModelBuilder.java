@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/** Defines a lazy Java model's output fields and its plain-table input contract. */
+/** Defines a lazy Java view and the fields consumed from structurally compatible Lua tables. */
 public final class ModelBuilder<T> {
     public enum InputMode { OUTPUT_ONLY, REQUIRED, OPTIONAL, DEFAULT }
 
@@ -153,7 +153,7 @@ public final class ModelBuilder<T> {
     }
 
     public LuaType<T> type() { return LuaType.model(this); }
-    /** Function argument type documenting the plain-table input contract. */
+    /** Function argument schema; additional table fields are ignored and __index lookup is supported. */
     public LuaType<T> inputType() { return LuaType.modelInput(this); }
     public String providerId() { return providerId; }
     public String name() { return name; }

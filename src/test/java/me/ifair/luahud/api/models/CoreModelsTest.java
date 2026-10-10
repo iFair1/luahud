@@ -59,7 +59,8 @@ class CoreModelsTest {
         runtime.execute("seconds=lh.effect.durationInSeconds; lh.capture({id='minecraft:speed', durationInSeconds=-1})", "infinite");
         assertEquals(-1, runtime.global("seconds").checkInteger());
         assertEquals(-1, result.get().getDuration());
-        assertThrows(LuaError.class, () -> runtime.execute("lh.capture({id='minecraft:speed', durationInTick=31})", "typo"));
+        runtime.execute("lh.capture({id='minecraft:speed', name='Speed', extra=true})", "wide-effect");
+        assertEquals(0, result.get().getDuration());
     }
 
     @Test void explicitSecondsOverrideLazySourceTicks() throws Exception {
