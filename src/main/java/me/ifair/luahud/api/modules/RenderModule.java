@@ -168,7 +168,7 @@ public final class RenderModule {
                 fields.optional("scale", LuaType.number(),
                         section ? "Scale applied to the entire section" : "Scale relative to the section");
             }
-            if (!section && !text && !entity) {
+            if (!section && !text) {
                 fields.optional("newLine", LuaType.bool(), "Advance to the next line after drawing; defaults to false");
             }
             if (stack) {
@@ -294,7 +294,7 @@ public final class RenderModule {
         RenderBuffer.addEntity(entity, iconScale(options), angle(options, "yaw"), angle(options, "pitch"),
                 bool(options, "fullBright", true), bool(options, "useEntityRotation", false),
                 resolveColor(options, "backgroundColor", currentState.backgroundColor()),
-                offset(options, "offsetX"), offset(options, "offsetY"), false);
+                offset(options, "offsetX"), offset(options, "offsetY"), newLine(options));
     }
 
     private static Entity findEntity(String value) {
