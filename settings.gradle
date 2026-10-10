@@ -1,11 +1,25 @@
 pluginManagement {
 	repositories {
+		maven { url = 'https://maven.kikugie.dev/releases' }
 		maven {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
 		mavenCentral()
 		gradlePluginPortal()
+	}
+}
+
+plugins {
+	id 'dev.kikugie.stonecutter' version '0.9.8'
+}
+
+stonecutter {
+	centralScript = 'build.gradle'
+	kotlinController = false
+	create(rootProject) {
+		versions('1.21')
+		vcsVersion = '1.21'
 	}
 }
 

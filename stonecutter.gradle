@@ -1,0 +1,31 @@
+plugins {
+    id 'dev.kikugie.stonecutter'
+}
+
+stonecutter.active '1.21' /* [SC] DO NOT EDIT */
+
+// Everyday tasks always target the development baseline, even after switching
+// the IDE to another version to work on a port.
+['build', 'test', 'runClient', 'generateApiDocs'].each { taskName ->
+    tasks.register(taskName) {
+        dependsOn ":1.21:${taskName}"
+    }
+}
+
+tasks.register('clean', Delete) {
+    dependsOn ':1.21:clean'
+    delete layout.buildDirectory
+}
+
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Build and test every supported Minecraft version.'
+    dependsOn stonecutter.tasks.named('build')
+}
+
+tasks.register('cleanAll', Delete) {
+    group = 'build'
+    description = 'Remove build outputs for every supported Minecraft version.'
+    dependsOn stonecutter.tasks.named('clean')
+    delete layout.buildDirectory
+}

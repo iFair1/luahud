@@ -3,8 +3,19 @@ plugins {
 	id 'maven-publish'
 }
 
-version = project.mod_version
+version = "${project.mod_version}+mc${project.minecraft_version}"
 group = project.maven_group
+
+base {
+	archivesName = 'luahud'
+}
+
+// Preserve the existing development world's location for the baseline.
+if (project.name == '1.21') {
+	loom.runs.configureEach {
+		runDir = rootProject.file('run').absolutePath
+	}
+}
 
 repositories {
 	maven { url = 'https://jitpack.io' }
@@ -63,7 +74,9 @@ tasks.register('generateApiDocs', JavaExec) {
 	dependsOn tasks.named('documentationClasses')
 	classpath = sourceSets.documentation.runtimeClasspath
 	mainClass = 'me.ifair.luahud.api.core.DocumentationExportLauncher'
-	def outputFile = layout.buildDirectory.file('generated/api/api.json')
+	def outputFile = project.name == '1.21'
+			? rootProject.layout.buildDirectory.file('generated/api/api.json')
+			: layout.buildDirectory.file('generated/api/api.json')
 	inputs.files(sourceSets.main.output, sourceSets.documentation.output)
 	outputs.file(outputFile)
 	args outputFile.get().asFile.absolutePath
@@ -73,14 +86,18 @@ tasks.register('generateApiDocs', JavaExec) {
 processResources {
 	def version = project.version
 	inputs.property "version", version
+	inputs.property "minecraft_range", project.minecraft_range
+	inputs.property "java_version", project.java_version
+	inputs.property "loader_version", project.loader_version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": version, "minecraft_range": project.minecraft_range,
+				"java_version": project.java_version, "loader_version": project.loader_version
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = project.java_version.toInteger()
 }
 
 java {
@@ -89,15 +106,15 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.toVersion(project.java_version)
+	targetCompatibility = JavaVersion.toVersion(project.java_version)
 }
 
 jar {
-	def projectName = project.name
+	def projectName = rootProject.name
 	inputs.property "projectName", projectName
 
-	from("LICENSE") {
+	from(rootProject.file("LICENSE")) {
 		rename { "${it}_$projectName"}
 	}
 }
@@ -106,6 +123,7 @@ jar {
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {
+			artifactId = 'luahud'
 			from components.java
 		}
 	}

@@ -30,7 +30,6 @@ public final class CoreApi {
         SlotsModule.register(api, client, models);
         SessionModule.register(api, client);
         FunctionsModule.register(api, client, models);
-        SoundModule.register(api, client);
         registry.addEventFunctions();
     }
 }

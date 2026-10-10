@@ -1,5 +1,24 @@
 # LuaHUD
 
+## Development versions
+
+Minecraft **1.21** is the development baseline. Stonecutter shares the root
+`src/` tree between version projects; version-specific dependencies live in
+`versions/<minecraft>/gradle.properties`. Only 1.21 is currently enabled.
+
+```bash
+./gradlew build            # Build and test 1.21
+./gradlew test             # Test 1.21
+./gradlew runClient        # Launch the 1.21 development client
+./gradlew buildAll         # Build and test all enabled targets (also used by CI)
+./gradlew cleanAll         # Clean outputs for all enabled targets
+```
+
+Jars are written to `versions/1.21/build/libs/`, with the Minecraft version in
+the filename, for example `luahud-1.0.0+mc1.21.jar`. API documentation remains at
+`build/generated/api/api.json`. See [the multiversion guide](docs/multiversion.md)
+for porting instructions and the planned 1.21.x / 26.x workflow.
+
 ## Commands
 
 - `/luahud` or `/luahud menu` opens the main menu.

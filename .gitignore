@@ -1,6 +1,8 @@
 # gradle
 
 .gradle/
+.stonecutter/
+versions/*/src/
 build/
 out/
 classes/
