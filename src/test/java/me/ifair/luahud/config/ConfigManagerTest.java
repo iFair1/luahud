@@ -6,12 +6,17 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.time.Duration;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -201,6 +206,99 @@ class ConfigManagerTest {
 
         assertUnchanged();
         assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("New Profile.lua")));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", ".", "..", "../Outside", "nested/Profile", "..\\Outside", "/tmp/Outside", "nul\u0000name"})
+    void invalidNamesNeverChangeFilesOrConfiguration(String name) throws Exception {
+        ConfigManager.createProfile(name);
+        ConfigManager.addProfile(name);
+        ConfigManager.renameProfile("First", name);
+
+        assertUnchanged();
+        assertEquals(originalJson, Files.readString(ConfigManager.JSON_CONFIG));
+        assertEquals("first script", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
+    }
+
+    @Test
+    void largeNumericSuffixCanBeIncrementedWithoutOverflow() {
+        ConfigManager.addProfile("Profile (2147483647)");
+        ConfigManager.addProfile("Profile (2147483647)");
+        ConfigManager.addProfile("Profile (99999999999999999999)");
+        ConfigManager.addProfile("Profile (99999999999999999999)");
+
+        assertTrue(ConfigManager.hasProfile("Profile (2147483648)"));
+        assertTrue(ConfigManager.hasProfile("Profile (100000000000000000000)"));
+    }
+
+    @Test
+    void loadingNormalizesUnsafeNamesAndInvalidKeybindsOnDisk() throws Exception {
+        ConfigData initial = new ConfigData();
+        initial.profiles.add(new ConfigData.ProfileData("../Outside"));
+        ConfigData.ProfileData valid = new ConfigData.ProfileData("First");
+        valid.setKeybind("key.keyboard.invalid");
+        initial.profiles.add(valid);
+        Files.writeString(ConfigManager.JSON_CONFIG, new Gson().toJson(initial));
+
+        ConfigManager.load();
+
+        assertEquals(List.of("First"), names());
+        assertEquals("key.keyboard.unknown", ConfigManager.getProfiles().getFirst().getKeybind());
+        ConfigData saved = new Gson().fromJson(Files.readString(ConfigManager.JSON_CONFIG), ConfigData.class);
+        assertEquals(1, saved.profiles.size());
+        assertEquals("key.keyboard.unknown", saved.profiles.getFirst().getKeybind());
+    }
+
+    @Test
+    void editorSavePreservesProfileSettingsAndOrder() throws Exception {
+        ConfigManager.setProfileActive("First", false);
+        ConfigManager.setProfileHidden("First", true);
+        ConfigManager.setProfileKeybind("First", "key.keyboard.a");
+        ConfigManager.consumeProfileReloadSignal();
+        long beforeSave = ConfigManager.getProfileRevision();
+        FileWatcher watcher = new FileWatcher();
+        watcher.start();
+        try {
+            Path script = ConfigManager.MOD_CONFIG_DIR.resolve("First.lua");
+            Files.delete(script);
+            Thread.sleep(50); // A save may span multiple WatchService event batches.
+            Files.writeString(script, "updated script");
+            await(watcher::consumeReloadSignal);
+
+            assertEquals(List.of("First", "Second"), names());
+            ConfigData.ProfileData first = ConfigManager.getProfiles().getFirst();
+            assertFalse(first.isActive());
+            assertTrue(first.isHidden());
+            assertEquals("key.keyboard.a", first.getKeybind());
+            assertEquals(beforeSave, ConfigManager.getProfileRevision());
+        } finally {
+            watcher.stop();
+        }
+    }
+
+    @Test
+    void watcherDetectsRealCreationAndDeletionButIgnoresDirectories() throws Exception {
+        Files.createDirectory(ConfigManager.MOD_CONFIG_DIR.resolve("Directory.lua"));
+        FileWatcher watcher = new FileWatcher();
+        watcher.start();
+        try {
+            assertFalse(ConfigManager.hasProfile("Directory"));
+            Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("Third.lua"), "third script");
+            await(() -> ConfigManager.hasProfile("Third"));
+            Files.delete(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua"));
+            await(() -> !ConfigManager.hasProfile("First"));
+
+            assertEquals(List.of("Second", "Third"), names());
+        } finally {
+            watcher.stop();
+        }
+    }
+
+    private static void await(BooleanSupplier condition) {
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            while (!condition.getAsBoolean()) Thread.sleep(10);
+        });
     }
 
     private void blockJsonWrite() throws Exception {

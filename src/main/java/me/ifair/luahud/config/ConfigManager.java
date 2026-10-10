@@ -13,6 +13,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.Path;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,14 +43,16 @@ public class ConfigManager {
             ConfigData loaded = gson.fromJson(document, ConfigData.class);
             config = (loaded != null) ? loaded : new ConfigData();
             if (config.profiles == null) config.profiles = new ConfigData().profiles;
-            config.profiles.removeIf(profile -> profile == null
-                    || profile.getName() == null
-                    || profile.getName().isBlank());
+            boolean removedProfiles = config.profiles.removeIf(profile -> profile == null
+                    || !ConfigData.isValidProfileName(profile.getName()));
             saveNormalizedConfig = document == null
                     || !document.isJsonObject()
                     || !document.getAsJsonObject().has("luaTimeoutMs");
             saveNormalizedConfig |= config.normalize();
-            config.profiles.forEach(ConfigData.ProfileData::normalize);
+            saveNormalizedConfig |= removedProfiles;
+            for (ConfigData.ProfileData profile : config.profiles) {
+                saveNormalizedConfig |= profile.normalize();
+            }
 
         } catch (IOException e) {
             ErrorManager.reportSystem("config read", e);
@@ -154,6 +157,7 @@ public class ConfigManager {
     }
 
     public static synchronized void addProfile(String name, ConfigData.ProfileData profile) {
+        if (!validateProfileName(name)) return;
         while (ConfigManager.hasProfile(name)) {
             name = incrementSuffix(name);
         }
@@ -174,8 +178,8 @@ public class ConfigManager {
 
         if (matcher.matches()) {
             String prefix = matcher.group(1);
-            int number = Integer.parseInt(matcher.group(2));
-            return prefix + "(" + (number + 1) + ")";
+            BigInteger number = new BigInteger(matcher.group(2));
+            return prefix + "(" + number.add(BigInteger.ONE) + ")";
         } else {
             return name + " (1)";
         }
@@ -186,6 +190,7 @@ public class ConfigManager {
     }
 
     public static synchronized void createProfile(String name) {
+        if (!validateProfileName(name)) return;
         Path profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
         while (hasProfile(name) || Files.exists(profileFile)) {
             name = incrementSuffix(name);
@@ -300,6 +305,7 @@ public class ConfigManager {
     }
 
     public static synchronized void setProfileKeybind(String name, String keybind) {
+        keybind = ConfigData.ProfileData.normalizeKeybind(keybind);
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null) return;
         if (profile.getKeybind().equals(keybind)) return;
@@ -312,6 +318,7 @@ public class ConfigManager {
     }
 
     public static synchronized void renameProfile(String oldName, String newName) {
+        if (!validateProfileName(newName)) return;
         if (oldName.equals(newName)) return;
 
         ConfigData.ProfileData profile = findProfile(oldName);
@@ -358,6 +365,12 @@ public class ConfigManager {
         if (index == -1) return null;
 
         return config.profiles.get(index);
+    }
+
+    private static boolean validateProfileName(String name) {
+        if (ConfigData.isValidProfileName(name)) return true;
+        ErrorManager.reportSystem("profile name", "Profile name must be a nonblank file name without path separators");
+        return false;
     }
 
     private static int indexOfProfile(String name) {

@@ -46,7 +46,7 @@ If several discs are playing, it returns the nearest one:
   the song ID for songs without a matching item).
 - `name`: localized song name.
 - `length`, `elapsed`, `remaining`: total, elapsed, and remaining time in seconds.
-  Playback time advances with client ticks and pauses with the game.
+  Playback time uses elapsed real time and excludes sound pauses.
 
 ```lua
 local record = lh.sound.record
@@ -237,7 +237,8 @@ an empty string and `package.loadlib` returns `nil`, an error message, and
 `"absent"`, as in Lua 5.2 builds without dynamic library support. These are
 host restrictions; this does not make the entire Cobalt interpreter Lua 5.2.
 Top-level Lua edits trigger automatic reloads; after editing a module in a
-subdirectory, reload the HUD manually.
+subdirectory, reload the HUD manually. Top-level changes are reconciled after
+150 ms without another Lua file event to avoid reloading midway through a save.
 
 ## Lua execution timeout
 
@@ -259,4 +260,4 @@ For setup instructions, please see the [Fabric Documentation page](https://docs.
 
 ## License
 
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+LuaHUD is licensed under the GNU General Public License v3. See [LICENSE](LICENSE).

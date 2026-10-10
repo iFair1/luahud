@@ -4,10 +4,14 @@ import me.ifair.luahud.error.ErrorManager;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileWatcher {
     private static final String LUA_EXTENSION = ".lua";
+    private static final long SAVE_QUIET_PERIOD_MS = 150;
 
     private final AtomicBoolean reloadNeeded = new AtomicBoolean(false);
     private WatchService watchService;
@@ -22,8 +26,6 @@ public class FileWatcher {
                 Files.createDirectories(ConfigManager.MOD_CONFIG_DIR);
             }
 
-            syncExistingFiles();
-
             watchService = FileSystems.getDefault().newWatchService();
             ConfigManager.MOD_CONFIG_DIR.register(
                     watchService,
@@ -32,12 +34,16 @@ public class FileWatcher {
                     StandardWatchEventKinds.ENTRY_DELETE
             );
 
+            syncExistingFiles();
+
             running = true;
-            watchThread = new Thread(this::runWatcher, "LuaHUD-FileWatcher");
+            WatchService service = watchService;
+            watchThread = new Thread(() -> runWatcher(service), "LuaHUD-FileWatcher");
             watchThread.setDaemon(true);
             watchThread.start();
 
         } catch (IOException e) {
+            stop();
             ErrorManager.reportSystem("file watcher", e);
         }
     }
@@ -46,6 +52,7 @@ public class FileWatcher {
     private void syncExistingFiles() {
         try (DirectoryStream<Path> files = Files.newDirectoryStream(ConfigManager.MOD_CONFIG_DIR, "*" + LUA_EXTENSION)) {
             for (Path file : files) {
+                if (!Files.isRegularFile(file)) continue;
                 String profileName = stripExtension(file.getFileName().toString());
                 if (!ConfigManager.hasProfile(profileName)) ConfigManager.addProfile(profileName);
             }
@@ -62,34 +69,35 @@ public class FileWatcher {
         }
     }
 
-    private void runWatcher() {
+    private void runWatcher(WatchService service) {
+        Set<Path> changedFiles = new LinkedHashSet<>();
+        boolean overflow = false;
         try {
             WatchKey key;
-            while (running && (key = watchService.take()) != null) {
+            while (running) {
+                key = changedFiles.isEmpty() && !overflow
+                        ? service.take() : service.poll(SAVE_QUIET_PERIOD_MS, TimeUnit.MILLISECONDS);
+                if (key == null) {
+                    synchronized (ConfigManager.class) {
+                        if (overflow) syncExistingFiles();
+                        for (Path changedFile : changedFiles) reconcileFile(changedFile);
+                    }
+                    reloadNeeded.set(true);
+                    changedFiles.clear();
+                    overflow = false;
+                    continue;
+                }
                 for (WatchEvent<?> event : key.pollEvents()) {
-                    if (event.kind() == StandardWatchEventKinds.OVERFLOW) continue;
+                    if (event.kind() == StandardWatchEventKinds.OVERFLOW) {
+                        overflow = true;
+                        continue;
+                    }
 
                     Path changedFile = (Path) event.context();
                     String fileName = changedFile.toString();
 
                     if (!fileName.endsWith(LUA_EXTENSION)) continue;
-                    String profileName = stripExtension(fileName);
-
-                    // Rename/delete rollbacks can leave stale events in the queue.
-                    // Wait for the config transaction, then check the current file state.
-                    synchronized (ConfigManager.class) {
-                        Path profileFile = ConfigManager.MOD_CONFIG_DIR.resolve(changedFile);
-                        if (event.kind() == StandardWatchEventKinds.ENTRY_DELETE) {
-                            if (Files.exists(profileFile)) continue;
-                            ConfigManager.removeProfile(profileName);
-                            reloadNeeded.set(true);
-                        } else if (Files.isRegularFile(profileFile)) {
-                            if (!ConfigManager.hasProfile(profileName)) {
-                                ConfigManager.addProfile(profileName);
-                            }
-                            reloadNeeded.set(true);
-                        }
-                    }
+                    changedFiles.add(changedFile);
                 }
                 boolean valid = key.reset();
 
@@ -97,8 +105,22 @@ public class FileWatcher {
             }
         } catch (ClosedWatchServiceException e) {
             // Here will trigger when the watcher is closed. No problem, just skip
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             ErrorManager.reportSystem("file watcher", e);
+        }
+    }
+
+    private void reconcileFile(Path changedFile) {
+        // Editors may delete and recreate a script during one save. Reconcile
+        // only after the event burst settles, preserving its profile settings.
+        String profileName = stripExtension(changedFile.toString());
+        Path profileFile = ConfigManager.MOD_CONFIG_DIR.resolve(changedFile);
+        if (Files.notExists(profileFile)) {
+            ConfigManager.removeProfile(profileName);
+        } else if (Files.isRegularFile(profileFile) && !ConfigManager.hasProfile(profileName)) {
+            ConfigManager.addProfile(profileName);
         }
     }
 

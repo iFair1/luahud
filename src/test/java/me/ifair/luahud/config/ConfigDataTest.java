@@ -5,11 +5,32 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigDataTest {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "garbage", "key.keyboard.invalid", "key.mouse.9999", "scancode.-5", "key.keyboard.9999"})
+    void invalidKeybindsNormalizeToUnbound(String binding) {
+        ConfigData.ProfileData profile = new ConfigData.ProfileData("example");
+        profile.setKeybind(binding);
+
+        assertTrue(profile.normalize());
+
+        assertEquals("key.keyboard.unknown", profile.getKeybind());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"key.keyboard.a", "key.keyboard.unknown", "key.mouse.left", "scancode.30"})
+    void validKeybindsArePreserved(String binding) {
+        assertEquals(binding, ConfigData.ProfileData.normalizeKeybind(binding));
+    }
+
     @Test
     void profilesSerializeAsAnOrderedListWithNames() {
         ConfigData config = new ConfigData();
