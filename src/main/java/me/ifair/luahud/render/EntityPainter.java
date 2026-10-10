@@ -13,6 +13,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 final class EntityPainter {
     private EntityPainter() {}
@@ -112,9 +113,25 @@ final class EntityPainter {
         Quaternionf vertical = new Quaternionf().rotateX((float) Math.toRadians(pitch));
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI)
                 .mul(vertical).rotateY((float) Math.toRadians(yaw));
-        context.addEntity(state, scale, new org.joml.Vector3f(0, entity.getHeight() / 2f, 0),
-                rotation, vertical, x, y, x + size, y + size);
+        // The deferred renderer clips to its render texture, even without a scissor.
+        // Use the screen as the viewport so heads and animated limbs can overflow
+        // the layout slot, keeping the original hitbox-based scale and position.
+        int viewportWidth = context.getScaledWindowWidth();
+        int viewportHeight = context.getScaledWindowHeight();
+        context.addEntity(state, scale,
+                viewportTranslation(x, y, size, entity.getHeight(), scale, viewportWidth, viewportHeight),
+                rotation, vertical, 0, 0, viewportWidth, viewportHeight);
         *///?}
+    }
+
+    static Vector3f viewportTranslation(
+            int x, int y, int size, float entityHeight, float scale, int viewportWidth, int viewportHeight) {
+        // Translation is applied after scaling but before rotation. Compensate
+        // for the new viewport center in model units, independent of animation.
+        return new Vector3f(
+                (x + size / 2f - viewportWidth / 2f) / scale,
+                entityHeight / 2f + (y + size / 2f - viewportHeight / 2f) / scale,
+                0);
     }
 
     private record LivingRotation(
