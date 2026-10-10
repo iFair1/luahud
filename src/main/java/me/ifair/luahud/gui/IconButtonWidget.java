@@ -44,7 +44,8 @@ public class IconButtonWidget extends ButtonWidget {
         //? if <1.21.11 {
         super.renderWidget(context, mouseX, mouseY, delta);
         //?} else {
-        /*// The base widget draws its background before calling drawIcon.
+        /*// Since 1.21.11, drawIcon must also draw the button background.
+        drawButton(context);
         *///?}
 
         GuiCompat.drawTexture(context,
