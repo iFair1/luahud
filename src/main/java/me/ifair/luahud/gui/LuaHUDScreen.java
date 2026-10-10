@@ -49,7 +49,7 @@ public class LuaHUDScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 14, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 14, 0xFFFFFFFF);
     }
 
     public void reloadProfiles() {
@@ -67,20 +67,38 @@ public class LuaHUDScreen extends Screen {
     }
 
     @Override
+    //? if <1.21.9 {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    //?} else {
+    /*public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+        int button = click.button();
+    *///?}
         if (keybindProfile != null) {
             setSelectedKeybind(InputUtil.Type.MOUSE.createFromCode(button));
             return true;
         }
+        //? if <1.21.9 {
         return super.mouseClicked(mouseX, mouseY, button);
+        //?} else {
+        /*return super.mouseClicked(click, doubled);
+        *///?}
     }
 
     @Override
+    //? if <1.21.9 {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    //?} else {
+    /*public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+        int keyCode = input.key();
+    *///?}
         if (keybindProfile != null) {
             setSelectedKeybind(keyCode == GLFW.GLFW_KEY_ESCAPE
                     ? InputUtil.UNKNOWN_KEY
+                    //? if <1.21.9 {
                     : InputUtil.fromKeyCode(keyCode, scanCode));
+                    //?} else {
+                    /*: InputUtil.fromKeyCode(input));
+                    *///?}
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE
@@ -88,7 +106,11 @@ public class LuaHUDScreen extends Screen {
                 && profileList.cancelNameEdit()) {
             return true;
         }
+        //? if <1.21.9 {
         return super.keyPressed(keyCode, scanCode, modifiers);
+        //?} else {
+        /*return super.keyPressed(input);
+        *///?}
     }
 
     private void setSelectedKeybind(InputUtil.Key key) {

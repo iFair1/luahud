@@ -27,7 +27,11 @@ public final class PlayerModule {
                     .number("z", "Z coordinate", () -> client.player.getZ())
                     .integer("health", "Current health", () -> (int) client.player.getHealth())
                     .integer("maxHealth", "Maximum health", () -> (int) client.player.getMaxHealth())
+                    //? if <1.21.9 {
                     .string("username", "Account username", () -> client.player.getGameProfile().getName())
+                    //?} else {
+                    /*.string("username", "Account username", () -> client.player.getGameProfile().name())
+                    *///?}
                     .bool("sprinting", "Whether the character is sprinting", () -> client.player.isSprinting())
                     .bool("sprintHeld", "Whether the sprint key is held", () -> client.options.sprintKey.isPressed())
                     .string("gamemode", "Current game mode", () -> gameMode(client))
@@ -39,9 +43,21 @@ public final class PlayerModule {
                     .number("food", "Food level", () -> (double) client.player.getHungerManager().getFoodLevel())
                     .number("saturation", "Saturation level", () -> (double) client.player.getHungerManager().getSaturationLevel()));
             player.namespace("armor", armor -> armor
+                    //? if <1.21.2 {
                     .number("armor", "Armor attribute", () -> attribute(client, EntityAttributes.GENERIC_ARMOR))
+                    //?} else {
+                    /*.number("armor", "Armor attribute", () -> attribute(client, EntityAttributes.ARMOR))
+                    *///?}
+                    //? if <1.21.2 {
                     .number("toughness", "Armor toughness attribute", () -> attribute(client, EntityAttributes.GENERIC_ARMOR_TOUGHNESS))
+                    //?} else {
+                    /*.number("toughness", "Armor toughness attribute", () -> attribute(client, EntityAttributes.ARMOR_TOUGHNESS))
+                    *///?}
+                    //? if <1.21.2 {
                     .number("knockbackResistance", "Explosion knockback resistance", () -> attribute(client, EntityAttributes.GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE)));
+                    //?} else {
+                    /*.number("knockbackResistance", "Explosion knockback resistance", () -> attribute(client, EntityAttributes.EXPLOSION_KNOCKBACK_RESISTANCE)));
+                    *///?}
             player.namespace("xp", xp -> xp
                     .integer("total", "Total experience points", () -> client.player.totalExperience)
                     .integer("level", "Experience level", () -> client.player.experienceLevel)

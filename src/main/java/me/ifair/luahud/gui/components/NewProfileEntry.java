@@ -27,6 +27,7 @@ public class NewProfileEntry extends ProfileListEntry {
     }
 
     @Override
+    //? if <1.21.9 {
     public void render(
             DrawContext context,
             int index,
@@ -39,6 +40,13 @@ public class NewProfileEntry extends ProfileListEntry {
             boolean hovered,
             float tickDelta
     ) {
+    //?} else {
+    /*public void render(DrawContext context, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        int x = getContentX();
+        int y = getContentY();
+        int entryWidth = getContentWidth();
+        int entryHeight = getContentHeight();
+    *///?}
         button.setPosition(x, y);
         button.render(context, mouseX, mouseY, tickDelta);
     }

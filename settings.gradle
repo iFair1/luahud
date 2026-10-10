@@ -18,10 +18,17 @@ stonecutter {
 	centralScript = 'build.gradle'
 	kotlinController = false
 	create(rootProject) {
-		versions('1.21')
+		versions('1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6', '1.21.7', '1.21.8', '1.21.9', '1.21.10', '1.21.11')
 		vcsVersion = '1.21'
 	}
 }
 
 // Should match your modid
 rootProject.name = 'luahud'
+
+// Unqualified Gradle task selectors also select matching subproject tasks.
+// Qualify our baseline shortcuts so `runClient` cannot launch every target.
+def baselineShortcuts = ['build', 'test', 'clean', 'runClient', 'generateApiDocs']
+gradle.startParameter.setTaskNames(gradle.startParameter.taskNames.collect { taskName ->
+	baselineShortcuts.contains(taskName) ? ':' + taskName : taskName
+})

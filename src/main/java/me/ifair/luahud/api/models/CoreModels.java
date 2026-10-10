@@ -110,10 +110,22 @@ public record CoreModels(
     private static ModelBuilder<AbstractHorseEntity> registerHorse(LuaApiRegistrar api, ModelBuilder<Entity> entity) {
         ModelBuilder<AbstractHorseEntity> model = api.model("Horse", AbstractHorseEntity.class);
         model.number("movementSpeed", "Effective movement-speed attribute (not blocks per second)",
+                //? if <1.21.2 {
                 value -> value.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
+                //?} else {
+                /*value -> value.getAttributeValue(EntityAttributes.MOVEMENT_SPEED));
+                *///?}
         model.number("jumpStrength", "Effective jump-strength attribute (not jump height)",
+                //? if <1.21.2 {
                 value -> value.getAttributeValue(EntityAttributes.GENERIC_JUMP_STRENGTH));
+                //?} else {
+                /*value -> value.getAttributeValue(EntityAttributes.JUMP_STRENGTH));
+                *///?}
+        //? if <1.21.5 {
         model.bool("isSaddled", "Whether a saddle is equipped", value -> value.isSaddled());
+        //?} else {
+        /*model.bool("isSaddled", "Whether a saddle is equipped", value -> !value.getEquippedStack(net.minecraft.entity.EquipmentSlot.SADDLE).isEmpty());
+        *///?}
         model.bool("isTamed", "Whether the animal is tamed", value -> value.isTame());
         model.optionalField("rider", entity.type(), "First passenger, or nil when unoccupied", Entity::getFirstPassenger);
         model.bool("hasChest", "Whether a chest is attached", value -> value instanceof AbstractDonkeyEntity donkey && donkey.hasChest());
@@ -200,7 +212,11 @@ public record CoreModels(
         if (enchantments == null || enchantments.isEmpty()) return;
         ClientWorld world = MinecraftClient.getInstance().world;
         if (world == null) throw new IllegalStateException("Cannot resolve enchantments without a loaded world");
+        //? if <1.21.2 {
         Registry<Enchantment> registry = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+        //?} else {
+        /*Registry<Enchantment> registry = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
+        *///?}
         for (Map.Entry<String, Integer> entry : enchantments.entrySet()) {
             String id = entry.getKey();
             Identifier identifier = identifier(id, "enchantment");
@@ -212,7 +228,11 @@ public record CoreModels(
 
     private static <T> T registryValue(Registry<T> registry, String id, String kind) {
         Identifier identifier = identifier(id, kind);
+        //? if <1.21.2 {
         return registry.getOrEmpty(identifier)
+        //?} else {
+        /*return registry.getOptionalValue(identifier)
+        *///?}
                 .orElseThrow(() -> new IllegalArgumentException(capitalize(kind) + " not found: " + id));
     }
 

@@ -20,18 +20,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
 
+//? if <1.21.2 {
 @Mixin(WorldRenderer.class)
+//?} else {
+/*@Mixin(net.minecraft.client.world.WorldEventHandler.class)
+*///?}
 public abstract class WorldRendererMixin implements SoundState {
     @Shadow @Final private MinecraftClient client;
-    @Shadow private ClientWorld world;
     @Shadow @Final private Map<BlockPos, SoundInstance> playingSongs;
     @Unique private final RecordTracker luahud$records = new RecordTracker();
 
     @Inject(method = "playJukeboxSong", at = @At("TAIL"))
     private void luahud$startRecord(RegistryEntry<JukeboxSong> song, BlockPos pos, CallbackInfo ci) {
+        ClientWorld world = client.world;
         if (world == null) return;
         String id = song.getKey().map(key -> key.getValue().toString())
+                //? if <1.21.2 {
                 .orElseGet(() -> song.value().soundEvent().value().getId().toString());
+                //?} else {
+                /*.orElseGet(() -> song.value().soundEvent().value().id().toString());
+                *///?}
         // Playback packets carry a song, not an item stack. Resolve the actual disc item
         // from its component instead of assuming vanilla item or sound naming conventions.
         for (var item : Registries.ITEM) {
@@ -49,10 +57,13 @@ public abstract class WorldRendererMixin implements SoundState {
         luahud$records.stop(pos);
     }
 
+    //? if <1.21.2 {
     @Inject(method = "setWorld", at = @At("HEAD"))
     private void luahud$clearRecords(ClientWorld world, CallbackInfo ci) {
         luahud$records.clear();
     }
+
+    //?}
 
     @Override
     public void luahud$setSoundPaused(boolean paused) {
@@ -61,8 +72,9 @@ public abstract class WorldRendererMixin implements SoundState {
 
     @Override
     public RecordTracker.PlayingRecord luahud$getRecord() {
+        ClientWorld world = client.world;
         if (world == null || client.player == null) return null;
-        return luahud$records.nearest(client.player.getPos(), pos -> {
+        return luahud$records.nearest(new net.minecraft.util.math.Vec3d(client.player.getX(), client.player.getY(), client.player.getZ()), pos -> {
             SoundInstance sound = playingSongs.get(pos);
             return sound != null && client.getSoundManager().isPlaying(sound);
         });

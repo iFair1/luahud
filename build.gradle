@@ -84,6 +84,13 @@ tasks.register('generateApiDocs', JavaExec) {
 }
 
 processResources {
+    def entityLightingMixins = (stonecutter.eval(stonecutter.current.version, '>=1.21.6') && stonecutter.eval(stonecutter.current.version, '<1.21.9'))
+            ? '"EntityRenderStateMixin", "EntityGuiLightingMixin",' : ''
+    inputs.property 'entity_lighting_mixins', entityLightingMixins
+    filesMatching('luahud.mixins.json') {
+        expand 'entity_lighting_mixins': entityLightingMixins
+    }
+
 	def version = project.version
 	inputs.property "version", version
 	inputs.property "minecraft_range", project.minecraft_range

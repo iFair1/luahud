@@ -60,7 +60,12 @@ public class ProfileEntry extends ProfileListEntry {
 
         this.nameField = new TextFieldWidget(client.textRenderer, 0, 0, Text.literal("Profile name")) {
             @Override
+            //? if <1.21.9 {
             public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            //?} else {
+            /*public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+                int keyCode = input.key();
+            *///?}
                 if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                     cancelNameEdit();
                     return true;
@@ -70,7 +75,11 @@ public class ProfileEntry extends ProfileListEntry {
                     applyNameEdit();
                     return true;
                 }
+                //? if <1.21.9 {
                 return super.keyPressed(keyCode, scanCode, modifiers);
+                //?} else {
+                /*return super.keyPressed(input);
+                *///?}
             }
 
             @Override
@@ -111,6 +120,7 @@ public class ProfileEntry extends ProfileListEntry {
     }
 
     @Override
+    //? if <1.21.9 {
     public void render(
             DrawContext context,
             int index,
@@ -123,6 +133,13 @@ public class ProfileEntry extends ProfileListEntry {
             boolean hovered,
             float tickDelta
     ) {
+    //?} else {
+    /*public void render(DrawContext context, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        int x = getContentX();
+        int y = getContentY();
+        int entryWidth = getContentWidth();
+        int entryHeight = getContentHeight();
+    *///?}
         int deleteX = x + entryWidth - BUTTON_SIZE;
         int downX = deleteX - GAP - BUTTON_SIZE;
         int upX = downX - GAP - BUTTON_SIZE;
@@ -156,7 +173,7 @@ public class ProfileEntry extends ProfileListEntry {
         } else {
             String name = client.textRenderer.trimToWidth(profileName, nameField.getInnerWidth());
             int textY = y + (BUTTON_SIZE - client.textRenderer.fontHeight) / 2 + LABEL_Y_OFFSET;
-            context.drawTextWithShadow(client.textRenderer, name, nameX + 4, textY, 0xFFFFFF);
+            context.drawTextWithShadow(client.textRenderer, name, nameX + 4, textY, 0xFFFFFFFF);
         }
         visibilityButton.render(context, mouseX, mouseY, tickDelta);
         keybindButton.render(context, mouseX, mouseY, tickDelta);

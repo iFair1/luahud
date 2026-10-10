@@ -1,16 +1,14 @@
 package me.ifair.luahud.api.modules;
 
-import com.mojang.brigadier.StringReader;
 import me.ifair.luahud.api.FunctionBuilder;
 import me.ifair.luahud.api.LuaApiRegistrar;
 import me.ifair.luahud.api.LuaParameter;
 import me.ifair.luahud.api.LuaType;
 import me.ifair.luahud.api.models.CoreModels;
+import me.ifair.luahud.compat.ClientCoordinates;
 import me.ifair.luahud.api.models.CoreModels.BlockView;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.command.argument.PosArgument;
-import net.minecraft.command.argument.Vec3ArgumentType;
 import net.minecraft.util.math.BlockPos;
 
 public final class FunctionsModule {
@@ -27,11 +25,8 @@ public final class FunctionsModule {
     }
 
     private static BlockPos resolveCoordinates(String value, ClientPlayerEntity player) {
-        try {
-            PosArgument argument = Vec3ArgumentType.vec3().parse(new StringReader(value));
-            return argument.toAbsoluteBlockPos(player.getCommandSource());
-        } catch (Exception error) {
-            throw new IllegalArgumentException(value + " is not a valid position", error);
-        }
+        return ClientCoordinates.resolve(value,
+                new net.minecraft.util.math.Vec3d(player.getX(), player.getY(), player.getZ()),
+                player.getRotationClient());
     }
 }

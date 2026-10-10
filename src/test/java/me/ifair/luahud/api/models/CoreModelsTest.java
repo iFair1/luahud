@@ -113,8 +113,13 @@ class CoreModelsTest {
                 LlamaEntity.class, CamelEntity.class, SkeletonHorseEntity.class, ZombieHorseEntity.class}) {
             assertTrue(models.horse().javaType().isAssignableFrom(species), species.getSimpleName());
         }
+        //? if <1.21.2 {
         assertTrue(EntityAttributes.GENERIC_MOVEMENT_SPEED.value().isTracked());
         assertTrue(EntityAttributes.GENERIC_JUMP_STRENGTH.value().isTracked());
+        //?} else {
+        /*assertTrue(EntityAttributes.MOVEMENT_SPEED.value().isTracked());
+        assertTrue(EntityAttributes.JUMP_STRENGTH.value().isTracked());
+        *///?}
         assertNull(CoreModels.horse(null));
     }
 

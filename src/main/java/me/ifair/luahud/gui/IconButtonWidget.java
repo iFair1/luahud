@@ -1,5 +1,6 @@
 package me.ifair.luahud.gui;
 
+import me.ifair.luahud.compat.GuiCompat;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
@@ -21,7 +22,7 @@ public class IconButtonWidget extends ButtonWidget {
                 y,
                 width,
                 height,
-                Text.empty(),
+                net.minecraft.text.Text.empty(),
                 onPress,
                 DEFAULT_NARRATION_SUPPLIER
         );
@@ -30,15 +31,23 @@ public class IconButtonWidget extends ButtonWidget {
     }
 
     @Override
+    //? if <1.21.11 {
     protected void renderWidget(
+    //?} else {
+    /*protected void drawIcon(
+    *///?}
             DrawContext context,
             int mouseX,
             int mouseY,
             float delta
     ) {
+        //? if <1.21.11 {
         super.renderWidget(context, mouseX, mouseY, delta);
+        //?} else {
+        /*// The base widget draws its background before calling drawIcon.
+        *///?}
 
-        context.drawTexture(
+        GuiCompat.drawTexture(context,
                 icon,
                 getX(),
                 getY(),

@@ -2,9 +2,21 @@
 
 ## Current status
 
-The build uses Stonecutter 0.9.8 and a single source tree. **Only Minecraft 1.21
-is enabled and supported.** This change establishes the build infrastructure;
-it does not port the mod to later 1.21.x or 26.x releases.
+The build uses Stonecutter 0.9.8 and a single source tree. The target matrix is
+**1.21 and every stable 1.21.x release through 1.21.11**. Each version has its own
+exact Minecraft dependency and artifact. 26.x is not enabled; all current targets
+use Java 21 bytecode and Yarn mappings.
+
+Minecraft integration differences are isolated in `compat/GuiCompat`,
+`compat/ClientCoordinates`, `render/EntityPainter` and the relevant GUI/mixin
+entry points. The Lua engine and addon API remain shared. Jukebox state is exposed
+through `ClientWorldSoundMixin`, delegating to WorldRenderer on 1.21/1.21.1 and
+WorldEventHandler on newer targets. Only 1.21.6–1.21.8 include the two deferred
+entity-lighting mixins; newer render states carry light directly.
+
+`buildAll` runs the JUnit suite for each target, including loading the mixin target
+classes and inspecting Minecraft's GPU hook. These checks do not replace visual
+in-game checks of the HUD, GUI, key bindings and sound playback before release.
 
 No Git branch per Minecraft version is needed. Features and fixes are developed
 in the root `src/` tree against 1.21. Stonecutter generates sources for the other
@@ -24,7 +36,9 @@ targets when they are added. Never edit generated `versions/*/src/` directories.
 
 The root shortcuts always select 1.21. Use an explicit project path to work on
 another target, for example `./gradlew :1.21.1:build` or
-`./gradlew :1.21.1:runClient` **after enabling that target**.
+`./gradlew :1.21.1:runClient`. The baseline keeps the root `run/` directory;
+other targets use their own run directories to avoid opening a development world
+with a different Minecraft version.
 
 Each target produces separate artifacts under `versions/<version>/build/libs/`.
 Mod versions include `+mc<version>` to distinguish artifacts, including Maven

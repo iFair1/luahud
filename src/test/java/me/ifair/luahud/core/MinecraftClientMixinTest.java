@@ -32,8 +32,13 @@ class MinecraftClientMixinTest {
         boolean usesVanillaGpuTimer = false;
         for (AbstractInsnNode instruction : render.instructions) {
             if (!(instruction instanceof MethodInsnNode call)) continue;
+            //? if <1.21.9 {
             if (call.owner.equals("net/minecraft/client/gui/hud/DebugHud")
                     && call.name.equals("shouldShowDebugHud") && call.desc.equals("()Z")) {
+            //?} else {
+            /*if (call.owner.equals("net/minecraft/client/gui/hud/debug/DebugHudProfile")
+                    && call.name.equals("isEntryVisible") && call.desc.equals("(Lnet/minecraft/util/Identifier;)Z")) {
+            *///?}
                 debugHudChecks++;
             }
             if (call.owner.equals("net/minecraft/client/gl/GlTimer") && call.name.equals("getInstance")) {

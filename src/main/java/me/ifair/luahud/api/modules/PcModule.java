@@ -55,7 +55,11 @@ public final class PcModule {
     }
 
     private static int getGpuUsage(MinecraftClient client) {
+        //? if <1.21.9 {
         if (GlTimer.getInstance().isEmpty()) return -1;
+        //?} else {
+        /*if (GlTimer.getInstance() == null) return -1;
+        *///?}
         double usage = client.getGpuUtilizationPercentage();
         if (!Double.isFinite(usage) || usage < 0) return -1;
         return (int) Math.round(Math.min(100, usage));

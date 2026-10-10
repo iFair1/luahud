@@ -4,7 +4,8 @@
 
 Minecraft **1.21** is the development baseline. Stonecutter shares the root
 `src/` tree between version projects; version-specific dependencies live in
-`versions/<minecraft>/gradle.properties`. Only 1.21 is currently enabled.
+`versions/<minecraft>/gradle.properties`. Targets cover every stable release from
+1.21 through 1.21.11; 26.x is not enabled.
 
 ```bash
 ./gradlew build            # Build and test 1.21
@@ -17,7 +18,7 @@ Minecraft **1.21** is the development baseline. Stonecutter shares the root
 Jars are written to `versions/1.21/build/libs/`, with the Minecraft version in
 the filename, for example `luahud-1.0.0+mc1.21.jar`. API documentation remains at
 `build/generated/api/api.json`. See [the multiversion guide](docs/multiversion.md)
-for porting instructions and the planned 1.21.x / 26.x workflow.
+for target commands, compatibility code and the planned 26.x workflow.
 
 ## Commands
 

@@ -5,6 +5,8 @@
     "client": [
         "MinecraftClientMixin",
         "SoundManagerMixin",
+        "ClientWorldSoundMixin",
+        ${entity_lighting_mixins}
         "WorldRendererMixin"
     ],
     "injectors": {

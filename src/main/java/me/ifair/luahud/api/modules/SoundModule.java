@@ -23,6 +23,6 @@ public final class SoundModule {
                 .value("record", LuaType.optional(record.type()),
                         LuaDoc.of("Nearest playing jukebox disc within 64 blocks, or nil"),
                         () -> client.world == null || client.player == null ? null
-                                : ((SoundState) client.worldRenderer).luahud$getRecord()));
+                                : ((SoundState) client.world).luahud$getRecord()));
     }
 }

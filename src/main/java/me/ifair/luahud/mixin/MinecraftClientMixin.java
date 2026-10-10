@@ -10,7 +10,11 @@ public abstract class MinecraftClientMixin {
     // minecraft only updates the gpu usage field when f3 is opened.
     @ModifyExpressionValue(
             method = "render(Z)V",
+            //? if <1.21.9 {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/hud/DebugHud;shouldShowDebugHud()Z"),
+            //?} else {
+            /*at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/hud/debug/DebugHudProfile;isEntryVisible(Lnet/minecraft/util/Identifier;)Z"),
+            *///?}
             require = 1,
             allow = 1
     )

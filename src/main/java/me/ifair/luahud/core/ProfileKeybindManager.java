@@ -69,11 +69,11 @@ public final class ProfileKeybindManager {
             return GLFW.glfwGetMouseButton(window, key.getCode()) == GLFW.GLFW_PRESS;
         }
         if (key.getCategory() == InputUtil.Type.KEYSYM) {
-            return InputUtil.isKeyPressed(window, key.getCode());
+            return GLFW.glfwGetKey(window, key.getCode()) == GLFW.GLFW_PRESS;
         }
         if (key.getCategory() == InputUtil.Type.SCANCODE) {
             int keysym = keysymsByScancode.computeIfAbsent(key.getCode(), ProfileKeybindManager::findKeysym);
-            return keysym != GLFW.GLFW_KEY_UNKNOWN && InputUtil.isKeyPressed(window, keysym);
+            return keysym != GLFW.GLFW_KEY_UNKNOWN && GLFW.glfwGetKey(window, keysym) == GLFW.GLFW_PRESS;
         }
         return false;
     }

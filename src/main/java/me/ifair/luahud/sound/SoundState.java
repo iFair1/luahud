@@ -1,6 +1,6 @@
 package me.ifair.luahud.sound;
 
-/** Sound state supplied by the world renderer mixin. */
+/** World-scoped jukebox state exposed by the sound tracking mixins. */
 public interface SoundState {
     RecordTracker.PlayingRecord luahud$getRecord();
 

@@ -21,8 +21,16 @@ public final class ErrorNotifications {
                     ? detail
                     : detail.substring(0, MAX_HOVER_LENGTH) + "...";
             MutableText view = Text.literal("View").formatted(Formatting.WHITE, Formatting.UNDERLINE).styled(style -> style
+                    //? if <1.21.5 {
                     .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/luahud errors " + error.id()))
+                    //?} else {
+                    /*.withClickEvent(new ClickEvent.RunCommand("/luahud errors " + error.id()))
+                    *///?}
+                    //? if <1.21.5 {
                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(preview))));
+                    //?} else {
+                    /*.withHoverEvent(new HoverEvent.ShowText(Text.literal(preview))));
+                    *///?}
             MutableText message = Text.literal("[LuaHUD] ").formatted(Formatting.RED)
                     .append(Text.literal("[" + error.phase() + "] error at " + error.source() + ": ")
                             .formatted(Formatting.WHITE))

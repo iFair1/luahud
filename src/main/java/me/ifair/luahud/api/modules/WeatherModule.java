@@ -16,6 +16,10 @@ public final class WeatherModule {
 
     private static boolean precipitation(MinecraftClient client, Biome.Precipitation expected) {
         return client.world.isRaining()
+                //? if <1.21.2 {
                 && client.world.getBiome(client.player.getBlockPos()).value().getPrecipitation(client.player.getBlockPos()) == expected;
+                //?} else {
+                /*&& client.world.getBiome(client.player.getBlockPos()).value().getPrecipitation(client.player.getBlockPos(), client.world.getSeaLevel()) == expected;
+                *///?}
     }
 }

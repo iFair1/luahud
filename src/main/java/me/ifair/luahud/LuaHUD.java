@@ -38,7 +38,11 @@ public class LuaHUD implements ClientModInitializer {
 				"Open Config Screen", // These are translation keys, but I'm very lazy now so ill put literal text like this
 				InputUtil.Type.KEYSYM,
 				GLFW.GLFW_KEY_H,
+				//? if <1.21.9 {
 				"LuaHUD"
+				//?} else {
+				/*KeyBinding.Category.create(net.minecraft.util.Identifier.of(MOD_ID, "main"))
+				*///?}
 		));
 
 		ConfigManager.load();

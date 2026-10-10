@@ -18,20 +18,16 @@ public class SlotsModule {
     public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models) {
         ModelBuilder<ItemStack> stack = models.itemStack();
         api.root().namespace("slots", slots -> slots
-                .model("head", stack, "Head armor stack", () -> inventoryStack(client, 39))
-                .model("chest", stack, "Chest armor stack", () -> inventoryStack(client, 38))
-                .model("legs", stack, "Leg armor stack", () -> inventoryStack(client, 37))
-                .model("feet", stack, "Feet armor stack", () -> inventoryStack(client, 36))
-                .model("mainHand", stack, "Main-hand stack", () -> client.player.getInventory().getMainHandStack())
+                .model("head", stack, "Head armor stack", () -> client.player.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD))
+                .model("chest", stack, "Chest armor stack", () -> client.player.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST))
+                .model("legs", stack, "Leg armor stack", () -> client.player.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS))
+                .model("feet", stack, "Feet armor stack", () -> client.player.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET))
+                .model("mainHand", stack, "Main-hand stack", () -> client.player.getMainHandStack())
                 .model("offHand", stack, "Off-hand stack", () -> client.player.getOffHandStack())
                 .value("hotbar", LuaType.list(stack.type()), LuaDoc.of("Hotbar stacks at Lua indices 1-9"),
                         () -> inventoryStacks(client, 0, PlayerInventory.getHotbarSize()))
                 .value("inventory", LuaType.list(stack.type()), LuaDoc.of("Main inventory stacks, excluding the hotbar, at Lua indices 1-27"),
                         () -> inventoryStacks(client, PlayerInventory.getHotbarSize(), PlayerInventory.MAIN_SIZE)));
-    }
-
-    private static ItemStack inventoryStack(MinecraftClient client, int slot) {
-        return client.player.getInventory().getStack(slot);
     }
 
     private static List<ItemStack> inventoryStacks(MinecraftClient client, int fromIndex, int toIndex) {

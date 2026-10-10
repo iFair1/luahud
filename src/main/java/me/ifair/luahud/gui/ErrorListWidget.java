@@ -124,7 +124,13 @@ final class ErrorListWidget extends ClickableWidget {
     }
 
     @Override
+    //? if <1.21.9 {
     public void onClick(double mouseX, double mouseY) {
+    //?} else {
+    /*public void onClick(net.minecraft.client.gui.Click click, boolean doubled) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+    *///?}
         if (isMobileDetailVisible()) {
             if (mouseY < getY() + 27) backToMobileList();
             return;
@@ -159,7 +165,12 @@ final class ErrorListWidget extends ClickableWidget {
     }
 
     @Override
+    //? if <1.21.9 {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    //?} else {
+    /*public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+        int keyCode = input.key();
+    *///?}
         if (keyCode == GLFW.GLFW_KEY_ENTER && usesCompactLayout() && this.selectedErrorId != null) {
             this.mobileDetailVisible = true;
             return true;
@@ -433,7 +444,10 @@ final class ErrorListWidget extends ClickableWidget {
 
     private static void drawPanel(DrawContext context, int x, int y, int width, int height) {
         context.fill(x, y, x + width, y + height, 0x99000000);
-        context.drawBorder(x, y, width, height, 0xFF555555);
+        context.fill(x, y, x + width, y + 1, 0xFF555555);
+        context.fill(x, y + height - 1, x + width, y + height, 0xFF555555);
+        context.fill(x, y + 1, x + 1, y + height - 1, 0xFF555555);
+        context.fill(x + width - 1, y + 1, x + width, y + height - 1, 0xFF555555);
     }
 
     private static void renderScrollbar(

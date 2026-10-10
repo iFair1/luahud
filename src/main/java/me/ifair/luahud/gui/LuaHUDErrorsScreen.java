@@ -132,10 +132,19 @@ public final class LuaHUDErrorsScreen extends Screen {
     }
 
     @Override
+    //? if <1.21.9 {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    //?} else {
+    /*public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+        int keyCode = input.key();
+    *///?}
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && this.errorBrowser != null
                 && this.errorBrowser.backToMobileList()) return true;
+        //? if <1.21.9 {
         return super.keyPressed(keyCode, scanCode, modifiers);
+        //?} else {
+        /*return super.keyPressed(input);
+        *///?}
     }
 
     @Override
