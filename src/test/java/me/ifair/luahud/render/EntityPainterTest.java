@@ -1,14 +1,54 @@
 package me.ifair.luahud.render;
 
+import net.minecraft.Bootstrap;
+import net.minecraft.SharedConstants;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.boss.dragon.EnderDragonEntity;
+import net.minecraft.entity.boss.dragon.EnderDragonPart;
+import net.minecraft.entity.decoration.EndCrystalEntity;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EntityPainterTest {
+    @Test
+    void dragonHitboxPartsRenderTheirOwner() throws Exception {
+        SharedConstants.createGameVersion();
+        Bootstrap.initialize();
+        // Only identity and ownership matter here; a real dragon constructor
+        // requires a running world and its AI infrastructure.
+        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        Unsafe unsafe = (Unsafe) unsafeField.get(null);
+        EnderDragonEntity dragon = (EnderDragonEntity) unsafe.allocateInstance(EnderDragonEntity.class);
+        EnderDragonPart part = (EnderDragonPart) unsafe.allocateInstance(EnderDragonPart.class);
+        Field owner = EnderDragonPart.class.getDeclaredField("owner");
+        owner.setAccessible(true);
+        owner.set(part, dragon);
+
+        assertSame(dragon, EntityPainter.renderEntity(part));
+        assertSame(dragon, EntityPainter.renderEntity(dragon));
+    }
+
+    @Test
+    void ordinaryEntitiesAndNullKeepTheirRenderTarget() {
+        SharedConstants.createGameVersion();
+        Bootstrap.initialize();
+        EndCrystalEntity crystal = new EndCrystalEntity(EntityType.END_CRYSTAL, null);
+
+        assertSame(crystal, EntityPainter.renderEntity(crystal));
+        assertNull(EntityPainter.renderEntity(null));
+    }
+
     @Test
     void screenViewportPreservesOriginalHitboxTransformAtEveryScaleAndRotation() {
         for (int size : new int[] {12, 24, 60, 120}) {

@@ -12,6 +12,7 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.boss.dragon.EnderDragonPart;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -21,7 +22,7 @@ final class EntityPainter {
     @SuppressWarnings("deprecation")
     static void paint(
             DrawContext context,
-            Entity entity,
+            Entity requestedEntity,
             float iconScale,
             float yaw,
             float pitch,
@@ -31,6 +32,7 @@ final class EntityPainter {
             int x,
             int y
     ) {
+        Entity entity = renderEntity(requestedEntity);
         if (entity == null || entity.isRemoved()) return;
 
         int size = RenderElementMeasurer.scaledIconSize(iconScale, sectionScale);
@@ -122,6 +124,12 @@ final class EntityPainter {
                 viewportTranslation(x, y, size, entity.getHeight(), scale, viewportWidth, viewportHeight),
                 rotation, vertical, 0, 0, viewportWidth, viewportHeight);
         *///?}
+    }
+
+    static Entity renderEntity(Entity entity) {
+        // Dragon hitbox parts share their owner's entity type, but the renderer
+        // only accepts the dragon itself. Resolve before sizing or rendering.
+        return entity instanceof EnderDragonPart part ? part.owner : entity;
     }
 
     static Vector3f viewportTranslation(
