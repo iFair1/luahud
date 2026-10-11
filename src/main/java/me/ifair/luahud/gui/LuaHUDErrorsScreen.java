@@ -40,6 +40,7 @@ public final class LuaHUDErrorsScreen extends Screen {
     private ButtonWidget profileButton;
     private ButtonWidget systemButton;
     private ButtonWidget copyButton;
+    private ButtonWidget dismissButton;
     private long displayedRevision;
 
     public LuaHUDErrorsScreen(@Nullable Screen parent, @Nullable Long selectedErrorId) {
@@ -97,21 +98,25 @@ public final class LuaHUDErrorsScreen extends Screen {
             this.query = value;
             this.errorBrowser.setFilter(this.filter, value);
             this.selectedErrorId = this.errorBrowser.selectedErrorId();
-            updateCopyButton();
+            updateSelectionButtons();
         });
 
         int footerY = this.height - 28;
-        int buttonWidth = Math.min(126, Math.max(88, (contentWidth - 8) / 2));
+        int buttonWidth = Math.min(126, Math.max(1, (contentWidth - 16) / 3));
         this.copyButton = this.addDrawableChild(ButtonWidget.builder(
                         Text.literal("Copy details"), button -> copySelectedError())
                 .dimensions(contentX, footerY, buttonWidth, 20)
+                .build());
+        this.dismissButton = this.addDrawableChild(ButtonWidget.builder(
+                        Text.literal("Dismiss"), button -> dismissSelectedError())
+                .dimensions(contentX + buttonWidth + 8, footerY, buttonWidth, 20)
                 .build());
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> this.close())
                 .dimensions(contentX + contentWidth - buttonWidth, footerY, buttonWidth, 20)
                 .build());
 
         updateFilterButtons();
-        updateCopyButton();
+        updateSelectionButtons();
     }
 
     @Override
@@ -158,7 +163,7 @@ public final class LuaHUDErrorsScreen extends Screen {
                     this.errorBrowser.setFilter(target, this.query);
                     this.selectedErrorId = this.errorBrowser.selectedErrorId();
                     updateFilterButtons();
-                    updateCopyButton();
+                    updateSelectionButtons();
                 })
                 .dimensions(x, y, width, 20)
                 .build();
@@ -167,7 +172,7 @@ public final class LuaHUDErrorsScreen extends Screen {
     private void selectError(@Nullable Long id) {
         this.selectedErrorId = id;
         if (this.copyButton != null) this.copyButton.setMessage(Text.literal("Copy details"));
-        updateCopyButton();
+        updateSelectionButtons();
     }
 
     private void updateFilterButtons() {
@@ -177,8 +182,16 @@ public final class LuaHUDErrorsScreen extends Screen {
         this.systemButton.active = this.filter != ErrorListWidget.Filter.SYSTEM;
     }
 
-    private void updateCopyButton() {
-        if (this.copyButton != null) this.copyButton.active = currentSelection() != null;
+    private void updateSelectionButtons() {
+        boolean hasSelection = currentSelection() != null;
+        if (this.copyButton != null) this.copyButton.active = hasSelection;
+        if (this.dismissButton != null) this.dismissButton.active = hasSelection;
+    }
+
+    private void dismissSelectedError() {
+        if (this.selectedErrorId == null) return;
+        ErrorManager.dismiss(this.selectedErrorId);
+        this.clearAndInit();
     }
 
     private void copySelectedError() {

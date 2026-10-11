@@ -58,6 +58,23 @@ public final class ErrorManager {
         return findMutable(id).map(MutableError::snapshot);
     }
 
+    public static synchronized boolean dismiss(long id) {
+        boolean removed = systemGroup.entries.values().removeIf(error -> error.id == id);
+        if (!removed) {
+            for (ErrorGroup group : profileGroups.values()) {
+                if (group.entries.values().removeIf(error -> error.id == id)) {
+                    removed = true;
+                    break;
+                }
+            }
+        }
+        if (!removed) return false;
+
+        pendingNotifications.removeIf(pendingId -> pendingId == id);
+        structureRevision++;
+        return true;
+    }
+
     public static synchronized List<ErrorEntry> drainNotifications() {
         List<ErrorEntry> result = new ArrayList<>();
         while (!pendingNotifications.isEmpty()) {
