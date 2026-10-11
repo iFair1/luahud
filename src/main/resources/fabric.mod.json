@@ -16,10 +16,10 @@
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-			"me.ifair.luahud.LuaHUD"
+			"dev.ifair.luahud.LuaHUD"
 		],
 		"modmenu": [
-			"me.ifair.luahud.ModMenuIntegration"
+			"dev.ifair.luahud.ModMenuIntegration"
 		]
 	},
 	"mixins": [

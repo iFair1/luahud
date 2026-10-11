@@ -73,7 +73,7 @@ tasks.register('generateApiDocs', JavaExec) {
 	description = 'Export the built-in Lua API as JSON for the documentation site.'
 	dependsOn tasks.named('documentationClasses')
 	classpath = sourceSets.documentation.runtimeClasspath
-	mainClass = 'me.ifair.luahud.api.core.DocumentationExportLauncher'
+	mainClass = 'dev.ifair.luahud.api.core.DocumentationExportLauncher'
 	def outputFile = project.name == '1.21'
 			? rootProject.layout.buildDirectory.file('generated/api/api.json')
 			: layout.buildDirectory.file('generated/api/api.json')
