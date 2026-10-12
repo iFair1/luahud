@@ -77,7 +77,8 @@ class StubGeneratorTest {
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@overload fun(event: \"damage\", callback: fun(event: example_addon_Damage))"));
         assertTrue(stub.contains("---@overload fun(event: \"reload\", callback: fun())"));
-        assertTrue(stub.contains("---@param event \"damage\" | \"reload\""));
+        assertTrue(stub.contains("---@param event string Registered event name"));
+        assertFalse(stub.contains("---@param event \""));
     }
 
     private static ApiRegistry fixture() {

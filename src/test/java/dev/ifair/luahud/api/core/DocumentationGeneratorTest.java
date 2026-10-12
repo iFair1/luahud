@@ -42,8 +42,8 @@ class DocumentationGeneratorTest {
         assertEquals("a", parameters.get(1).getAsJsonObject().get("name").getAsString());
         assertTrue(parameters.get(1).getAsJsonObject().get("optional").getAsBoolean());
         JsonObject on = find(document.getAsJsonArray("functions"), "path", "lh.on");
-        assertEquals(3, on.getAsJsonArray("parameters").get(0).getAsJsonObject()
-                .getAsJsonObject("type").getAsJsonArray("alternatives").size());
+        assertEquals("string", on.getAsJsonArray("parameters").get(0).getAsJsonObject()
+                .getAsJsonObject("type").get("kind").getAsString());
     }
 
     @Test void recursiveModelsAndInputTablesUseResolvableStubNames() {

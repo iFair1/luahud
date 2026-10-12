@@ -88,12 +88,6 @@ public final class ApiRegistry {
 
     public void freeze() {
         mutable();
-        Node on = root.children.get("on");
-        if (on instanceof FunctionNode function && function.special == SpecialFunction.EVENT && !events.isEmpty()) {
-            LuaType<?>[] names = events.keySet().stream().sorted().map(LuaType::literal).toArray(LuaType<?>[]::new);
-            LuaType<?> eventNames = names.length == 1 ? names[0] : LuaType.union(names);
-            function.parameters.set(0, new LuaParameter<>(function, 0, "event", eventNames, LuaDoc.of("Registered event name")));
-        }
         validate(root, "lh");
         models.forEach(ModelBuilder::freeze);
         frozen = true;
