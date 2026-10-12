@@ -25,7 +25,13 @@ public class ConfigInstaller {
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
             final String profileDir = source + "lua/";
-            copyFromResourceIfAbsent(profileDir + "Example Profile.lua", MOD_CONFIG_DIR);
+            copyFromResourceIfAbsent(profileDir + "Welcome Profile.lua", MOD_CONFIG_DIR);
+            if (Files.isRegularFile(MOD_CONFIG_DIR.resolve("Welcome Profile.lua"))
+                    && !ConfigManager.hasProfile("Welcome Profile")) {
+                ConfigData.ProfileData welcome = new ConfigData.ProfileData("Welcome Profile");
+                welcome.setKeybind("key.keyboard.j");
+                ConfigManager.addProfile(welcome.getName(), welcome);
+            }
             // other default profiles will come here
 
             ConfigManager.setGenerateExampleProfiles(false);

@@ -35,7 +35,11 @@ public class ConfigManager {
     public static synchronized void load() {
         boolean saveNormalizedConfig = false;
         if (Files.notExists(JSON_CONFIG)) {
-            ConfigInstaller.generateDefaults();
+            config = new ConfigData();
+            save();
+            profileRevision++;
+            profileKeybindRevision++;
+            return;
         }
 
         try (BufferedReader reader = Files.newBufferedReader(JSON_CONFIG)) {
