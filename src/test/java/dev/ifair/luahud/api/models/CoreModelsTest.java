@@ -62,6 +62,33 @@ class CoreModelsTest {
         assertEquals(0, result.get().getDuration());
     }
 
+    @Test void statusEffectExposesAndAcceptsShownParticles() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        CoreModels models = CoreModels.register(api);
+        AtomicReference<StatusEffectInstance> result = new AtomicReference<>();
+        var capture = api.root().function("capture", LuaType.nil(), "");
+        var argument = capture.parameter("effect", models.statusEffect().inputType(), "");
+        capture.call(args -> { result.set(args.get(argument)); return null; });
+        api.root().value("effect", models.statusEffect().type(), LuaDoc.NONE,
+                () -> new StatusEffectInstance(StatusEffects.SPEED, 200, 0, true, false, false));
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+
+        runtime.execute("assert(lh.effect.showParticles == false); lh.capture({id='minecraft:speed'})", "default-particles");
+        assertTrue(result.get().shouldShowParticles());
+        runtime.execute("lh.capture({id='minecraft:speed', showParticles=false})", "hidden-particles");
+        assertFalse(result.get().shouldShowParticles());
+        runtime.execute("effect=lh.effect; effect.durationInSeconds=3; lh.capture(effect)", "preserved-particles");
+        assertFalse(result.get().shouldShowParticles());
+        runtime.execute("effect.showParticles=true; assert(effect.showParticles == true); lh.capture(effect)", "visible-particles");
+        assertTrue(result.get().shouldShowParticles());
+        assertTrue(result.get().isAmbient());
+        assertFalse(result.get().shouldShowIcon());
+        assertTrue(StubGenerator.generate(registry).contains("---@field showParticles boolean"));
+    }
+
     @Test void explicitSecondsOverrideLazySourceTicks() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");
