@@ -65,6 +65,21 @@ class StubGeneratorTest {
         assertTrue(stub.contains("---@return (fixture_Value | fixture_ValueInput)?"));
     }
 
+    @Test void eventOverloadsDescribeAddonModelsAndNoArgumentCallbacks() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("example-addon");
+        var model = api.model("Damage", String.class);
+        model.string("attacker", "", value -> value);
+        api.event("damage", model.type(), "Damage payload");
+        api.event("reload", "");
+        registry.addEventFunctions();
+        registry.freeze();
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@overload fun(event: \"damage\", callback: fun(event: example_addon_Damage))"));
+        assertTrue(stub.contains("---@overload fun(event: \"reload\", callback: fun())"));
+        assertTrue(stub.contains("---@param event \"damage\" | \"reload\""));
+    }
+
     private static ApiRegistry fixture() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").root().namespace("example", table -> {

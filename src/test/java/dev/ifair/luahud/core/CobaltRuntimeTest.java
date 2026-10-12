@@ -306,7 +306,12 @@ class CobaltRuntimeTest {
     }
 
     @Test void eventsTimersReloadAndSafeLibrariesWork() throws Exception {
-        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
+        registry.addEventFunctions();
+        registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
         runtime.execute("ticks=0; intervals=0; lh.on('tick', function() ticks=ticks+1 end); lh.setInterval(2,'ticks',function() intervals=intervals+1 end); unsafe=(io~=nil or os~=nil or debug~=nil or luajava~=nil)", "callbacks");
         runtime.fireEvent("tick"); runtime.tickTimers(); runtime.tickTimers();
@@ -407,6 +412,9 @@ class CobaltRuntimeTest {
 
     private static ApiRegistry watchdogRegistry(AtomicInteger clock) {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
         registry.addEventFunctions();
         registry.registrar("fixture").root().function("expire", LuaType.nil(), "")
                 .call(arguments -> {
@@ -419,7 +427,12 @@ class CobaltRuntimeTest {
 
     @Test void callbackErrorsKeepProfileProvenanceAndDeduplicate() throws Exception {
         ErrorManager.beginProfileReload();
-        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
+        registry.addEventFunctions();
+        registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
         runtime.execute(new java.io.ByteArrayInputStream(
                         "lh.on('tick', function() error('target is nil') end)".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
@@ -440,15 +453,20 @@ class CobaltRuntimeTest {
 
     @Test void callbacksRegisteredInsideCallbacksInheritProfile() throws Exception {
         ErrorManager.beginProfileReload();
-        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
+        registry.addEventFunctions();
+        registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
         runtime.execute(new java.io.ByteArrayInputStream(
-                        "lh.on('tick', function() lh.on('later', function() error('nested') end) end)"
+                        "lh.on('tick', function() lh.on('render', function() error('nested') end) end)"
                                 .getBytes(java.nio.charset.StandardCharsets.UTF_8)),
                 "@Nested.lua", "Nested");
 
         runtime.fireEvent("tick");
-        runtime.fireEvent("later");
+        runtime.fireEvent("render");
 
         assertTrue(ErrorManager.snapshot().stream()
                 .anyMatch(entry -> entry.group().equals("Nested") && entry.message().contains("nested")));
@@ -456,7 +474,12 @@ class CobaltRuntimeTest {
 
     @Test void repeatedCallbackErrorsDoNotPoisonOtherProfilesOrGrowTheTraceback() throws Exception {
         ErrorManager.beginProfileReload();
-        ApiRegistry registry = new ApiRegistry(ignored -> {}); registry.addEventFunctions(); registry.freeze();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
+        registry.addEventFunctions();
+        registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
         runtime.execute(new java.io.ByteArrayInputStream(
                         "lh.on('tick', function() error('target is nil') end)"
@@ -477,5 +500,74 @@ class CobaltRuntimeTest {
         assertFalse(error.message().contains("stack overflow"));
         assertEquals(1, ErrorManager.snapshot().stream()
                 .filter(entry -> entry.group().equals("Broken")).count());
+    }
+    private record Damage(String attacker, double amount) {}
+
+    @Test void eventModelsReachEachListenerAsOneIndependentArgument() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        var model = api.model("Damage", Damage.class);
+        model.string("attacker", "", Damage::attacker);
+        model.number("amount", "", Damage::amount);
+        var event = api.event("damage", model.type(), "Damage payload");
+        api.event("tick", "");
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        runtime.execute("lh.on('damage', function(...) assert(select('#', ...)==1); "
+                + "local damage=...; first=damage.amount; damage.amount=999 end); "
+                + "lh.on('damage', function(damage) second=damage.amount; attacker=damage.attacker end); "
+                + "lh.on('tick', function(...) tickArgs=select('#', ...) end)", "listeners");
+        runtime.fireEvent(event, new Damage("player", 6.0));
+        assertEquals(6.0, runtime.global("first").checkDouble());
+        assertEquals(6.0, runtime.global("second").checkDouble());
+        assertEquals("player", runtime.global("attacker").checkString());
+        runtime.fireEvent("damage", new Damage("another", 3.0));
+        assertEquals(3.0, runtime.global("second").checkDouble());
+        runtime.fireEvent("tick");
+        assertEquals(0, runtime.global("tickArgs").checkInteger());
+    }
+
+    @Test void unknownEventsAndIncorrectPublicationPayloadsAreRejected() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("fixture").event("count", LuaType.integer(), "");
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        LuaError error = assertThrows(LuaError.class,
+                () -> runtime.execute("lh.on('init', function() end)", "removed-event"));
+        assertTrue(error.getMessage().contains("Unknown event: init"));
+        assertThrows(IllegalArgumentException.class, () -> runtime.fireEvent("missing"));
+        assertThrows(IllegalArgumentException.class, () -> runtime.fireEvent("count", "wrong"));
+        assertThrows(IllegalArgumentException.class, () -> runtime.fireEvent("count"));
+    }
+    @Test void nestedJavaPublicationsDoNotExtendTheOuterWatchdogDeadline() throws Exception {
+        AtomicInteger clock = new AtomicInteger();
+        AtomicReference<CobaltRuntime> current = new AtomicReference<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        api.event("outer", "");
+        api.event("inner", "");
+        api.root().function("emit", LuaType.nil(), "").call(arguments -> {
+            clock.set(24);
+            current.get().fireEvent("inner");
+            clock.set(26);
+            return null;
+        });
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 25, () -> clock.get() * 1_000_000L);
+        current.set(runtime);
+        runtime.start();
+        runtime.execute("outerCalls=0; innerCalls=0; "
+                + "lh.on('outer', function() outerCalls=outerCalls+1; lh.emit() end); "
+                + "lh.on('inner', function() innerCalls=innerCalls+1 end)", "nested");
+        runtime.fireEvent("outer");
+        clock.set(0);
+        runtime.fireEvent("outer");
+        assertEquals(1, runtime.global("outerCalls").checkInteger());
+        assertEquals(1, runtime.global("innerCalls").checkInteger());
     }
 }

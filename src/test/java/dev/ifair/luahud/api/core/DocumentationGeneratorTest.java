@@ -23,6 +23,9 @@ class DocumentationGeneratorTest {
         function.parameter("z", LuaType.integer(), "First");
         function.parameter("a", LuaType.optional(LuaType.string()), "Second");
         function.call(args -> { throw new AssertionError("Must not invoke functions"); });
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
         registry.addEventFunctions();
         registry.freeze();
 
@@ -39,7 +42,7 @@ class DocumentationGeneratorTest {
         assertEquals("a", parameters.get(1).getAsJsonObject().get("name").getAsString());
         assertTrue(parameters.get(1).getAsJsonObject().get("optional").getAsBoolean());
         JsonObject on = find(document.getAsJsonArray("functions"), "path", "lh.on");
-        assertEquals(2, on.getAsJsonArray("parameters").get(0).getAsJsonObject()
+        assertEquals(3, on.getAsJsonArray("parameters").get(0).getAsJsonObject()
                 .getAsJsonObject("type").getAsJsonArray("alternatives").size());
     }
 
@@ -85,6 +88,23 @@ class DocumentationGeneratorTest {
         ApiRegistry withoutAddon = new ApiRegistry(ignored -> {});
         withoutAddon.freeze();
         assertFalse(DocumentationGenerator.generate(withoutAddon).contains("lh.addonCount"));
+    }
+
+    @Test void eventMetadataIncludesProviderAndResolvablePayloadTypes() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("addon");
+        var model = api.model("Damage", String.class);
+        model.string("attacker", "", value -> value);
+        api.event("damage", model.type(), "Damage details");
+        api.event("reload", "Reloaded");
+        registry.addEventFunctions();
+        registry.freeze();
+        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
+        JsonObject damage = find(document.getAsJsonArray("events"), "name", "damage");
+        assertEquals("addon", damage.get("providerId").getAsString());
+        assertTrue(damage.get("hasPayload").getAsBoolean());
+        assertEquals("addon_Damage", damage.getAsJsonObject("payloadType").get("display").getAsString());
+        assertFalse(find(document.getAsJsonArray("events"), "name", "reload").get("hasPayload").getAsBoolean());
     }
 
     private static JsonObject find(JsonArray values, String key, String expected) {

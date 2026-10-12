@@ -26,6 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RenderModuleTest {
     @Test void sectionStateDoesNotLeakBetweenProfileCallbacks() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
         registry.addEventFunctions();
         var api = registry.registrar("luahud");
         RenderModule.register(api, CoreModels.register(api));

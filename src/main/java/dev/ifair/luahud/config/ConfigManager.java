@@ -51,7 +51,8 @@ public class ConfigManager {
                     || !ConfigData.isValidProfileName(profile.getName()));
             saveNormalizedConfig = document == null
                     || !document.isJsonObject()
-                    || !document.getAsJsonObject().has("luaTimeoutMs");
+                    || !document.getAsJsonObject().has("luaTimeoutMs")
+                    || !document.getAsJsonObject().has("sectionDurationClock");
             saveNormalizedConfig |= config.normalize();
             saveNormalizedConfig |= removedProfiles;
             for (ConfigData.ProfileData profile : config.profiles) {
@@ -112,6 +113,7 @@ public class ConfigManager {
         copy.showHiddenFiles = config.showHiddenFiles;
         copy.generateExampleProfiles = config.generateExampleProfiles;
         copy.luaTimeoutMs = config.luaTimeoutMs;
+        copy.sectionDurationClock = config.sectionDurationClock;
         config.profiles.forEach(profile -> copy.profiles.add(profile.copy()));
         return copy;
     }
@@ -133,6 +135,7 @@ public class ConfigManager {
     public static synchronized boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
     public static synchronized boolean isGenerateExampleProfilesEnabled() { return config.generateExampleProfiles; }
     public static synchronized int getLuaTimeoutMs() { return config.luaTimeoutMs; }
+    public static synchronized String getSectionDurationClock() { return config.sectionDurationClock; }
     public static synchronized List<ConfigData.ProfileData> getProfiles() {
         List<ConfigData.ProfileData> snapshot = new ArrayList<>();
         config.profiles.forEach(profile -> snapshot.add(profile.copy()));

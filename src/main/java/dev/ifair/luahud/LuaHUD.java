@@ -70,9 +70,8 @@ public class LuaHUD implements ClientModInitializer {
 			handleKeybinds(client);
 			engine.checkForUpdates();
 			if (!engine.isReady()) return;
+			if (!client.isPaused()) RenderBuffer.tickClock();
 			TimerManager.tick();
-
-			RenderBuffer.clear();
 			EventDispatcher.fireEvent("tick");
 		});
 
@@ -80,6 +79,8 @@ public class LuaHUD implements ClientModInitializer {
 			MinecraftClient client = MinecraftClient.getInstance();
 
 			if (!engine.isReady()) return;
+
+			EventDispatcher.fireEvent("render");
 
 			// Java does the drawing
 			int width = client.getWindow().getScaledWidth();

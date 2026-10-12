@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.ifair.luahud.api.LuaParameter;
+import dev.ifair.luahud.api.EventType;
 import dev.ifair.luahud.api.LuaType;
 import dev.ifair.luahud.api.ModelBuilder;
 
@@ -34,6 +35,17 @@ public final class DocumentationGenerator {
         document.add("namespaces", namespaces);
         document.add("properties", properties);
         document.add("functions", functions);
+        JsonArray events = new JsonArray();
+        registry.events().stream().sorted(Comparator.comparing(EventType::name)).forEach(event -> {
+            JsonObject item = new JsonObject();
+            item.addProperty("name", event.name());
+            item.addProperty("providerId", event.providerId());
+            item.addProperty("description", event.doc().description());
+            item.addProperty("hasPayload", event.hasPayload());
+            item.add("payloadType", type(event.payloadType(), event.providerId(), context, false));
+            events.add(item);
+        });
+        document.add("events", events);
 
         JsonArray types = new JsonArray();
         context.namedTypes.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(entry -> {

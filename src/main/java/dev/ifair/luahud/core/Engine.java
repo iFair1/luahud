@@ -1,6 +1,7 @@
 package dev.ifair.luahud.core;
 
 import dev.ifair.luahud.LuaHUD;
+import dev.ifair.luahud.api.EventType;
 import dev.ifair.luahud.api.core.ApiRegistry;
 import dev.ifair.luahud.api.modules.RenderModule;
 import dev.ifair.luahud.config.ConfigData;
@@ -19,6 +20,7 @@ import java.util.function.Supplier;
 
 public final class Engine {
     private final BooleanSupplier inWorld;
+    private final ApiRegistry registry;
     private final Supplier<CobaltRuntime> runtimeFactory;
     private final Consumer<Engine> profileLoader;
     private final BooleanSupplier reloadRequested;
@@ -29,13 +31,16 @@ public final class Engine {
     private CobaltRuntime runtime;
 
     public Engine(ApiRegistry registry) {
+        this.registry = registry;
         scriptsDirectory = ConfigManager::getScriptsDir;
         inWorld = () -> {
             MinecraftClient client = MinecraftClient.getInstance();
             return client.world != null && client.player != null;
         };
-        runtimeFactory = () -> new CobaltRuntime(
-                registry, RenderModule::resetSection, ConfigManager.getLuaTimeoutMs());
+        runtimeFactory = () -> {
+            RenderBuffer.configureClock("gameTime".equals(ConfigManager.getSectionDurationClock()));
+            return new CobaltRuntime(registry, RenderModule::resetSection, ConfigManager.getLuaTimeoutMs());
+        };
         profileLoader = engine -> {
             for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) {
                 if (profile.isActive()) engine.runProfile(profile.getName());
@@ -50,6 +55,7 @@ public final class Engine {
 
     Engine(BooleanSupplier inWorld, Supplier<CobaltRuntime> runtimeFactory,
            Consumer<Engine> profileLoader, BooleanSupplier reloadRequested) {
+        this.registry = null;
         this.inWorld = inWorld;
         this.runtimeFactory = runtimeFactory;
         this.profileLoader = profileLoader;
@@ -75,7 +81,7 @@ public final class Engine {
             return;
         }
         profileLoader.accept(this);
-        fireEvent("init");
+        fireEvent("reload");
     }
 
     public void runProfile(String name) { runScript(ConfigManager.getScriptsDir().resolve(name + ".lua"), name); }
@@ -119,7 +125,22 @@ public final class Engine {
     }
 
     public boolean isReady() { return inWorld.getAsBoolean() && runtime != null && runtime.isReady(); }
-    public void fireEvent(String event) { if (isReady()) runtime.fireEvent(event); }
+    public void fireEvent(String event) { fireEvent(event, null); }
+    public void fireEvent(String event, Object payload) {
+        if (registry != null) registry.validateEvent(registry.event(event), payload);
+        if (isReady()) runtime.fireEvent(event, payload);
+    }
+    public void fireEvent(EventType<Void> event) { fireEvent(event, null); }
+    public <T> void fireEvent(EventType<T> event, T payload) {
+        if (registry != null) registry.validateEvent(event, payload);
+        if (isReady()) runtime.fireEvent(event, payload);
+    }
+    public void validateEvent(String event, Object payload) {
+        if (registry != null) registry.validateEvent(registry.event(event), payload);
+    }
+    public void validateEvent(EventType<?> event, Object payload) {
+        if (registry != null) registry.validateEvent(event, payload);
+    }
     public void tickTimers() { if (isReady()) runtime.tickTimers(); }
     public void shutdown() {
         fileWatcher.stop();

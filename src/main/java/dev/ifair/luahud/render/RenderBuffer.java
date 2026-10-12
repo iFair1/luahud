@@ -6,6 +6,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 
+import java.util.List;
+
 public final class RenderBuffer {
     private static final RenderQueue QUEUE = new RenderQueue();
     private static final RenderLayoutEngine LAYOUT_ENGINE = new RenderLayoutEngine();
@@ -18,6 +20,27 @@ public final class RenderBuffer {
 
     public static void clear() {
         QUEUE.clear();
+        invalidateLayout();
+    }
+
+    public static void configureClock(boolean gameTime) {
+        QUEUE.configureClock(gameTime);
+        invalidateLayout();
+    }
+
+    public static void tickClock() { QUEUE.tickClock(); }
+
+    public static void beginInvocation(Object owner) {
+        QUEUE.beginInvocation(owner);
+        invalidateLayout();
+    }
+
+    public static void endInvocation() { QUEUE.endInvocation(); }
+
+    public static void selectDefault(SectionLayout layout) { QUEUE.selectDefault(layout); }
+
+    public static void beginSection(SectionLayout layout, String id, Double duration) {
+        QUEUE.beginSection(layout, id, duration);
         invalidateLayout();
     }
 
@@ -105,6 +128,7 @@ public final class RenderBuffer {
     }
 
     public static void renderAll(DrawContext context, TextRenderer textRenderer, int screenWidth, int screenHeight) {
+        if (QUEUE.expire()) invalidateLayout();
         if (cachedLayout == null
                 || cachedTextRenderer != textRenderer
                 || cachedScreenWidth != screenWidth
@@ -121,6 +145,8 @@ public final class RenderBuffer {
         }
         RenderPainter.paint(context, textRenderer, cachedLayout);
     }
+
+    static List<RenderSection> sections() { return QUEUE.sections(); }
 
     private static void invalidateLayout() {
         cachedLayout = null;

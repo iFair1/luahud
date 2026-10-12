@@ -207,6 +207,9 @@ class LuaModulesTest {
 
     private CobaltRuntime runtime() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
         registry.addEventFunctions();
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry);

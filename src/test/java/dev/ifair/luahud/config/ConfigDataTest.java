@@ -75,4 +75,18 @@ class ConfigDataTest {
         config.normalize();
         assertEquals(ConfigData.DEFAULT_LUA_TIMEOUT_MS, config.luaTimeoutMs);
     }
+    @Test void durationClockDefaultsAndNormalizesInvalidValues() {
+        Gson gson = new Gson();
+        assertEquals("realTime", gson.fromJson("{}", ConfigData.class).sectionDurationClock);
+        ConfigData config = new ConfigData();
+        config.sectionDurationClock = "gameTime";
+        config.normalize();
+        assertEquals("gameTime", config.sectionDurationClock);
+        config.sectionDurationClock = "invalid";
+        assertTrue(config.normalize());
+        assertEquals("realTime", config.sectionDurationClock);
+        config.sectionDurationClock = null;
+        assertTrue(config.normalize());
+        assertEquals("realTime", config.sectionDurationClock);
+    }
 }

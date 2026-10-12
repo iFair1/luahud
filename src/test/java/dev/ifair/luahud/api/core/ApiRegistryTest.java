@@ -1,6 +1,9 @@
 package dev.ifair.luahud.api.core;
 
 import dev.ifair.luahud.api.LuaApiRegistrar;
+import dev.ifair.luahud.api.LuaType;
+import dev.ifair.luahud.api.EventType;
+import java.util.concurrent.atomic.AtomicReference;
 import dev.ifair.luahud.api.ModelBuilder;
 import org.junit.jupiter.api.Test;
 
@@ -63,5 +66,44 @@ class ApiRegistryTest {
         ModelBuilder<String> child = api.model("Child", String.class).include(base);
         child.string("value", "", value -> value);
         assertEquals(List.of("length", "value"), child.fields().stream().map(ModelBuilder.Field::name).toList());
+    }
+    @Test void eventsMergeButConflictingAndRolledBackHandlesCannotPublish() {
+        List<String> warnings = new ArrayList<>();
+        ApiRegistry registry = new ApiRegistry(warnings::add);
+        var first = registry.registrar("core").event("damage", LuaType.number(), "Damage");
+        AtomicReference<EventType<String>> duplicate = new AtomicReference<>();
+        registry.registerAddon("addon", api -> {
+            duplicate.set(api.event("damage", LuaType.string(), "Conflict"));
+            api.event("addonEvent", "");
+        });
+        AtomicReference<EventType<Void>> rolledBack = new AtomicReference<>();
+        assertThrows(IllegalStateException.class, () -> registry.registerAddon("broken", api -> {
+            rolledBack.set(api.event("partial", ""));
+            throw new IllegalStateException("failed contribution");
+        }));
+        registry.freeze();
+        assertSame(first, registry.event("damage"));
+        registry.validateEvent(first, 2.5);
+        assertEquals(2, registry.events().size());
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(duplicate.get(), "wrong"));
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(rolledBack.get(), null));
+        assertTrue(warnings.getFirst().contains("addon"));
+        assertTrue(warnings.getFirst().contains("damage"));
+    }
+
+    @Test void lateEventRegistrationInvalidNamesAndWrongPayloadsAreRejected() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        var event = api.event("count", LuaType.integer(), "");
+        var empty = api.event("empty", "");
+        assertThrows(IllegalArgumentException.class, () -> api.event("", ""));
+        registry.freeze();
+        assertThrows(IllegalStateException.class, () -> api.event("late", ""));
+        assertThrows(IllegalArgumentException.class, () -> registry.event("missing"));
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(event, "wrong"));
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(event, null));
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(empty, 1));
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(
+                new EventType<>("count", "fixture", LuaType.integer(), dev.ifair.luahud.api.LuaDoc.NONE), 1));
     }
 }

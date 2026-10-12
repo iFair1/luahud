@@ -2,6 +2,8 @@ package dev.ifair.luahud.core;
 
 import dev.ifair.luahud.api.*;
 import dev.ifair.luahud.api.core.ApiRegistry;
+import dev.ifair.luahud.api.modules.RenderModule;
+import dev.ifair.luahud.render.RenderBuffer;
 import dev.ifair.luahud.error.ErrorManager;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -39,6 +41,7 @@ public final class CobaltRuntime {
     private final LongSupplier nanoTime;
     private final Map<String, List<Callback>> listeners = new HashMap<>();
     private final List<Timer> timers = new ArrayList<>();
+    private final Map<String, Object> loadOwners = new HashMap<>();
     // Keep model metadata owned by each Lua table so unreachable tables remain collectible.
     private final LuaValue modelValueKey = new LuaUserdata(new Object());
     private final CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder()
@@ -51,6 +54,7 @@ public final class CobaltRuntime {
     private long watchdogDeadline;
 
     private record ModelValue(Supplier<Object> supplier, ModelBuilder<Object> model) {}
+    private record WatchdogState(boolean active, boolean timedOut, long deadline) {}
 
     public CobaltRuntime(ApiRegistry registry) {
         this(registry, () -> {}, DEFAULT_TIMEOUT_MS);
@@ -78,7 +82,9 @@ public final class CobaltRuntime {
     }
 
     public void start(Path scriptsDirectory) throws LuaError {
-        listeners.clear(); timers.clear();
+        listeners.clear(); timers.clear(); loadOwners.clear();
+        RenderBuffer.clear();
+        RenderModule.resetSection();
         state = new LuaState();
         if (timeoutMs > 0) {
             state.getMainThread().getDebugState().setHook(new WatchdogHook(), false, false, false,
@@ -103,9 +109,10 @@ public final class CobaltRuntime {
         ready();
         String previousProfile = currentProfile;
         currentProfile = profile;
+        RenderModule.beginInvocation(loadOwners.computeIfAbsent(profile, ignored -> new Object()));
         try {
             invocationBoundary.run();
-            beginWatchdog();
+            WatchdogState previousWatchdog = beginWatchdog();
             try {
                 Varargs result = LuaThread.runMain(state, LoadState.load(state, source, name, state.globals()));
                 throwIfTimedOut();
@@ -114,65 +121,90 @@ public final class CobaltRuntime {
                 if (watchdogTimedOut) removeProfileRegistrations(profile);
                 throw error;
             } finally {
-                endWatchdog();
+                endWatchdog(previousWatchdog);
             }
         } finally {
+            RenderModule.endInvocation();
             currentProfile = previousProfile;
         }
     }
 
     public LuaValue global(String name) { ready(); return state.globals().rawget(name); }
 
-    public void fireEvent(String eventName) {
-        List<Callback> callbacks = listeners.get(eventName);
+    public void fireEvent(String eventName) { fireEvent(eventName, null); }
+
+    public void fireEvent(String eventName, Object payload) {
+        dispatchEvent(registry.event(eventName), payload);
+    }
+
+    public void fireEvent(EventType<Void> event) { dispatchEvent(event, null); }
+
+    public <T> void fireEvent(EventType<T> event, T payload) { dispatchEvent(event, payload); }
+
+    private void dispatchEvent(EventType<?> event, Object payload) {
+        registry.validateEvent(event, payload);
+        List<Callback> callbacks = listeners.get(event.name());
         if (callbacks == null) return;
         for (Callback callback : List.copyOf(callbacks)) {
-            if (invokeCallback(callback, eventName)) callbacks.removeIf(candidate -> candidate == callback);
+            if (invokeCallback(callback, event.name(), event, payload)) {
+                callbacks.removeIf(candidate -> candidate == callback);
+            }
         }
-        if (callbacks.isEmpty()) listeners.remove(eventName);
+        if (callbacks.isEmpty()) listeners.remove(event.name());
     }
 
     public void tickTimers() {
         for (Timer timer : List.copyOf(timers)) {
             if (++timer.elapsed[0] >= timer.interval) {
                 timer.elapsed[0] = 0;
-                if (invokeCallback(timer.callback, null)) timers.removeIf(candidate -> candidate == timer);
+                if (invokeCallback(timer.callback, null, null, null)) timers.removeIf(candidate -> candidate == timer);
             }
         }
     }
 
     /** @return whether this callback timed out and should be removed. */
-    private boolean invokeCallback(Callback callback, String cooldownKey) {
+    private boolean invokeCallback(Callback callback, String cooldownKey, EventType<?> event, Object payload) {
         String previousProfile = currentProfile;
         currentProfile = callback.profile;
+        RenderModule.beginInvocation(callback);
         try {
             invocationBoundary.run();
-            beginWatchdog();
+            WatchdogState previousWatchdog = beginWatchdog();
             try {
-                LuaThread.run(new LuaThread(state, callback.function), Constants.NONE);
+                Varargs arguments = event != null && event.hasPayload()
+                        ? toLua(payload, event.payloadType(), "event " + event.name(), event.providerId())
+                        : Constants.NONE;
+                LuaThread.run(new LuaThread(state, callback.function), arguments);
                 throwIfTimedOut();
                 return false;
             } catch (LuaError error) {
                 ErrorManager.reportProfile(callback.profile, cooldownKey == null ? "timer" : cooldownKey, error);
                 return watchdogTimedOut;
             } finally {
-                endWatchdog();
+                endWatchdog(previousWatchdog);
             }
         } finally {
+            RenderModule.endInvocation();
             currentProfile = previousProfile;
         }
     }
 
-    private void beginWatchdog() {
+    private WatchdogState beginWatchdog() {
+        WatchdogState previous = new WatchdogState(watchdogActive, watchdogTimedOut, watchdogDeadline);
         watchdogTimedOut = false;
-        if (timeoutMs == 0) return;
-        watchdogDeadline = nanoTime.getAsLong() + timeoutMs * 1_000_000L;
-        watchdogActive = true;
+        if (timeoutMs > 0) {
+            long deadline = nanoTime.getAsLong() + timeoutMs * 1_000_000L;
+            // A nested publication must not extend the calling callback's execution budget.
+            if (!watchdogActive || deadline - watchdogDeadline < 0) watchdogDeadline = deadline;
+            watchdogActive = true;
+        }
+        return previous;
     }
 
-    private void endWatchdog() {
-        watchdogActive = false;
-        watchdogTimedOut = false;
+    private void endWatchdog(WatchdogState previous) {
+        watchdogActive = previous.active();
+        watchdogTimedOut = previous.timedOut();
+        watchdogDeadline = previous.deadline();
     }
 
     private void throwIfTimedOut() throws LuaError {
@@ -231,6 +263,8 @@ public final class CobaltRuntime {
             try {
                 if (definition.special() == ApiRegistry.SpecialFunction.EVENT) {
                     String event = args.arg(1).checkString();
+                    try { registry.event(event); }
+                    catch (IllegalArgumentException error) { throw new LuaError(error.getMessage()); }
                     listeners.computeIfAbsent(event, ignored -> new ArrayList<>())
                             .add(new Callback(args.arg(2).checkFunction(), currentProfile));
                     return Constants.NIL;

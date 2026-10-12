@@ -1,6 +1,7 @@
 package dev.ifair.luahud.api.core;
 
 import dev.ifair.luahud.api.LuaParameter;
+import dev.ifair.luahud.api.EventType;
 import dev.ifair.luahud.api.LuaType;
 import dev.ifair.luahud.api.ModelBuilder;
 
@@ -58,6 +59,14 @@ public final class StubGenerator {
         for (FunctionInfo info : functions) {
             ApiRegistry.FunctionNode function = info.function();
             description(out, function.doc().description());
+            if (function.special() == ApiRegistry.SpecialFunction.EVENT) {
+                registry.events().stream().sorted(Comparator.comparing(EventType::name)).forEach(event -> {
+                    out.append("---@overload fun(event: ").append(LuaType.literal(event.name()).luaName())
+                            .append(", callback: fun(");
+                    if (event.hasPayload()) out.append("event: ").append(context.type(event.payloadType(), event.providerId()));
+                    out.append("))\n");
+                });
+            }
             for (LuaParameter<?> parameter : function.parameters()) {
                 out.append("---@param ").append(parameter.name());
                 if (parameter.type().kind() == LuaType.Kind.OPTIONAL) out.append('?');

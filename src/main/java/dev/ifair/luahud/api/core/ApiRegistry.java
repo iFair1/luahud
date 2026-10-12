@@ -47,6 +47,7 @@ public final class ApiRegistry {
 
     private final NamespaceNode root = new NamespaceNode("lh", "luahud", LuaDoc.NONE);
     private final List<ModelBuilder<?>> models = new ArrayList<>();
+    private final Map<String, EventType<?>> events = new LinkedHashMap<>();
     private final Consumer<String> warnings;
     private boolean frozen;
 
@@ -61,6 +62,7 @@ public final class ApiRegistry {
         contribution.accept(staged.new Registrar(providerId));
         merge(root, staged.root, "lh");
         staged.models.forEach(this::addModel);
+        staged.events.values().forEach(this::addEvent);
     }
 
     public void discoverAddons() {
@@ -76,18 +78,50 @@ public final class ApiRegistry {
 
     public void addEventFunctions() {
         FunctionNode on = special("on", "Register an event callback.", SpecialFunction.EVENT);
-        param(on, "event", LuaType.union(LuaType.literal("init"), LuaType.literal("tick")), "Event name");
-        param(on, "callback", LuaType.function(), "Callback invoked without arguments");
+        param(on, "event", LuaType.string(), "Registered event name");
+        param(on, "callback", LuaType.function(), "Callback receives the registered event payload, if any");
         FunctionNode interval = special("setInterval", "Run a callback repeatedly after a tick interval.", SpecialFunction.INTERVAL);
         param(interval, "number", LuaType.integer(), "Interval length");
         param(interval, "type", LuaType.literal("ticks"), "Only ticks are supported");
         param(interval, "callback", LuaType.function(), "Callback invoked without arguments");
     }
 
-    public void freeze() { mutable(); validate(root, "lh"); models.forEach(ModelBuilder::freeze); frozen = true; }
+    public void freeze() {
+        mutable();
+        Node on = root.children.get("on");
+        if (on instanceof FunctionNode function && function.special == SpecialFunction.EVENT && !events.isEmpty()) {
+            LuaType<?>[] names = events.keySet().stream().sorted().map(LuaType::literal).toArray(LuaType<?>[]::new);
+            LuaType<?> eventNames = names.length == 1 ? names[0] : LuaType.union(names);
+            function.parameters.set(0, new LuaParameter<>(function, 0, "event", eventNames, LuaDoc.of("Registered event name")));
+        }
+        validate(root, "lh");
+        models.forEach(ModelBuilder::freeze);
+        frozen = true;
+    }
     public boolean isFrozen() { return frozen; }
     public NamespaceNode rootNode() { return root; }
     public List<ModelBuilder<?>> models() { return List.copyOf(models); }
+    public List<EventType<?>> events() { return List.copyOf(events.values()); }
+
+    public EventType<?> event(String name) {
+        EventType<?> event = events.get(name);
+        if (event == null) throw new IllegalArgumentException("Unknown event: " + name);
+        return event;
+    }
+
+    public void validateEvent(EventType<?> event, Object payload) {
+        Objects.requireNonNull(event, "event");
+        if (events.get(event.name()) != event) {
+            throw new IllegalArgumentException("Event handle is not registered here: " + event.name());
+        }
+        event.validatePayload(payload);
+    }
+
+    private void addEvent(EventType<?> event) {
+        if (events.putIfAbsent(event.name(), event) != null) {
+            warn(event.providerId(), "event " + event.name(), "duplicate event");
+        }
+    }
 
     private FunctionNode special(String name, String doc, SpecialFunction kind) {
         FunctionNode node = new FunctionNode(name, "luahud", LuaDoc.of(doc), LuaType.nil(), kind);
@@ -126,6 +160,12 @@ public final class ApiRegistry {
         private final String provider;
         private Registrar(String provider) { this.provider = Objects.requireNonNull(provider); }
         public NamespaceBuilder root() { mutable(); return new Namespace(provider, root, "lh"); }
+        public <T> EventType<T> event(String name, LuaType<T> type, String description) {
+            mutable();
+            EventType<T> event = new EventType<>(name, provider, type, LuaDoc.of(description));
+            addEvent(event);
+            return event;
+        }
         public <T> ModelBuilder<T> model(String name, Class<T> type) { mutable(); ModelBuilder<T> model = new ModelBuilder<>(provider, name, type); addModel(model); return model; }
     }
 

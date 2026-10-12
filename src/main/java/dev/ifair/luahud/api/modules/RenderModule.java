@@ -18,6 +18,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -31,12 +33,25 @@ public final class RenderModule {
         }
     };
     private static SectionState currentState = SectionState.defaults();
+    private static final Deque<SectionState> INVOCATION_STATES = new ArrayDeque<>();
     private static ClientWorld entityCacheWorld;
 
     private RenderModule() {}
 
     public static void resetSection() {
-        setSection(SectionState.defaults());
+        currentState = SectionState.defaults();
+        RenderBuffer.selectDefault(currentState.layout());
+    }
+
+    public static void beginInvocation(Object owner) {
+        INVOCATION_STATES.push(currentState);
+        RenderBuffer.beginInvocation(owner);
+        resetSection();
+    }
+
+    public static void endInvocation() {
+        RenderBuffer.endInvocation();
+        currentState = INVOCATION_STATES.pop();
     }
 
     static SectionState currentSectionState() {
@@ -135,7 +150,9 @@ public final class RenderModule {
                             : "Local horizontal offset")
                     .optional("offsetY", LuaType.integer(), section ? "Vertical screen-edge inset" : "Local vertical offset");
             if (section) {
-                fields.optional("anchor", LuaType.union(
+                fields.optional("id", LuaType.string(), "Shared section ID; replaces any existing section with this ID")
+                        .optional("duration", LuaType.number(), "Positive lifetime in seconds; omitted sections last until this callback runs again")
+                        .optional("anchor", LuaType.union(
                                 LuaType.literal("topLeft"), LuaType.literal("topCenter"), LuaType.literal("topRight"),
                                 LuaType.literal("bottomLeft"), LuaType.literal("bottomCenter"), LuaType.literal("bottomRight")),
                                 "Screen anchor")
@@ -188,7 +205,11 @@ public final class RenderModule {
     }
 
     private static void applySection(LuaTableValue options) {
-        setSection(sectionState(options));
+        SectionState state = sectionState(options);
+        String id = options == null ? null : options.string("id", null);
+        Double duration = options == null || !options.contains("duration") ? null : options.number("duration", 0);
+        RenderBuffer.beginSection(state.layout(), id, duration);
+        currentState = state;
     }
 
     static SectionState sectionState(LuaTableValue options) {
@@ -241,11 +262,6 @@ public final class RenderModule {
         if ("auto".equals(requested)) return new RowHeight(defaults.rowHeight(), true);
         if (requested instanceof Number number) return new RowHeight(number.intValue(), false);
         throw new IllegalArgumentException("Row height must be a positive integer or 'auto'");
-    }
-
-    private static void setSection(SectionState state) {
-        currentState = state;
-        RenderBuffer.beginSection(state.layout());
     }
 
     private static void drawText(String text, LuaTableValue options, boolean newline) {

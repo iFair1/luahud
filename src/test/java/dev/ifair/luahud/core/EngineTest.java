@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class EngineTest {
     @TempDir Path directory;
 
-    @Test void profilesAndInitWaitForWorldEntryAndRestartOnReentry() throws Exception {
+    @Test void profilesAndReloadWaitForWorldEntryAndRestartOnReentry() throws Exception {
         Path profile = directory.resolve("Profile.lua");
         Files.writeString(profile, "loads=1; initialized=0; ticks=0; timers=0; "
-                + "lh.on('init', function() initialized=initialized+1 end); "
+                + "lh.on('reload', function() initialized=initialized+1 end); "
                 + "lh.on('tick', function() assert(initialized==1); ticks=ticks+1 end); "
                 + "lh.setInterval(1,'ticks',function() assert(initialized==1); timers=timers+1 end)");
         AtomicBoolean inWorld = new AtomicBoolean();
@@ -31,7 +31,7 @@ class EngineTest {
         engine.checkForUpdates();
         engine.reloadAll();
         engine.runScript(profile);
-        engine.fireEvent("init");
+        engine.fireEvent("reload");
         engine.tickTimers();
         assertFalse(engine.isReady());
         assertEquals(0, creations.get());
@@ -70,7 +70,7 @@ class EngineTest {
         assertEquals(0, current.get().global("timers").checkInteger());
     }
 
-    @Test void menuChangesAreLoadedOnEntryAndInWorldReloadRunsInitOnce() throws Exception {
+    @Test void menuChangesAreLoadedOnEntryAndInWorldReloadRunsReloadOnce() throws Exception {
         Path profile = directory.resolve("Profile.lua");
         Files.writeString(profile, "version=1");
         AtomicBoolean inWorld = new AtomicBoolean(true);
@@ -80,7 +80,7 @@ class EngineTest {
         Engine engine = engine(inWorld, reloadRequested, creations, current, profile);
         engine.checkForUpdates();
 
-        Files.writeString(profile, "version=2; initialized=0; lh.on('init', function() initialized=initialized+1 end)");
+        Files.writeString(profile, "version=2; initialized=0; lh.on('reload', function() initialized=initialized+1 end)");
         reloadRequested.set(true);
         engine.checkForUpdates();
         engine.checkForUpdates();
@@ -90,7 +90,7 @@ class EngineTest {
 
         inWorld.set(false);
         engine.checkForUpdates();
-        Files.writeString(profile, "version=3; initialized=0; lh.on('init', function() initialized=initialized+1 end)");
+        Files.writeString(profile, "version=3; initialized=0; lh.on('reload', function() initialized=initialized+1 end)");
         reloadRequested.set(true);
         engine.reloadAll();
         engine.checkForUpdates();
@@ -113,7 +113,7 @@ class EngineTest {
         engine.checkForUpdates();
         CobaltRuntime first = current.get();
 
-        Files.writeString(profile, "version=2; initialized=0; lh.on('init', function() initialized=initialized+1 end)");
+        Files.writeString(profile, "version=2; initialized=0; lh.on('reload', function() initialized=initialized+1 end)");
         engine.reloadAll();
         engine.checkForUpdates();
 
@@ -159,6 +159,9 @@ class EngineTest {
 
     private static ApiRegistry registry() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("luahud").event("reload", "");
+        registry.registrar("luahud").event("tick", "");
+        registry.registrar("luahud").event("render", "");
         registry.addEventFunctions();
         registry.freeze();
         return registry;

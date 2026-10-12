@@ -295,6 +295,18 @@ class ConfigManagerTest {
         }
     }
 
+    @Test void durationClockIsPersistedWhenMissingAndPreservedByOtherSettingChanges() throws Exception {
+        Files.writeString(ConfigManager.JSON_CONFIG, "{}");
+        ConfigManager.load();
+        assertEquals("realTime", ConfigManager.getSectionDurationClock());
+        assertTrue(Files.readString(ConfigManager.JSON_CONFIG).contains("sectionDurationClock"));
+        Files.writeString(ConfigManager.JSON_CONFIG, "{\"sectionDurationClock\":\"gameTime\"}");
+        ConfigManager.load();
+        ConfigManager.setShowHiddenFiles(true);
+        ConfigData saved = new Gson().fromJson(Files.readString(ConfigManager.JSON_CONFIG), ConfigData.class);
+        assertEquals("gameTime", saved.sectionDurationClock);
+    }
+
     private static void await(BooleanSupplier condition) {
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             while (!condition.getAsBoolean()) Thread.sleep(10);

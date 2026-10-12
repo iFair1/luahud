@@ -15,6 +15,7 @@ public final class ConfigData {
     boolean showHiddenFiles = false;
     boolean generateExampleProfiles = true;
     int luaTimeoutMs = DEFAULT_LUA_TIMEOUT_MS;
+    String sectionDurationClock = "realTime";
     List<ProfileData> profiles = new ArrayList<>();
 
     static boolean isValidProfileName(String name) {
@@ -29,11 +30,16 @@ public final class ConfigData {
     }
 
     boolean normalize() {
+        boolean changed = false;
+        if (!"realTime".equals(sectionDurationClock) && !"gameTime".equals(sectionDurationClock)) {
+            sectionDurationClock = "realTime";
+            changed = true;
+        }
         if (luaTimeoutMs < 0 || luaTimeoutMs > MAX_LUA_TIMEOUT_MS) {
             luaTimeoutMs = DEFAULT_LUA_TIMEOUT_MS;
             return true;
         }
-        return false;
+        return changed;
     }
 
     public static final class ProfileData {
