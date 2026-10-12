@@ -11,8 +11,10 @@ import java.nio.file.Path;
 import static dev.ifair.luahud.config.ConfigManager.*;
 
 public class ConfigInstaller {
+    private static final String ASSETS_SOURCE = "/assets/luahud/";
+    private static final String PROFILES_SOURCE = ASSETS_SOURCE + "lua/";
+
     public static void generateDefaults() {
-        final String source = "/assets/luahud/";
 
         if (Files.notExists(MOD_CONFIG_DIR) || !Files.isDirectory(MOD_CONFIG_DIR)) {
             try {
@@ -24,14 +26,7 @@ public class ConfigInstaller {
         }
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
-            final String profileDir = source + "lua/";
-            copyFromResourceIfAbsent(profileDir + "Welcome Profile.lua", MOD_CONFIG_DIR);
-            if (Files.isRegularFile(MOD_CONFIG_DIR.resolve("Welcome Profile.lua"))
-                    && !ConfigManager.hasProfile("Welcome Profile")) {
-                ConfigData.ProfileData welcome = new ConfigData.ProfileData("Welcome Profile");
-                welcome.setKeybind("key.keyboard.j");
-                ConfigManager.addProfile(welcome.getName(), welcome);
-            }
+            generateExampleProfile("Welcome Profile", true, false, "key.keyboard.j");
             // other default profiles will come here
 
             ConfigManager.setGenerateExampleProfiles(false);
@@ -44,7 +39,7 @@ public class ConfigInstaller {
         } catch (IOException e) {
             ErrorManager.reportSystem("default config", e);
         }
-        copyFromResourceIfAbsent(source + "lua/.luarc.json", luaDir);
+        copyFromResourceIfAbsent(ASSETS_SOURCE + "lua/.luarc.json", luaDir);
     }
 
     static void copyFromResourceIfAbsent(String resourcePath, Path targetDir) {
@@ -62,6 +57,24 @@ public class ConfigInstaller {
             // Preserve user changes to files installed on an earlier run.
         } catch (IOException e) {
             ErrorManager.reportSystem("default config", e);
+        }
+    }
+
+    private static void generateExampleProfile(String name, boolean active, boolean hidden) {
+        generateExampleProfile(name, active, hidden, "key.keyboard.unknown");
+    }
+
+    private static void generateExampleProfile(String name, boolean active, boolean hidden, String keybind) {
+        String nameWithExtension = name + ".lua";
+        copyFromResourceIfAbsent(PROFILES_SOURCE + nameWithExtension, MOD_CONFIG_DIR);
+        if (Files.isRegularFile(MOD_CONFIG_DIR.resolve(nameWithExtension))
+        && !ConfigManager.hasProfile(name)) {
+            ConfigData.ProfileData newProfile = new ConfigData.ProfileData(name);
+            newProfile.setActive(active);
+            newProfile.setHidden(hidden);
+            newProfile.setKeybind(keybind);
+
+            ConfigManager.addProfile(name, newProfile);
         }
     }
 }
