@@ -10,6 +10,7 @@ import dev.ifair.luahud.api.models.CoreModels.BlockView;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 
 public final class FunctionsModule {
     private FunctionsModule() {}
@@ -26,7 +27,7 @@ public final class FunctionsModule {
 
     private static BlockPos resolveCoordinates(String value, ClientPlayerEntity player) {
         return ClientCoordinates.resolve(value,
-                new net.minecraft.util.math.Vec3d(player.getX(), player.getY(), player.getZ()),
+                new Vec3d(player.getX(), player.getY(), player.getZ()),
                 player.getRotationClient());
     }
 }
