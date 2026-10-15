@@ -46,11 +46,6 @@ public final class PcModule {
                     .integer("allocated", "Memory allocated in MiB", () -> (int) (runtime.totalMemory() / MIB))
                     .integer("max", "Maximum memory in MiB", () -> (int) (runtime.maxMemory() / MIB))
                     .integer("free", "Memory still available in MiB", () -> (int) ((runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory()) / MIB)));
-            pc.namespace("display", display -> display
-                    .integer("width", "Window width", () -> client.getWindow().getWidth())
-                    .integer("height", "Window height", () -> client.getWindow().getHeight())
-                    .integer("scale", "GUI scale", () -> (int) client.getWindow().getScaleFactor())
-                    .integer("hz", "Monitor refresh rate", () -> client.getWindow().getRefreshRate()));
         });
     }
 

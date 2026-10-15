@@ -30,6 +30,7 @@ public final class CoreApi {
         SlotsModule.register(api, client, models);
         SessionModule.register(api, client);
         FunctionsModule.register(api, client, models);
+        DisplayModule.register(api, client);
         api.event("reload", "Runs once after active profiles load, including first world entry.");
         api.event("tick", "Runs at the end of each client tick.");
         api.event("render", "Runs immediately before each HUD frame is painted.");
