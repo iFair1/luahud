@@ -17,6 +17,7 @@ import dev.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -52,11 +53,13 @@ public class LuaHUD implements ClientModInitializer {
 		CoreApi.register(api);
 		api.discoverAddons();
 		api.freeze();
-		try {
-			StubGenerator.writeIfChanged(ConfigManager.getScriptsDir().resolve("api/lh.lua"), StubGenerator.generate(api));
-		} catch (Exception error) {
-			ErrorManager.reportSystem("stub generation", error);
-		}
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+			try {
+				StubGenerator.writeIfChanged(ConfigManager.getScriptsDir().resolve("api/lh.lua"), StubGenerator.generate(api));
+			} catch (Exception error) {
+				ErrorManager.reportSystem("stub generation", error);
+			}
+		});
 
 		Engine engine = new Engine(api);
 		EventDispatcher.attach(engine);

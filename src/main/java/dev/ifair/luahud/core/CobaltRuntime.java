@@ -296,6 +296,7 @@ public final class CobaltRuntime {
 
     private LuaValue supplied(Supplier<?> supplier, LuaType<?> type, String path, String provider) throws LuaError {
         try {
+            while (type.kind() == LuaType.Kind.ALIAS) type = type.elementType();
             if (type.kind() == LuaType.Kind.MODEL) {
                 @SuppressWarnings("unchecked") Supplier<Object> dynamic = (Supplier<Object>) supplier;
                 @SuppressWarnings("unchecked") ModelBuilder<Object> model = (ModelBuilder<Object>) type.model();
@@ -320,7 +321,7 @@ public final class CobaltRuntime {
             case INTEGER -> ValueFactory.valueOf(((Number) value).intValue());
             case NUMBER -> ValueFactory.valueOf(((Number) value).doubleValue());
             case BOOLEAN -> ValueFactory.valueOf((Boolean) value);
-            case OPTIONAL -> toLua(value, type.elementType(), path, provider);
+            case ALIAS, OPTIONAL -> toLua(value, type.elementType(), path, provider);
             case UNION -> {
                 LuaValue result = null;
                 for (LuaType<?> alternative : type.alternatives()) {
@@ -389,6 +390,7 @@ public final class CobaltRuntime {
 
     private boolean matchesJava(Object value, LuaType<?> type) {
         return switch (type.kind()) {
+            case ALIAS -> matchesJava(value, type.elementType());
             case STRING -> value instanceof String;
             case LITERAL -> type.displayName().equals(value);
             case INTEGER -> value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long;
@@ -404,6 +406,7 @@ public final class CobaltRuntime {
         return switch (type.kind()) {
             case NIL -> { if (!value.isNil()) throw new LuaError("expected nil, got " + value.typeName()); yield null; }
             case ANY -> anyFromLua(value);
+            case ALIAS -> fromLua(value, type.elementType());
             case STRING -> javaString(value);
             case INTEGER -> value.checkInteger();
             case NUMBER -> value.checkDouble();
@@ -522,6 +525,7 @@ public final class CobaltRuntime {
      */
     private boolean matchesLua(LuaValue value, LuaType<?> type) {
         return switch (type.kind()) {
+            case ALIAS -> matchesLua(value, type.elementType());
             case NIL -> value.isNil();
             case STRING, LITERAL -> value.type() == Constants.TSTRING;
             case INTEGER, NUMBER -> value.type() == Constants.TNUMBER;

@@ -35,6 +35,24 @@ class CoreModelsTest {
         Bootstrap.initialize();
     }
 
+    @Test void registryIdAliasesAppearOnModelsPlayerAndInputs() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        CoreModels models = CoreModels.register(api);
+        PlayerModule.register(api, null, models);
+        registry.freeze();
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@alias ItemId\n"));
+        assertTrue(stub.contains("---| \"minecraft:diamond\"\n"));
+        assertTrue(stub.contains("---@alias BlockId\n"));
+        assertTrue(stub.contains("---@alias EntityTypeId\n"));
+        assertTrue(stub.contains("---@field id ItemId Namespaced item ID"));
+        assertTrue(stub.contains("---@field id BlockId Namespaced block ID"));
+        assertTrue(stub.contains("---@field id EntityTypeId Namespaced entity type"));
+        assertTrue(stub.contains("---@field id EntityTypeId Namespaced player entity type"));
+        assertEquals(net.minecraft.registry.Registries.ITEM.getIds().size(), RegistryIds.ITEM.stringValues().size());
+    }
+
     @Test void statusEffectUsesDeclaredDurationNamesAndPreservesInfinity() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");

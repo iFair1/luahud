@@ -58,7 +58,7 @@ class RenderModuleTest {
         registry.freeze();
 
         String stub = StubGenerator.generate(registry);
-        assertTrue(stub.contains("---@param id string | ItemStack | ItemStackInput Namespaced item ID or ItemStack model"));
+        assertTrue(stub.contains("---@param id ItemId | ItemStack | ItemStackInput Namespaced item ID or ItemStack model"));
         assertTrue(stub.contains("---@param uuid string | Entity | EntityInput Entity UUID or any table with a string uuid field"));
         assertTrue(stub.contains("---@param options? EntityOptions Rendering options"));
         assertTrue(stub.contains("---@field pitch? number Vertical viewing angle offset in degrees"));
@@ -75,7 +75,7 @@ class RenderModuleTest {
                 + "Vertical alignment of elements within a row; defaults to center"));
         assertTrue(stub.contains("---@param count? integer Number of line breaks; defaults to 1"));
         assertTrue(stub.contains("function lh.newline(count) end"));
-        assertTrue(stub.contains("---@field id string Namespaced item ID"));
+        assertTrue(stub.contains("---@field id ItemId Namespaced item ID"));
         assertTrue(stub.contains("---@field count? integer Stack count; defaults to 1 for input tables"));
         assertTrue(stub.contains("---@field damage? integer Current item damage"));
         assertTrue(stub.contains("---@field damageLeft? integer Remaining durability"));

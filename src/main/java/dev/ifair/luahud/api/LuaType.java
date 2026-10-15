@@ -1,15 +1,17 @@
 package dev.ifair.luahud.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class LuaType<T> {
-    public enum Kind { NIL, ANY, STRING, INTEGER, NUMBER, BOOLEAN, LITERAL, UNION, OPTIONAL, LIST, MAP, MODEL, MODEL_INPUT, INPUT_TABLE, FUNCTION }
+    public enum Kind { NIL, ANY, STRING, INTEGER, NUMBER, BOOLEAN, ALIAS, LITERAL, UNION, OPTIONAL, LIST, MAP, MODEL, MODEL_INPUT, INPUT_TABLE, FUNCTION }
 
     public record InputField(String name, LuaType<?> type, LuaDoc doc, boolean optional) {}
 
@@ -33,6 +35,8 @@ public final class LuaType<T> {
         }
     }
 
+    private final Supplier<? extends Collection<String>> stringValues;
+
     private final Kind kind;
     private final String displayName;
     private final List<LuaType<?>> alternatives;
@@ -42,6 +46,13 @@ public final class LuaType<T> {
 
     private LuaType(Kind kind, String displayName, List<LuaType<?>> alternatives, LuaType<?> elementType,
                     ModelBuilder<?> model, Map<String, InputField> inputFields) {
+        this(kind, displayName, alternatives, elementType, model, inputFields, null);
+    }
+
+    private LuaType(Kind kind, String displayName, List<LuaType<?>> alternatives, LuaType<?> elementType,
+                    ModelBuilder<?> model, Map<String, InputField> inputFields,
+                    Supplier<? extends Collection<String>> stringValues) {
+        this.stringValues = stringValues;
         this.kind = kind;
         this.displayName = displayName;
         this.alternatives = alternatives == null ? List.of() : List.copyOf(alternatives);
@@ -56,6 +67,27 @@ public final class LuaType<T> {
     public static LuaType<Integer> integer() { return simple(Kind.INTEGER, "integer"); }
     public static LuaType<Double> number() { return simple(Kind.NUMBER, "number"); }
     public static LuaType<Boolean> bool() { return simple(Kind.BOOLEAN, "boolean"); }
+
+    /** Creates a named annotation type with the same runtime contract as its underlying type. */
+    public static <T> LuaType<T> alias(String name, LuaType<T> underlyingType) {
+        validateName(name);
+        return new LuaType<>(Kind.ALIAS, name, null, Objects.requireNonNull(underlyingType), null, null);
+    }
+
+    /**
+     * Creates a string alias whose literal values are read only when generating a stub.
+     * The supplier should return the complete current set; values are sorted and deduplicated.
+     * Runtime conversion remains string-based, so registry validation stays with the API consumer.
+     */
+    public static LuaType<String> stringAlias(String name, Supplier<? extends Collection<String>> values) {
+        validateName(name);
+        return new LuaType<>(Kind.ALIAS, name, null, string(), null, null, Objects.requireNonNull(values));
+    }
+
+    /** Returns a fresh, deterministic snapshot of the alias's documented string literals. */
+    public List<String> stringValues() {
+        return stringValues == null ? List.of() : stringValues.get().stream().distinct().sorted().toList();
+    }
 
     public static LuaType<String> literal(String value) {
         return new LuaType<>(Kind.LITERAL, Objects.requireNonNull(value), null, null, null, null);
@@ -118,7 +150,7 @@ public final class LuaType<T> {
             case OPTIONAL -> elementType.luaName() + "?";
             case LIST -> elementType.luaName() + "[]";
             case MAP -> "table<string, " + elementType.luaName() + ">";
-            case MODEL, MODEL_INPUT, INPUT_TABLE -> displayName;
+            case ALIAS, MODEL, MODEL_INPUT, INPUT_TABLE -> displayName;
         };
     }
 

@@ -46,7 +46,7 @@ public record CoreModels(
         registerEntityFields(entity, statusEffect, horse);
 
         ModelBuilder<BlockView> block = api.model("PlacedBlock", BlockView.class);
-        block.string("id", "Namespaced block ID", CoreModels::blockId);
+        block.field("id", RegistryIds.BLOCK, "Namespaced block ID", CoreModels::blockId);
         block.string("name", "Localized block name", CoreModels::blockName);
         block.integer("x", "Block X coordinate", value -> value.pos() == null ? 0 : value.pos().getX());
         block.integer("y", "Block Y coordinate", value -> value.pos() == null ? 0 : value.pos().getY());
@@ -95,7 +95,7 @@ public record CoreModels(
 
     private static void registerEntityFields(ModelBuilder<Entity> model, ModelBuilder<StatusEffectInstance> statusEffect,
                                              ModelBuilder<AbstractHorseEntity> horse) {
-        model.string("id", "Namespaced entity type", value -> Registries.ENTITY_TYPE.getId(value.getType()).toString());
+        model.field("id", RegistryIds.ENTITY_TYPE, "Namespaced entity type", value -> Registries.ENTITY_TYPE.getId(value.getType()).toString());
         model.number("x", "X coordinate", Entity::getX);
         model.number("y", "Y coordinate", Entity::getY);
         model.number("z", "Z coordinate", Entity::getZ);
@@ -141,7 +141,7 @@ public record CoreModels(
 
     private static ModelBuilder<ItemStack> registerItemStack(LuaApiRegistrar api) {
         ModelBuilder<ItemStack> model = api.model("ItemStack", ItemStack.class);
-        var id = model.string("id", "Namespaced item ID", value -> Registries.ITEM.getId(value.getItem()).toString()).inputRequired();
+        var id = model.field("id", RegistryIds.ITEM, "Namespaced item ID", value -> Registries.ITEM.getId(value.getItem()).toString()).inputRequired();
         model.string("name", "Localized item name", value -> value.getName().getString());
         var count = model.integer("count", "Stack count; defaults to 1 for input tables", ItemStack::getCount).inputDefault(1);
         var damage = model.optionalInteger("damage", "Current item damage", value -> value.isDamageable() ? value.getDamage() : null).inputOptional();

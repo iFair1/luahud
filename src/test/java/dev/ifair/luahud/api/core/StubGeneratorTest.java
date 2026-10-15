@@ -81,6 +81,30 @@ class StubGeneratorTest {
         assertFalse(stub.contains("---@param event \""));
     }
 
+    @Test void aliasesReadFreshSortedValuesOnlyDuringStubGeneration() {
+        var values = new java.util.ArrayList<String>();
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        LuaType<String> id = LuaType.stringAlias("ItemId", () -> {
+            reads.incrementAndGet();
+            return values;
+        });
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        api.root().value("id", id, LuaDoc.NONE, () -> "minecraft:stone");
+        api.root().value("count", LuaType.alias("Count", LuaType.integer()), LuaDoc.NONE, () -> 1);
+        registry.freeze();
+        DocumentationGenerator.generate(registry);
+        assertEquals(0, reads.get());
+        values.addAll(java.util.List.of("minecraft:stone", "minecraft:air", "minecraft:stone"));
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@alias ItemId\n---| \"minecraft:air\"\n---| \"minecraft:stone\"\n"));
+        assertTrue(stub.contains("---@alias Count integer"));
+        assertTrue(stub.contains("---@field id ItemId"));
+        assertEquals(1, reads.get());
+        values.clear();
+        assertTrue(StubGenerator.generate(registry).contains("---@alias ItemId string"));
+    }
+
     private static ApiRegistry fixture() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").root().namespace("example", table -> {

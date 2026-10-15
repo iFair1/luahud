@@ -4,6 +4,7 @@ import dev.ifair.luahud.api.LuaApiRegistrar;
 import dev.ifair.luahud.api.LuaDoc;
 import dev.ifair.luahud.api.LuaType;
 import dev.ifair.luahud.api.models.CoreModels;
+import dev.ifair.luahud.api.models.RegistryIds;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.attribute.EntityAttribute;
@@ -19,7 +20,7 @@ public final class PlayerModule {
 
     public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models) {
         api.root().namespace("player", player -> {
-            player.string("id", "Namespaced player entity type", () -> Registries.ENTITY_TYPE.getId(client.player.getType()).toString())
+            player.value("id", RegistryIds.ENTITY_TYPE, LuaDoc.of("Namespaced player entity type"), () -> Registries.ENTITY_TYPE.getId(client.player.getType()).toString())
                     .string("name", "Player display name", () -> client.player.getDisplayName().getString())
                     .string("uuid", "Player UUID", () -> client.player.getUuidAsString())
                     .number("x", "X coordinate", () -> client.player.getX())

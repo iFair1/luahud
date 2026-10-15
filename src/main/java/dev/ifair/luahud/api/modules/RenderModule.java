@@ -2,6 +2,7 @@ package dev.ifair.luahud.api.modules;
 
 import dev.ifair.luahud.api.*;
 import dev.ifair.luahud.api.models.CoreModels;
+import dev.ifair.luahud.api.models.RegistryIds;
 import dev.ifair.luahud.render.Anchor;
 import dev.ifair.luahud.render.InlineAlignment;
 import dev.ifair.luahud.render.InlineDirection;
@@ -98,7 +99,7 @@ public final class RenderModule {
         FunctionBuilder<Void> drawItem = api.root().function(
                 "drawItem", LuaType.nil(), "Draw an item by namespaced ID or ItemStack model.");
         LuaParameter<Object> itemId = drawItem.parameter(
-                "id", LuaType.union(LuaType.string(), models.itemStack().inputType()), "Namespaced item ID or ItemStack model");
+                "id", LuaType.union(RegistryIds.ITEM, models.itemStack().inputType()), "Namespaced item ID or ItemStack model");
         LuaParameter<LuaTableValue> itemOpts = drawItem.optionalParameter("options", iconOptions, "Rendering options");
         drawItem.call(arguments -> {
             drawItem(arguments.get(itemId), arguments.get(itemOpts));

@@ -77,7 +77,10 @@ public final class DocumentationGenerator {
                         });
             } else if (definition instanceof LuaType<?> table) {
                 String provider = context.owners.get(table);
-                type.addProperty("kind", "input_table");
+                type.addProperty("kind", table.kind() == LuaType.Kind.ALIAS ? "alias" : "input_table");
+                if (table.kind() == LuaType.Kind.ALIAS) {
+                    type.add("underlyingType", type(table.elementType(), provider, context, false));
+                }
                 type.addProperty("providerId", provider);
                 table.inputFields().values().stream().sorted(Comparator.comparing(LuaType.InputField::name))
                         .forEach(field -> fields.add(field(field.name(), field.doc().description(), field.type(),
@@ -148,7 +151,7 @@ public final class DocumentationGenerator {
             item.add("alternatives", alternatives);
         }
         if (type.kind() == LuaType.Kind.LITERAL) item.addProperty("value", type.displayName());
-        if (type.model() != null || type.kind() == LuaType.Kind.INPUT_TABLE) {
+        if (type.model() != null || type.kind() == LuaType.Kind.INPUT_TABLE || type.kind() == LuaType.Kind.ALIAS) {
             JsonArray references = new JsonArray();
             if (type.model() != null) {
                 references.add(context.namedTypes.get(type.model()));

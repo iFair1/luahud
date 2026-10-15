@@ -23,6 +23,18 @@ public final class StubGenerator {
 
         context.namedTypes.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(entry -> {
             Object definition = entry.getKey(); String name = entry.getValue();
+            if (definition instanceof LuaType<?> alias && alias.kind() == LuaType.Kind.ALIAS) {
+                List<String> values = alias.stringValues();
+                out.append("---@alias ").append(name);
+                if (values.isEmpty()) {
+                    out.append(' ').append(context.type(alias.elementType(), context.owners.get(alias))).append('\n');
+                } else {
+                    out.append('\n');
+                    values.forEach(value -> out.append("---| ").append(LuaType.literal(value).luaName()).append('\n'));
+                }
+                out.append('\n');
+                return;
+            }
             if (definition instanceof ApiTypeContext.InputModel) {
                 out.append("---Table schema: additional fields are accepted; no constructor is required.\n");
             }

@@ -96,6 +96,31 @@ class CobaltRuntimeTest {
         assertEquals(0xFF00FF00, captured.get());
     }
 
+    @Test void aliasesKeepUnderlyingRuntimeAndEventContractsWithoutReadingRegistryValues() throws Exception {
+        LuaType<String> id = LuaType.stringAlias("ItemId", () -> {
+            throw new AssertionError("Runtime must not read stub values");
+        });
+        List<Object> captured = new java.util.ArrayList<>();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        LuaApiRegistrar api = registry.registrar("fixture");
+        api.root().value("id", id, LuaDoc.NONE, () -> "minecraft:stone");
+        FunctionBuilder<Object> echo = api.root().function("echo", LuaType.union(id, LuaType.integer()), "");
+        var value = echo.parameter("value", LuaType.union(id, LuaType.integer()), "");
+        echo.call(arguments -> {
+            Object actual = arguments.get(value);
+            captured.add(actual);
+            return actual;
+        });
+        var event = api.event("item", id, "");
+        registry.freeze();
+        registry.validateEvent(event, "minecraft:stone");
+        assertThrows(IllegalArgumentException.class, () -> registry.validateEvent(event, 1));
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+        runtime.execute("assert(lh.echo(lh.id)=='minecraft:stone'); assert(lh.echo(42)==42)", "aliases");
+        assertEquals(List.of("minecraft:stone", 42), captured);
+        assertThrows(LuaError.class, () -> runtime.execute("lh.echo({})", "invalid-alias"));
+    }
+
     @Test void unionAcceptsEitherAStringOrAModel() throws Exception {
         Data supplied = new Data("model", 4);
         List<Object> captured = new java.util.ArrayList<>();

@@ -41,6 +41,7 @@ public final class EventType<T> {
     private static boolean accepts(LuaType<?> type, Object value) {
         return switch (type.kind()) {
             case NIL -> value == null;
+            case ALIAS -> accepts(type.elementType(), value);
             case OPTIONAL -> value == null || accepts(type.elementType(), value);
             case UNION -> type.alternatives().stream().anyMatch(part -> accepts(part, value));
             case ANY -> value == null || value instanceof String || value instanceof Boolean

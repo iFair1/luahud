@@ -36,7 +36,7 @@ final class ApiTypeContext {
             if (!collected.add(model)) return;
             model.fields().forEach(field -> collect(field.type(), model.providerId()));
         }
-        if (type.kind() == LuaType.Kind.INPUT_TABLE) {
+        if (type.kind() == LuaType.Kind.INPUT_TABLE || type.kind() == LuaType.Kind.ALIAS) {
             owners.put(type, provider);
             add(type, provider, type.displayName());
             if (!collected.add(type)) return;
@@ -73,7 +73,7 @@ final class ApiTypeContext {
         return switch (type.kind()) {
             case MODEL -> namedTypes.get(type.model());
             case MODEL_INPUT -> inputType(type.model());
-            case INPUT_TABLE -> namedTypes.get(type);
+            case INPUT_TABLE, ALIAS -> namedTypes.get(type);
             case OPTIONAL -> groupedType(type.elementType(), provider) + "?";
             case UNION -> String.join(" | ", type.alternatives().stream().map(value -> type(value, provider)).toList());
             case LIST -> groupedType(type.elementType(), provider) + "[]";
