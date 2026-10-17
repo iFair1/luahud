@@ -1,11 +1,4 @@
--- Callback drawings are independent. Untimed sections refresh on the next
--- invocation of the same callback; a duration keeps a section for that many seconds.
 lh.on("reload", function()
-    lh.section({id = "welcomeReloadNotice", duration = 5, anchor = "bottomCenter"})
-    lh.draw("LuaHUD profiles reloaded")
-end)
-
-lh.on("tick", function()
     lh.section({
         backgroundColor = 0,
         rowHeight = "auto",
