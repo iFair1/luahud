@@ -55,6 +55,20 @@ if record then
 end
 ```
 
+## Local chat messages
+
+`lh.sendMessage(message)` adds literal strings or Minecraft text component tables
+to local chat without sending a message to the server:
+
+```lua
+lh.sendMessage("Profile loaded.")
+lh.sendMessage({ text = "Profile loaded.", color = "green" })
+```
+
+See [local chat messages](docs/chat-messages.md) for nested text, hover and click
+events. Lua tables use modern `click_event` and `hover_event` field names on all
+supported versions.
+
 ## Addon API
 
 Addons can contribute engine-neutral values and synchronous functions through the

@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -58,7 +59,7 @@ public final class LuaType<T> {
         this.alternatives = alternatives == null ? List.of() : List.copyOf(alternatives);
         this.elementType = elementType;
         this.model = model;
-        this.inputFields = inputFields == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(inputFields));
+        this.inputFields = inputFields == null ? Map.of() : Collections.unmodifiableMap(inputFields);
     }
 
     public static LuaType<Void> nil() { return simple(Kind.NIL, "nil"); }
@@ -125,7 +126,18 @@ public final class LuaType<T> {
     public static LuaType<LuaTableValue> inputTable(String name, Consumer<InputTableBuilder> definition) {
         InputTableBuilder builder = new InputTableBuilder();
         definition.accept(builder);
-        return new LuaType<>(Kind.INPUT_TABLE, Objects.requireNonNull(name), null, null, null, builder.fields);
+        return new LuaType<>(Kind.INPUT_TABLE, Objects.requireNonNull(name), null, null, null, new LinkedHashMap<>(builder.fields));
+    }
+
+    /** Defines a strict recursive table; self can be used in nested fields and lists. */
+    public static LuaType<LuaTableValue> inputTable(String name,
+            BiConsumer<InputTableBuilder, LuaType<LuaTableValue>> definition) {
+        Map<String, InputField> fields = new LinkedHashMap<>();
+        LuaType<LuaTableValue> self = new LuaType<>(Kind.INPUT_TABLE, Objects.requireNonNull(name), null, null, null, fields);
+        InputTableBuilder builder = new InputTableBuilder();
+        definition.accept(builder, self);
+        fields.putAll(builder.fields);
+        return self;
     }
 
     /** Documentation-only callback type. Registrars reject it for addon-defined functions. */

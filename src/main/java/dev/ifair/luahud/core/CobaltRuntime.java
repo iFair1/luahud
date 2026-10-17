@@ -576,7 +576,7 @@ public final class CobaltRuntime {
 
     private Object anyFromLua(LuaValue value) throws LuaError {
         if (value.isNil()) return null;
-        if (value.isString()) return javaString(value);
+        if (value.type() == Constants.TSTRING) return javaString(value);
         if (value instanceof LuaInteger) return value.toInteger();
         if (value.isNumber()) return value.toDouble();
         if (value.type() == Constants.TBOOLEAN) return value.checkBoolean();
