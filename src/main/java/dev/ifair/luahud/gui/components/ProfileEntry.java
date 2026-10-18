@@ -8,6 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.InputUtil;
@@ -55,10 +56,11 @@ public class ProfileEntry extends ProfileListEntry {
 
         this.activeButton = iconButton(
                 profile.isActive() ? GuiTextures.ENABLED : GuiTextures.DISABLED,
+                active ? "Disable this profile" : "Enable this profile",
                 ignored -> toggleActive()
         );
 
-        this.nameField = new TextFieldWidget(client.textRenderer, 0, 0, Text.literal("Profile name")) {
+        this.nameField = new TextFieldWidget(client.textRenderer, 0, 0, Text.literal("Something's wrong if you're seeing this")) {
             @Override
             //? if <1.21.9 {
             public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -92,30 +94,35 @@ public class ProfileEntry extends ProfileListEntry {
             }
         };
 
+        this.nameField.setTooltip(Tooltip.of(Text.literal("Click to rename this profile")));
         this.nameField.setText(profileName);
         this.nameField.setVisible(false);
 
         this.visibilityButton = iconButton(
                 hidden ? GuiTextures.HIDDEN : GuiTextures.SHOWN,
+                hidden ? "Show this profile" : "Hide this profile",
                 ignored -> toggleHidden()
         );
 
         this.keybindButton = ButtonWidget.builder(getKeybindText(), ignored -> list.selectKeybind(this))
+                .tooltip(Tooltip.of(Text.literal("Keybind to toggle this profile")))
                 .dimensions(0, 0, KEYBIND_WIDTH, BUTTON_SIZE)
                 .build();
 
         this.moveUpButton = iconButton(
                 GuiTextures.MOVE_UP,
+                "Move up",
                 ignored -> list.moveProfile(profileName, -1)
         );
 
         this.moveDownButton = iconButton(
                 GuiTextures.MOVE_DOWN,
+                "Move down",
                 ignored -> list.moveProfile(profileName, 1)
         );
 
         this.deleteButton = iconButton(
-                GuiTextures.DELETE, ignored -> deleteProfile()
+                GuiTextures.DELETE, "Delete this profile", ignored -> deleteProfile()
         );
     }
 
@@ -228,6 +235,7 @@ public class ProfileEntry extends ProfileListEntry {
         if (!deleteConfirmation) {
             deleteConfirmation = true;
             deleteButton.setIcon(GuiTextures.DELETE_CONFIRM);
+            deleteButton.setLabel("Click again to confirm");
             return;
         }
 
@@ -263,13 +271,14 @@ public class ProfileEntry extends ProfileListEntry {
         return InputUtil.fromTranslationKey(this.keybind).getLocalizedText();
     }
 
-    private static IconButtonWidget iconButton(Identifier icon, ButtonWidget.PressAction onPress) {
+    private static IconButtonWidget iconButton(Identifier icon, String tooltip, ButtonWidget.PressAction onPress) {
         return new IconButtonWidget(
                 0,
                 0,
                 BUTTON_SIZE,
                 BUTTON_SIZE,
                 icon,
+                tooltip,
                 onPress
         );
     }

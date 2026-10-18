@@ -44,6 +44,7 @@ public class HeaderWidget {
                         BUTTON_SIZE,
                         BUTTON_SIZE,
                         GuiTextures.GITHUB,
+                        "GitHub",
                         ignored -> GuiUtils.openInBrowser(GITHUB_URL)
                 )
         );
@@ -54,6 +55,7 @@ public class HeaderWidget {
                         BUTTON_SIZE,
                         BUTTON_SIZE,
                         GuiTextures.MODRINTH,
+                        "Modrinth",
                         ignored -> GuiUtils.openInBrowser(MODRINTH_URL)
                 )
         );
@@ -64,6 +66,7 @@ public class HeaderWidget {
                 BUTTON_SIZE,
                 BUTTON_SIZE,
                 GuiTextures.DISCORD,
+                        "Discord",
                 ignored -> {}
             )
         );
@@ -77,6 +80,7 @@ public class HeaderWidget {
                         BUTTON_SIZE,
                         BUTTON_SIZE,
                         errorIcon(),
+                        errorLabel(),
                         ignored -> screen.openErrors()
                 )
         );
@@ -89,6 +93,7 @@ public class HeaderWidget {
                         ConfigManager.isShowHiddenFilesEnabled()
                                 ? GuiTextures.HIDE_HIDDEN
                                 : GuiTextures.SHOW_HIDDEN,
+                        visibilityLabel(),
                         button -> {
                             boolean showHidden = !ConfigManager.isShowHiddenFilesEnabled();
 
@@ -96,6 +101,7 @@ public class HeaderWidget {
                             this.visibilityButton.setIcon(
                                     showHidden ? GuiTextures.HIDE_HIDDEN : GuiTextures.SHOW_HIDDEN
                             );
+                            this.visibilityButton.setLabel(visibilityLabel());
                             screen.reloadProfiles();
                         }
                 )
@@ -103,7 +109,19 @@ public class HeaderWidget {
     }
 
     public void tick() {
-        if (this.errorButton != null) this.errorButton.setIcon(errorIcon());
+        if (this.errorButton != null) {
+            this.errorButton.setIcon(errorIcon());
+            this.errorButton.setLabel(errorLabel());
+        }
+    }
+
+    private static String visibilityLabel() {
+        return ConfigManager.isShowHiddenFilesEnabled() ? "Hide hidden profiles" : "Show hidden profiles";
+    }
+
+    private static String errorLabel() {
+        int count = ErrorManager.distinctCount();
+        return count == 0 ? "Errors" : "Errors (" + count + ")";
     }
 
     private static Identifier errorIcon() {

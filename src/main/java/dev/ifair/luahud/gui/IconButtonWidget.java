@@ -3,10 +3,13 @@ package dev.ifair.luahud.gui;
 import dev.ifair.luahud.compat.GuiCompat;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.tooltip.Tooltip;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 public class IconButtonWidget extends ButtonWidget {
     private Identifier icon;
+    private String label;
 
     public IconButtonWidget(
             int x,
@@ -14,6 +17,7 @@ public class IconButtonWidget extends ButtonWidget {
             int width,
             int height,
             Identifier icon,
+            String tooltip,
             PressAction onPress
     ) {
         super(
@@ -21,12 +25,14 @@ public class IconButtonWidget extends ButtonWidget {
                 y,
                 width,
                 height,
-                net.minecraft.text.Text.empty(),
+                Text.empty(),
                 onPress,
                 DEFAULT_NARRATION_SUPPLIER
         );
 
         this.icon = icon;
+        this.label = tooltip;
+        setTooltip(Tooltip.of(Text.literal(tooltip)));
     }
 
     @Override
@@ -58,6 +64,12 @@ public class IconButtonWidget extends ButtonWidget {
                 getWidth(),
                 getHeight()
         );
+    }
+
+    public void setLabel(String label) {
+        if (this.label.equals(label)) return;
+        this.label = label;
+        setTooltip(Tooltip.of(Text.literal(label)));
     }
 
     public void setIcon(Identifier icon) {
