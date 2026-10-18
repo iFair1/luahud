@@ -16,6 +16,7 @@ import net.minecraft.util.Identifier;
 import org.junit.jupiter.api.Test;
 import org.squiddev.cobalt.LuaError;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -180,6 +181,19 @@ class RenderModuleTest {
         assertEquals(0x00000000, RenderModule.color("#00000000"));
     }
 
+    @Test void sectionsDefaultToZeroHorizontalOffsetAndTwoVerticalOffsetForEveryAnchor() {
+        SectionState defaults = RenderModule.sectionState(null);
+        assertEquals(0, defaults.offsetX());
+        assertEquals(2, defaults.offsetY());
+
+        for (String anchor : List.of("topLeft", "topCenter", "topRight",
+                "bottomLeft", "bottomCenter", "bottomRight")) {
+            SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of("anchor", anchor)));
+            assertEquals(0, state.offsetX(), anchor);
+            assertEquals(2, state.offsetY(), anchor);
+        }
+    }
+
     @Test void centerAnchorsDefaultToZeroHorizontalOffsetAndCenteredRows() {
         SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of("anchor", "topCenter")));
 
@@ -194,10 +208,11 @@ class RenderModuleTest {
         assertEquals(0, state.layout().scaledInlineSpacing());
     }
 
-    @Test void rightAnchorsKeepTheirInsetAndDeriveRightRowAlignment() {
+    @Test void rightAnchorsDefaultToZeroHorizontalOffsetAndDeriveRightRowAlignment() {
         SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of("anchor", "bottomRight")));
 
-        assertEquals(2, state.offsetX());
+        assertEquals(0, state.offsetX());
+        assertEquals(2, state.offsetY());
         assertEquals(RowAlignment.RIGHT, state.rowAlignment());
     }
 

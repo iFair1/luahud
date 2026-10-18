@@ -347,12 +347,14 @@ class RenderLayoutEngineTest {
             float scale,
             int rowHeight
     ) {
-        return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
+        int offsetX = anchor == Anchor.TOP_CENTER || anchor == Anchor.BOTTOM_CENTER ? 0 : 2;
+        return new RenderSection(new SectionLayout(anchor, offsetX, 2,
                 alignment, InlineAlignment.CENTER, inlineDirection, rowDirection, scale, rowHeight, false, 2));
     }
 
     private static RenderSection autoSection(Anchor anchor, RowDirection rowDirection) {
-        return new RenderSection(new SectionLayout(anchor, anchor.defaultOffsetX(), 2,
+        int offsetX = anchor == Anchor.TOP_CENTER || anchor == Anchor.BOTTOM_CENTER ? 0 : 2;
+        return new RenderSection(new SectionLayout(anchor, offsetX, 2,
                 anchor.defaultRowAlignment(), InlineAlignment.CENTER, InlineDirection.LEFT_TO_RIGHT, rowDirection,
                 1f, 12, true, 2));
     }

@@ -41,7 +41,7 @@ public enum Anchor {
     }
 
     public int defaultOffsetX() {
-        return horizontal == Horizontal.CENTER ? 0 : 2;
+        return 0;
     }
 
     int resolveX(int screenWidth, int contentWidth, int offsetX) {
