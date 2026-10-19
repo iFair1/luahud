@@ -19,7 +19,14 @@ final class ApiTypeContext {
     private final Map<ModelBuilder<?>, InputModel> inputModels = new IdentityHashMap<>();
     private final Set<Object> collected = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<String> names = new HashSet<>();
+    private final boolean integersAsNumbers;
+
     ApiTypeContext(ApiRegistry registry) {
+        this(registry, false);
+    }
+
+    ApiTypeContext(ApiRegistry registry, boolean integersAsNumbers) {
+        this.integersAsNumbers = integersAsNumbers;
         for (ModelBuilder<?> model : registry.models()) add(model, model.providerId(), model.name());
         registry.models().forEach(model -> collect(model.type(), model.providerId()));
         collect(registry.rootNode());
@@ -71,6 +78,7 @@ final class ApiTypeContext {
 
     String type(LuaType<?> type, String provider) {
         return switch (type.kind()) {
+            case INTEGER -> integersAsNumbers ? "number" : "integer";
             case MODEL -> namedTypes.get(type.model());
             case MODEL_INPUT -> inputType(type.model());
             case INPUT_TABLE, ALIAS -> namedTypes.get(type);

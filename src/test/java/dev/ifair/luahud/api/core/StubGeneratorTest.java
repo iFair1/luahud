@@ -105,6 +105,23 @@ class StubGeneratorTest {
         assertTrue(StubGenerator.generate(registry).contains("---@alias ItemId string"));
     }
 
+    @Test void compatibilityFlagRendersNestedIntegersAsNumbersWithoutChangingLiterals() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        api.root().integer("count", "Current integer count", () -> 1);
+        var function = api.root().function("numbers", LuaType.map(LuaType.integer()), "");
+        function.parameter("values", LuaType.list(LuaType.union(LuaType.integer(), LuaType.literal("integer"))), "");
+        function.call(args -> java.util.Map.of());
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry, true);
+        assertTrue(stub.contains("---@field count number Current integer count"));
+        assertTrue(stub.contains("---@param values (number | \"integer\")[]"));
+        assertTrue(stub.contains("---@return table<string, number>"));
+        assertEquals(StubGenerator.generate(registry), StubGenerator.generate(registry, false));
+        assertTrue(StubGenerator.generate(registry).contains("---@field count integer"));
+    }
+
     private static ApiRegistry fixture() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").root().namespace("example", table -> {

@@ -55,7 +55,7 @@ public class LuaHUD implements ClientModInitializer {
 		api.freeze();
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			try {
-				StubGenerator.writeIfChanged(ConfigManager.getScriptsDir().resolve("api/lh.lua"), StubGenerator.generate(api));
+				StubGenerator.writeIfChanged(ConfigManager.getScriptsDir().resolve("api/lh.lua"), StubGenerator.generate(api, true));
 			} catch (Exception error) {
 				ErrorManager.reportSystem("stub generation", error);
 			}
