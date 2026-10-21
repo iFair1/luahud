@@ -40,6 +40,19 @@ another target, for example `./gradlew :1.21.1:build` or
 other targets use their own run directories to avoid opening a development world
 with a different Minecraft version.
 
+In IntelliJ IDEA, reload the Gradle project and select **Minecraft Client** in
+the Run/Debug configuration selector. Loom generates the baseline's IDE runs
+as Gradle configurations; **Minecraft Client** runs `:1.21:runClient`. This
+also prepares the launch files and assets, and avoids mismatches between Loom
+and IntelliJ's names for version modules. Other targets can be launched through
+their explicit Gradle `runClient` tasks.
+
+If IDE run configurations remain from before the Stonecutter migration, remove
+the old **Minecraft Client**, **Minecraft Server** and **Data Generation**
+configurations in **Run > Edit Configurations**, then reload Gradle. Loom does
+not replace existing Application configurations when their module or launch
+path changes.
+
 Each target produces separate artifacts under `versions/<version>/build/libs/`.
 Mod versions include `+mc<version>` to distinguish artifacts, including Maven
 publications. `fabric.mod.json` receives the Minecraft, Java and loader

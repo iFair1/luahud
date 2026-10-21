@@ -10,9 +10,14 @@ base {
 	archivesName = 'luahud'
 }
 
-// Preserve the existing development world's location for the baseline.
-if (project.name == '1.21') {
-	loom.runs.configureEach {
+loom.runs.configureEach {
+	// Loom does not generate IDE runs for Stonecutter subprojects by default.
+	generateRunConfig = project.name == '1.21'
+	if (project.name == '1.21') {
+		appendProjectPathToDisplayName = false
+		// IntelliJ normalizes version module names differently from Loom.
+		preferGradleTask = true
+		// Preserve the existing development world's location for the baseline.
 		runDir = rootProject.file('run').absolutePath
 	}
 }
