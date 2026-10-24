@@ -25,6 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RenderModuleTest {
+    @org.junit.jupiter.api.BeforeAll static void bootstrapMinecraft() {
+        net.minecraft.SharedConstants.createGameVersion();
+        net.minecraft.Bootstrap.initialize();
+    }
+
     @Test void sectionStateDoesNotLeakBetweenProfileCallbacks() throws Exception {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").event("reload", "");
@@ -80,7 +85,7 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field count? integer Stack count; defaults to 1 for input tables"));
         assertTrue(stub.contains("---@field damage? integer Current item damage"));
         assertTrue(stub.contains("---@field damageLeft? integer Remaining durability"));
-        assertTrue(stub.contains("---@field enchantments? table<string, integer>"));
+        assertTrue(stub.contains("---@field enchantments? table<EnchantmentId, integer>"));
         assertTrue(stub.contains("---@field maxDamage? integer Maximum durability"));
         assertTrue(stub.contains("---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
         assertEquals(3, count(stub, "---@field newLine? boolean Advance to the next line after drawing; defaults to false"));

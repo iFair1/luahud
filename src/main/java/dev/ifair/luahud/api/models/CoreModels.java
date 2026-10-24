@@ -103,7 +103,7 @@ public record CoreModels(
         var uuid = model.string("uuid", "World entity UUID", Entity::getUuidAsString).inputRequired();
         model.integer("health", "Current health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getHealth() : 0);
         model.integer("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0);
-        model.field("effects", LuaType.map(statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects);
+        model.field("effects", LuaType.map(RegistryIds.STATUS_EFFECT, statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects);
         model.bool("isLiving", "Whether the entity is a living entity", value -> value instanceof LivingEntity);
         model.optionalField("horse", horse.type(), "Horse-family properties, or nil for other entities", CoreModels::horse);
         model.fromFields(fields -> entity(fields.get(uuid)));
@@ -147,7 +147,7 @@ public record CoreModels(
         var damage = model.optionalInteger("damage", "Current item damage", value -> value.isDamageable() ? value.getDamage() : null).inputOptional();
         var damageLeft = model.optionalInteger("damageLeft", "Remaining durability", value -> value.isDamageable() ? value.getMaxDamage() - value.getDamage() : null).inputOptional();
         model.optionalInteger("maxDamage", "Maximum durability", value -> value.isDamageable() ? value.getMaxDamage() : null);
-        var enchantments = model.optionalField("enchantments", LuaType.map(LuaType.integer()), "Enchantments keyed by namespaced ID", CoreModels::enchantments).inputOptional();
+        var enchantments = model.optionalField("enchantments", LuaType.map(RegistryIds.ENCHANTMENT, LuaType.integer()), "Enchantments keyed by namespaced ID", CoreModels::enchantments).inputOptional();
         model.fromFields(fields -> {
             Item item = registryValue(Registries.ITEM, fields.get(id), "item");
             ItemStack source = fields.source();

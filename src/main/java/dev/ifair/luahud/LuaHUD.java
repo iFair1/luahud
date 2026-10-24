@@ -17,6 +17,7 @@ import net.fabricmc.api.ClientModInitializer;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -52,13 +53,8 @@ public class LuaHUD implements ClientModInitializer {
 		CoreApi.register(api);
 		api.discoverAddons();
 		api.freeze();
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-			try {
-				StubGenerator.writeIfChanged(ConfigManager.getApiDir().resolve("lh.lua"), StubGenerator.generate(api, true));
-			} catch (Exception error) {
-				ErrorManager.reportSystem("stub generation", error);
-			}
-		});
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> generateStub(api));
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> generateStub(api));
 
 		Engine engine = new Engine(api);
 		EventDispatcher.attach(engine);
@@ -88,6 +84,14 @@ public class LuaHUD implements ClientModInitializer {
 			RenderBuffer.renderAll(drawContext, client.textRenderer, width, height);
 		}));
 	}
+
+    private static void generateStub(ApiRegistry api) {
+        try {
+            StubGenerator.writeIfChanged(ConfigManager.getApiDir().resolve("lh.lua"), StubGenerator.generate(api, true));
+        } catch (Exception error) {
+            ErrorManager.reportSystem("stub generation", error);
+        }
+    }
 
 	private static void handleKeybinds(MinecraftClient client) {
 		boolean openScreen = false;

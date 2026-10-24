@@ -50,6 +50,10 @@ class CoreModelsTest {
         assertTrue(stub.contains("---@alias BlockId\n"));
         assertTrue(stub.contains("---@alias EntityTypeId\n"));
         assertTrue(stub.contains("---@alias StatusEffectId\n"));
+        assertTrue(stub.contains("---@alias EnchantmentId\n"));
+        assertTrue(stub.contains("---| \"minecraft:sharpness\"\n"));
+        assertTrue(stub.contains("---@field enchantments? table<EnchantmentId, integer>"));
+        assertTrue(stub.contains("---@field effects table<StatusEffectId, StatusEffect>"));
         for (var effectId : net.minecraft.registry.Registries.STATUS_EFFECT.getIds()) {
             assertTrue(stub.contains("---| \"" + effectId + "\"\n"));
         }
@@ -61,6 +65,15 @@ class CoreModelsTest {
         assertTrue(stub.contains("---@field id BlockId Namespaced block ID"));
         assertTrue(stub.contains("---@field id EntityTypeId Namespaced entity type"));
         assertTrue(stub.contains("---@field id EntityTypeId Namespaced player entity type"));
+        var enchantmentIds = net.minecraft.registry.BuiltinRegistries.createWrapperLookup()
+                //? if <1.21.2 {
+                .getWrapperOrThrow(net.minecraft.registry.RegistryKeys.ENCHANTMENT)
+                //?} else {
+                /*.getOrThrow(net.minecraft.registry.RegistryKeys.ENCHANTMENT)
+                *///?}
+                .streamKeys()
+                .map(key -> key.getValue().toString()).sorted().toList();
+        assertEquals(enchantmentIds, RegistryIds.ENCHANTMENT.stringValues());
         assertEquals(net.minecraft.registry.Registries.ITEM.getIds().size(), RegistryIds.ITEM.stringValues().size());
         assertEquals(net.minecraft.registry.Registries.STATUS_EFFECT.getIds().size(), RegistryIds.STATUS_EFFECT.stringValues().size());
     }

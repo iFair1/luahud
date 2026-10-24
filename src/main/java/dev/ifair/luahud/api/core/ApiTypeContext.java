@@ -49,6 +49,7 @@ final class ApiTypeContext {
             if (!collected.add(type)) return;
             type.inputFields().values().forEach(field -> collect(field.type(), provider));
         }
+        if (type.keyType() != null) collect(type.keyType(), provider);
         if (type.elementType() != null) collect(type.elementType(), provider);
         type.alternatives().forEach(value -> collect(value, provider));
     }
@@ -58,7 +59,7 @@ final class ApiTypeContext {
             case MODEL, MODEL_INPUT -> inputType(type.model());
             case OPTIONAL -> "(" + inputFieldType(type.elementType(), provider) + ")?";
             case LIST -> "(" + inputFieldType(type.elementType(), provider) + ")[]";
-            case MAP -> "table<string, " + inputFieldType(type.elementType(), provider) + ">";
+            case MAP -> "table<" + type(type.keyType(), provider) + ", " + inputFieldType(type.elementType(), provider) + ">";
             case UNION -> String.join(" | ", type.alternatives().stream().map(value -> inputFieldType(value, provider)).toList());
             default -> type(type, provider);
         };
@@ -85,7 +86,7 @@ final class ApiTypeContext {
             case OPTIONAL -> groupedType(type.elementType(), provider) + "?";
             case UNION -> String.join(" | ", type.alternatives().stream().map(value -> type(value, provider)).toList());
             case LIST -> groupedType(type.elementType(), provider) + "[]";
-            case MAP -> "table<string, " + type(type.elementType(), provider) + ">";
+            case MAP -> "table<" + type(type.keyType(), provider) + ", " + type(type.elementType(), provider) + ">";
             default -> type.luaName();
         };
     }

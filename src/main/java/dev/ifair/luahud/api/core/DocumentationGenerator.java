@@ -142,6 +142,9 @@ public final class DocumentationGenerator {
         boolean modelInput = type.kind() == LuaType.Kind.MODEL_INPUT || input && type.kind() == LuaType.Kind.MODEL;
         item.addProperty("kind", modelInput ? "model_input" : lower(type.kind()));
         item.addProperty("display", input ? context.inputFieldType(type, provider) : context.type(type, provider));
+        if (type.keyType() != null) {
+            item.add("keyType", type(type.keyType(), provider, context, false));
+        }
         if (type.elementType() != null) {
             item.add("elementType", type(type.elementType(), provider, context, input));
         }

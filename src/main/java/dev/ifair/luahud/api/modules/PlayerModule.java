@@ -50,7 +50,7 @@ public final class PlayerModule {
                     .bool("sprinting", "Whether the character is sprinting", () -> client.player.isSprinting())
                     .bool("sprintHeld", "Whether the sprint key is held", () -> client.options.sprintKey.isPressed())
                     .string("gamemode", "Current game mode", () -> gameMode(client))
-                    .value("effects", LuaType.map(models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
+                    .value("effects", LuaType.map(RegistryIds.STATUS_EFFECT, models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
                             () -> CoreModels.statusEffects(client.player))
                     .value("horse", LuaType.optional(models.horse().type()), LuaDoc.of("Currently ridden horse-family animal, or nil"),
                             () -> CoreModels.horse(client.player.getVehicle()));

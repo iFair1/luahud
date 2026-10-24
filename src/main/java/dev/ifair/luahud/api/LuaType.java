@@ -42,6 +42,7 @@ public final class LuaType<T> {
     private final String displayName;
     private final List<LuaType<?>> alternatives;
     private final LuaType<?> elementType;
+    private final LuaType<String> keyType;
     private final ModelBuilder<?> model;
     private final Map<String, InputField> inputFields;
 
@@ -53,6 +54,13 @@ public final class LuaType<T> {
     private LuaType(Kind kind, String displayName, List<LuaType<?>> alternatives, LuaType<?> elementType,
                     ModelBuilder<?> model, Map<String, InputField> inputFields,
                     Supplier<? extends Collection<String>> stringValues) {
+        this(kind, displayName, alternatives, elementType, model, inputFields, stringValues, null);
+    }
+
+    private LuaType(Kind kind, String displayName, List<LuaType<?>> alternatives, LuaType<?> elementType,
+                    ModelBuilder<?> model, Map<String, InputField> inputFields,
+                    Supplier<? extends Collection<String>> stringValues, LuaType<String> keyType) {
+        this.keyType = keyType;
         this.stringValues = stringValues;
         this.kind = kind;
         this.displayName = displayName;
@@ -111,7 +119,15 @@ public final class LuaType<T> {
     }
 
     public static <T> LuaType<Map<String, T>> map(LuaType<T> value) {
-        return new LuaType<>(Kind.MAP, "map", null, Objects.requireNonNull(value), null, null);
+        return map(string(), value);
+    }
+
+    /** Creates a string-keyed map with a documented key type, such as a registry ID alias. */
+    public static <T> LuaType<Map<String, T>> map(LuaType<String> key, LuaType<T> value) {
+        LuaType<?> underlying = Objects.requireNonNull(key);
+        while (underlying.kind() == Kind.ALIAS) underlying = underlying.elementType();
+        if (underlying.kind() != Kind.STRING) throw new IllegalArgumentException("Map keys must use a string type or alias");
+        return new LuaType<>(Kind.MAP, "map", null, Objects.requireNonNull(value), null, null, null, key);
     }
 
     public static <T> LuaType<T> model(ModelBuilder<T> model) {
@@ -150,6 +166,7 @@ public final class LuaType<T> {
     public Kind kind() { return kind; }
     public String displayName() { return displayName; }
     public List<LuaType<?>> alternatives() { return alternatives; }
+    public LuaType<String> keyType() { return keyType; }
     public LuaType<?> elementType() { return elementType; }
     public ModelBuilder<?> model() { return model; }
     public Map<String, InputField> inputFields() { return inputFields; }
@@ -161,7 +178,7 @@ public final class LuaType<T> {
             case UNION -> String.join(" | ", alternatives.stream().map(LuaType::luaName).toList());
             case OPTIONAL -> elementType.luaName() + "?";
             case LIST -> elementType.luaName() + "[]";
-            case MAP -> "table<string, " + elementType.luaName() + ">";
+            case MAP -> "table<" + keyType.luaName() + ", " + elementType.luaName() + ">";
             case ALIAS, MODEL, MODEL_INPUT, INPUT_TABLE -> displayName;
         };
     }

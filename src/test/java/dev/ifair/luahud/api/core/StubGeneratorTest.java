@@ -122,6 +122,35 @@ class StubGeneratorTest {
         assertTrue(StubGenerator.generate(registry).contains("---@field count integer"));
     }
 
+    @Test void registryMapKeysRetainAliasesInInputsDocumentationAndRuntime() throws Exception {
+        LuaType<String> id = LuaType.stringAlias("EffectId", () -> java.util.List.of("minecraft:speed"));
+        LuaType<java.util.Map<String, Integer>> effects = LuaType.map(id, LuaType.integer());
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        var model = api.model("Effects", java.util.Map.class);
+        var field = model.field("values", effects, "", value -> java.util.Map.<String, Integer>of()).inputRequired();
+        model.fromFields(fields -> fields.get(field));
+        var echo = api.root().function("echo", effects, "");
+        var argument = echo.parameter("values", effects, "");
+        echo.call(args -> args.get(argument));
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@alias EffectId\n---| \"minecraft:speed\"\n"));
+        assertTrue(stub.contains("---@field values table<EffectId, integer>"));
+        assertTrue(stub.contains("---@param values table<EffectId, integer>"));
+        assertTrue(StubGenerator.generate(registry, true).contains("table<EffectId, number>"));
+        assertEquals("table<EffectId, integer>", effects.luaName());
+        var documentation = com.google.gson.JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
+        var parameter = documentation.getAsJsonArray("functions").get(0).getAsJsonObject()
+                .getAsJsonArray("parameters").get(0).getAsJsonObject().getAsJsonObject("type");
+        assertEquals("EffectId", parameter.getAsJsonObject("keyType").get("display").getAsString());
+        var runtime = new dev.ifair.luahud.core.CobaltRuntime(registry);
+        runtime.start();
+        runtime.execute("assert(lh.echo({['minecraft:speed']=2})['minecraft:speed'] == 2)", "registry-map");
+        assertThrows(IllegalArgumentException.class, () -> LuaType.map(LuaType.literal("speed"), LuaType.integer()));
+    }
+
     private static ApiRegistry fixture() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").root().namespace("example", table -> {
