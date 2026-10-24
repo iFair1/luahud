@@ -9,7 +9,6 @@ import dev.ifair.luahud.command.LuaHUDCommands;
 import dev.ifair.luahud.core.Engine;
 import dev.ifair.luahud.core.EventDispatcher;
 import dev.ifair.luahud.core.ProfileKeybindManager;
-import dev.ifair.luahud.core.TimerManager;
 import dev.ifair.luahud.error.ErrorManager;
 import dev.ifair.luahud.error.ErrorNotifications;
 import dev.ifair.luahud.gui.LuaHUDScreen;
@@ -63,7 +62,6 @@ public class LuaHUD implements ClientModInitializer {
 
 		Engine engine = new Engine(api);
 		EventDispatcher.attach(engine);
-		TimerManager.attach(engine);
 		engine.init();
 
 		LuaHUDCommands.register(engine);
@@ -74,7 +72,6 @@ public class LuaHUD implements ClientModInitializer {
 			engine.checkForUpdates();
 			if (!engine.isReady()) return;
 			if (!client.isPaused()) RenderBuffer.tickClock();
-			TimerManager.tick();
 			EventDispatcher.fireEvent("tick");
 		});
 

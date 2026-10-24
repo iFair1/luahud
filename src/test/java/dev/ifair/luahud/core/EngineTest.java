@@ -23,7 +23,7 @@ class EngineTest {
         Files.writeString(profile, "loads=1; initialized=0; ticks=0; timers=0; "
                 + "lh.on('reload', function() initialized=initialized+1 end); "
                 + "lh.on('tick', function() assert(initialized==1); ticks=ticks+1 end); "
-                + "lh.setInterval(1,'ticks',function() assert(initialized==1); timers=timers+1 end)");
+                + "lh.setInterval(1,'tick',function() assert(initialized==1); timers=timers+1 end)");
         AtomicBoolean inWorld = new AtomicBoolean();
         AtomicBoolean reloadRequested = new AtomicBoolean(true);
         AtomicInteger creations = new AtomicInteger();
@@ -34,7 +34,6 @@ class EngineTest {
         engine.reloadAll();
         engine.runScript(profile);
         engine.fireEvent("reload");
-        engine.tickTimers();
         assertFalse(engine.isReady());
         assertEquals(0, creations.get());
         assertTrue(reloadRequested.get());
@@ -47,7 +46,6 @@ class EngineTest {
         assertEquals(1, first.global("loads").checkInteger());
         assertEquals(1, first.global("initialized").checkInteger());
         engine.fireEvent("tick");
-        engine.tickTimers();
         engine.checkForUpdates();
         assertEquals(1, creations.get());
         assertEquals(1, first.global("ticks").checkInteger());
@@ -56,7 +54,6 @@ class EngineTest {
         // Execution must stop immediately, before the next lifecycle tick.
         inWorld.set(false);
         engine.fireEvent("tick");
-        engine.tickTimers();
         engine.runScript(profile);
         assertFalse(engine.isReady());
         assertEquals(1, first.global("ticks").checkInteger());
@@ -163,7 +160,7 @@ class EngineTest {
                     error('observer failed')
                 end)
                 lh.on('tick', function() error('tick failed') end)
-                lh.setInterval(1, 'ticks', function() error('timer failed') end)
+                lh.setInterval(1, 'render', function() error('timer failed') end)
                 """);
         ApiRegistry registry = registry();
         CobaltRuntime runtime = new CobaltRuntime(registry);
@@ -184,7 +181,7 @@ class EngineTest {
             runtime.execute("assert(#errors == 1)", "verify-no-recursion");
             engine.fireEvent("tick");
             engine.fireEvent("tick");
-            engine.tickTimers();
+            engine.fireEvent("render");
             engine.checkForUpdates();
             runtime.execute("""
                     assert(#errors == 4)

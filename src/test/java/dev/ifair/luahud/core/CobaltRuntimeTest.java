@@ -338,15 +338,73 @@ class CobaltRuntimeTest {
         registry.addEventFunctions();
         registry.freeze();
         CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
-        runtime.execute("ticks=0; intervals=0; lh.on('tick', function() ticks=ticks+1 end); lh.setInterval(2,'ticks',function() intervals=intervals+1 end); unsafe=(io~=nil or os~=nil or debug~=nil or luajava~=nil)", "callbacks");
-        runtime.fireEvent("tick"); runtime.tickTimers(); runtime.tickTimers();
-        assertEquals(1, runtime.global("ticks").checkInteger());
+        runtime.execute("ticks=0; intervals=0; lh.on('tick', function() ticks=ticks+1 end); lh.setInterval(2,'tick',function() intervals=intervals+1 end); unsafe=(io~=nil or os~=nil or debug~=nil or luajava~=nil)", "callbacks");
+        runtime.fireEvent("tick"); runtime.fireEvent("tick");
+        assertEquals(2, runtime.global("ticks").checkInteger());
         assertEquals(1, runtime.global("intervals").checkInteger());
         assertFalse(runtime.global("unsafe").checkBoolean());
         runtime.start();
         assertTrue(runtime.global("ticks").isNil());
-        runtime.fireEvent("tick"); runtime.tickTimers(); runtime.tickTimers();
+        runtime.fireEvent("tick"); runtime.fireEvent("tick");
         assertTrue(runtime.global("intervals").isNil());
+    }
+
+    @Test void intervalsCountOnlyTheirSelectedEventAndPassItsPayload() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("fixture");
+        api.event("tick", "");
+        api.event("render", "");
+        var damage = api.event("damage", LuaType.integer(), "");
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        runtime.execute("""
+                ticks = 0; renders = 0; damages = 0; lastDamage = 0
+                lh.setInterval(2, 'tick', function() ticks = ticks + 1 end)
+                lh.setInterval(3, 'render', function() renders = renders + 1 end)
+                lh.setInterval(2, 'damage', function(value)
+                    damages = damages + 1
+                    lastDamage = value
+                end)
+                """, "intervals");
+
+        runtime.fireEvent("tick");
+        runtime.fireEvent("render");
+        runtime.fireEvent("damage", 4);
+        runtime.fireEvent("render");
+        assertEquals(0, runtime.global("ticks").checkInteger());
+        assertEquals(0, runtime.global("renders").checkInteger());
+        assertEquals(0, runtime.global("damages").checkInteger());
+
+        runtime.fireEvent("tick");
+        runtime.fireEvent("render");
+        runtime.fireEvent(damage, 7);
+        assertEquals(1, runtime.global("ticks").checkInteger());
+        assertEquals(1, runtime.global("renders").checkInteger());
+        assertEquals(1, runtime.global("damages").checkInteger());
+        assertEquals(7, runtime.global("lastDamage").checkInteger());
+
+        runtime.fireEvent("render");
+        runtime.fireEvent("render");
+        assertEquals(1, runtime.global("renders").checkInteger());
+        runtime.fireEvent("render");
+        assertEquals(2, runtime.global("renders").checkInteger());
+    }
+
+    @Test void intervalsRejectUnregisteredEventNames() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        registry.registrar("fixture").event("tick", "");
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+
+        for (String event : List.of("missing", "ticks")) {
+            LuaError error = assertThrows(LuaError.class,
+                    () -> runtime.execute("lh.setInterval(20, '" + event + "', function() end)", "invalid"));
+            assertTrue(error.getMessage().contains("Unknown event: " + event));
+        }
     }
 
     @Test void watchdogStopsLoopsAndCannotBeHiddenByPcall() throws Exception {
@@ -392,13 +450,12 @@ class CobaltRuntimeTest {
         assertThrows(LuaError.class, () -> runtime.execute(new java.io.ByteArrayInputStream((
                         "events=0; timers=0; "
                                 + "lh.on('tick', function() events=events+1 end); "
-                                + "lh.setInterval(1,'ticks',function() timers=timers+1 end); "
+                                + "lh.setInterval(1,'tick',function() timers=timers+1 end); "
                                 + "lh.expire(); while true do end")
                         .getBytes(java.nio.charset.StandardCharsets.UTF_8)), "@Broken.lua", "Broken"));
 
         clock.set(0);
         runtime.fireEvent("tick");
-        runtime.tickTimers();
         assertEquals(0, runtime.global("events").checkInteger());
         assertEquals(0, runtime.global("timers").checkInteger());
     }
@@ -413,17 +470,17 @@ class CobaltRuntimeTest {
         runtime.execute("eventAttempts=0; healthyEvents=0; timerAttempts=0; healthyTimers=0; "
                         + "lh.on('tick', function() eventAttempts=eventAttempts+1; lh.expire(); while true do end end); "
                         + "lh.on('tick', function() healthyEvents=healthyEvents+1 end); "
-                        + "lh.setInterval(1,'ticks',function() timerAttempts=timerAttempts+1; lh.expire(); while true do end end); "
-                        + "lh.setInterval(1,'ticks',function() healthyTimers=healthyTimers+1 end)",
+                        + "lh.setInterval(1,'render',function() timerAttempts=timerAttempts+1; lh.expire(); while true do end end); "
+                        + "lh.setInterval(1,'render',function() healthyTimers=healthyTimers+1 end)",
                 "callbacks");
 
         runtime.fireEvent("tick");
         clock.set(0);
         runtime.fireEvent("tick");
         clock.set(0);
-        runtime.tickTimers();
+        runtime.fireEvent("render");
         clock.set(0);
-        runtime.tickTimers();
+        runtime.fireEvent("render");
 
         assertEquals(1, runtime.global("eventAttempts").checkInteger());
         assertEquals(2, runtime.global("healthyEvents").checkInteger());

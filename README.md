@@ -224,6 +224,21 @@ loaded on the first in-world client tick, then `init` runs before timers and
 discards the Lua runtime and HUD contents; joining again loads fresh profiles.
 Changes made from the main menu take effect on the next world entry.
 
+`lh.setInterval(number, event, callback)` runs the callback every `number`
+occurrences of a registered event. Use `"tick"` for client ticks, `"render"` for
+HUD frames, or an addon event name. Each interval counts only its selected event
+and receives that occurrence's payload, if any. The old `"ticks"` unit is no
+longer accepted.
+
+```lua
+lh.setInterval(20, "tick", function()
+    -- Runs every 20 client ticks.
+end)
+lh.setInterval(20, "render", function()
+    -- Runs every 20 HUD frames.
+end)
+```
+
 ## Lua modules
 
 `require("utils")` loads `config/luahud/profiles/utils.lua`, falling back to

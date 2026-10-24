@@ -33,7 +33,7 @@ public final class CobaltRuntime {
     private static final int WATCHDOG_HOOK_INTERVAL = 1000;
 
     private record Callback(LuaFunction function, String profile) {}
-    private record Timer(int interval, Callback callback, int[] elapsed) {}
+    private record Timer(int interval, String event, Callback callback, int[] elapsed) {}
 
     private final ApiRegistry registry;
     private final Runnable invocationBoundary;
@@ -152,22 +152,20 @@ public final class CobaltRuntime {
 
     private void dispatchCallbacks(EventType<?> event, Object payload) {
         List<Callback> callbacks = listeners.get(event.name());
-        if (callbacks == null) return;
-        for (Callback callback : List.copyOf(callbacks)) {
+        List<Callback> callbackSnapshot = callbacks == null ? List.of() : List.copyOf(callbacks);
+        for (Timer timer : List.copyOf(timers)) {
+            if (!timer.event.equals(event.name())) continue;
+            if (++timer.elapsed[0] >= timer.interval) {
+                timer.elapsed[0] = 0;
+                if (invokeCallback(timer.callback, null, event, payload)) timers.removeIf(candidate -> candidate == timer);
+            }
+        }
+        for (Callback callback : callbackSnapshot) {
             if (invokeCallback(callback, event.name(), event, payload)) {
                 callbacks.removeIf(candidate -> candidate == callback);
             }
         }
-        if (callbacks.isEmpty()) listeners.remove(event.name());
-    }
-
-    public void tickTimers() {
-        for (Timer timer : List.copyOf(timers)) {
-            if (++timer.elapsed[0] >= timer.interval) {
-                timer.elapsed[0] = 0;
-                if (invokeCallback(timer.callback, null, null, null)) timers.removeIf(candidate -> candidate == timer);
-            }
-        }
+        if (callbacks != null && callbacks.isEmpty()) listeners.remove(event.name());
     }
 
     /** @return whether this callback timed out and should be removed. */
@@ -279,9 +277,10 @@ public final class CobaltRuntime {
                 }
                 if (definition.special() == ApiRegistry.SpecialFunction.INTERVAL) {
                     int interval = args.arg(1).checkInteger();
-                    String unit = args.arg(2).checkString();
-                    if (!unit.equals("ticks")) throw new LuaError("bad argument #2 (expected 'ticks')");
-                    timers.add(new Timer(interval, new Callback(args.arg(3).checkFunction(), currentProfile), new int[]{0}));
+                    String event = args.arg(2).checkString();
+                    try { registry.event(event); }
+                    catch (IllegalArgumentException error) { throw new LuaError(error.getMessage()); }
+                    timers.add(new Timer(interval, event, new Callback(args.arg(3).checkFunction(), currentProfile), new int[]{0}));
                     return Constants.NIL;
                 }
 

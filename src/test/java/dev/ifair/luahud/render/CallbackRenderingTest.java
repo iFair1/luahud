@@ -35,12 +35,10 @@ class CallbackRenderingTest {
                 + "lh.on('reload', function() lh.draw('reload') end); "
                 + "lh.on('tick', function() lh.draw('tick') end); "
                 + "lh.on('render', function() lh.draw('render') end); "
-                + "lh.setInterval(2, 'ticks', function() lh.draw('timer') end)", "profile");
+                + "lh.setInterval(2, 'tick', function() lh.draw('timer') end)", "profile");
         runtime.fireEvent("reload");
         runtime.fireEvent("tick");
         runtime.fireEvent("render");
-        runtime.tickTimers();
-        runtime.tickTimers();
         runtime.fireEvent("tick");
         runtime.fireEvent("render");
 

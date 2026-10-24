@@ -80,10 +80,10 @@ public final class ApiRegistry {
         FunctionNode on = special("on", "Register an event callback.", SpecialFunction.EVENT);
         param(on, "event", LuaType.string(), "Registered event name");
         param(on, "callback", LuaType.function(), "Callback receives the registered event payload, if any");
-        FunctionNode interval = special("setInterval", "Run a callback repeatedly after a tick interval.", SpecialFunction.INTERVAL);
-        param(interval, "number", LuaType.integer(), "Interval length");
-        param(interval, "type", LuaType.literal("ticks"), "Only ticks are supported");
-        param(interval, "callback", LuaType.function(), "Callback invoked without arguments");
+        FunctionNode interval = special("setInterval", "Run a callback every N occurrences of a registered event.", SpecialFunction.INTERVAL);
+        param(interval, "number", LuaType.integer(), "Number of event occurrences between callbacks");
+        param(interval, "event", LuaType.string(), "Registered event name, such as tick or render");
+        param(interval, "callback", LuaType.function(), "Callback receives the registered event payload, if any");
     }
 
     public void freeze() {

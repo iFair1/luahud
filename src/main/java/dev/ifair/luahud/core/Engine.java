@@ -147,7 +147,6 @@ public final class Engine {
     public void validateEvent(EventType<?> event, Object payload) {
         if (registry != null) registry.validateEvent(event, payload);
     }
-    public void tickTimers() { if (isReady()) runtime.tickTimers(); }
     public void shutdown() {
         fileWatcher.stop();
         runtime = null;
