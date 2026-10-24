@@ -16,13 +16,12 @@ public class ConfigInstaller {
 
     public static void generateDefaults() {
 
-        if (Files.notExists(MOD_CONFIG_DIR) || !Files.isDirectory(MOD_CONFIG_DIR)) {
-            try {
-                Files.createDirectory(MOD_CONFIG_DIR);
-
-            } catch (IOException e) {
-                ErrorManager.reportSystem("default config", e);
-            }
+        try {
+            Files.createDirectories(PROFILES_DIR);
+            Files.createDirectories(API_DIR);
+        } catch (IOException e) {
+            ErrorManager.reportSystem("default config", e);
+            return;
         }
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
@@ -33,13 +32,7 @@ public class ConfigInstaller {
         }
 
         // The API stub is generated from the frozen registry. Only install LuaLS settings here.
-        final Path luaDir = MOD_CONFIG_DIR.resolve("api");
-        try {
-            Files.createDirectories(luaDir);
-        } catch (IOException e) {
-            ErrorManager.reportSystem("default config", e);
-        }
-        copyFromResourceIfAbsent(ASSETS_SOURCE + "lua/.luarc.json", luaDir);
+        copyFromResourceIfAbsent(ASSETS_SOURCE + "lua/.luarc.json", MOD_CONFIG_DIR);
     }
 
     static void copyFromResourceIfAbsent(String resourcePath, Path targetDir) {
@@ -66,8 +59,8 @@ public class ConfigInstaller {
 
     private static void generateExampleProfile(String name, boolean active, boolean hidden, String keybind) {
         String nameWithExtension = name + ".lua";
-        copyFromResourceIfAbsent(PROFILES_SOURCE + nameWithExtension, MOD_CONFIG_DIR);
-        if (Files.isRegularFile(MOD_CONFIG_DIR.resolve(nameWithExtension))
+        copyFromResourceIfAbsent(PROFILES_SOURCE + nameWithExtension, PROFILES_DIR);
+        if (Files.isRegularFile(PROFILES_DIR.resolve(nameWithExtension))
         && !ConfigManager.hasProfile(name)) {
             ConfigData.ProfileData newProfile = new ConfigData.ProfileData(name);
             newProfile.setActive(active);

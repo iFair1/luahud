@@ -44,13 +44,13 @@ class ConfigManagerTest {
                 if (!path.equals(directory)) Files.delete(path);
             }
         }
-        Files.createDirectories(ConfigManager.MOD_CONFIG_DIR);
+        Files.createDirectories(ConfigManager.PROFILES_DIR);
         ConfigData initial = new ConfigData();
         initial.profiles.add(new ConfigData.ProfileData("First"));
         initial.profiles.add(new ConfigData.ProfileData("Second"));
         Files.writeString(ConfigManager.JSON_CONFIG, new Gson().toJson(initial));
-        Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua"), "first script");
-        Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("Second.lua"), "second script");
+        Files.writeString(ConfigManager.PROFILES_DIR.resolve("First.lua"), "first script");
+        Files.writeString(ConfigManager.PROFILES_DIR.resolve("Second.lua"), "second script");
         ConfigManager.load();
         ConfigManager.consumeProfileReloadSignal();
         revision = ConfigManager.getProfileRevision();
@@ -59,8 +59,51 @@ class ConfigManagerTest {
     }
 
     @Test
+    void defaultsUseSeparateProfileAndApiDirectoriesWithRootEditorSettings() throws Exception {
+        ConfigInstaller.generateDefaults();
+
+        assertEquals(ConfigManager.MOD_CONFIG_DIR.resolve("profiles"), ConfigManager.getScriptsDir());
+        assertEquals(ConfigManager.MOD_CONFIG_DIR.resolve("api"), ConfigManager.getApiDir());
+        assertTrue(Files.isDirectory(ConfigManager.getApiDir()));
+        assertTrue(Files.isRegularFile(ConfigManager.getScriptsDir().resolve("Welcome Profile.lua")));
+        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("Welcome Profile.lua")));
+        assertFalse(Files.exists(ConfigManager.getApiDir().resolve(".luarc.json")));
+        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("system")));
+        String settings = Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve(".luarc.json"));
+        assertEquals("./api", com.google.gson.JsonParser.parseString(settings).getAsJsonObject()
+                .getAsJsonArray("Lua.workspace.library").get(0).getAsString());
+
+        Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve(".luarc.json"), "custom settings");
+        Files.writeString(ConfigManager.getScriptsDir().resolve("Welcome Profile.lua"), "custom profile");
+        ConfigInstaller.generateDefaults();
+
+        assertEquals("custom settings", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve(".luarc.json")));
+        assertEquals("custom profile", Files.readString(ConfigManager.getScriptsDir().resolve("Welcome Profile.lua")));
+    }
+
+    @Test
+    void watcherOnlyDiscoversProfilesInsideProfilesDirectory() throws Exception {
+        Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("Root.lua"), "root script");
+        Files.createDirectories(ConfigManager.getApiDir());
+        Files.writeString(ConfigManager.getApiDir().resolve("lh.lua"), "api definitions");
+        FileWatcher watcher = new FileWatcher();
+        watcher.start();
+        try {
+            assertEquals(List.of("First", "Second"), names());
+            Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("Another Root.lua"), "root script");
+            Files.writeString(ConfigManager.getApiDir().resolve("addon.lua"), "addon definitions");
+            Files.writeString(ConfigManager.getScriptsDir().resolve("Third.lua"), "third script");
+            await(() -> ConfigManager.hasProfile("Third"));
+
+            assertEquals(List.of("First", "Second", "Third"), names());
+        } finally {
+            watcher.stop();
+        }
+    }
+
+    @Test
     void failedRenameKeepsMemoryAndJsonUnchanged() throws Exception {
-        Files.delete(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua"));
+        Files.delete(ConfigManager.PROFILES_DIR.resolve("First.lua"));
 
         ConfigManager.renameProfile("First", "Renamed");
 
@@ -70,14 +113,14 @@ class ConfigManagerTest {
 
     @Test
     void renameNeverOverwritesAnExistingScript() throws Exception {
-        Path target = ConfigManager.MOD_CONFIG_DIR.resolve("Renamed.lua");
+        Path target = ConfigManager.PROFILES_DIR.resolve("Renamed.lua");
         Files.writeString(target, "unregistered script");
 
         ConfigManager.renameProfile("First", "Renamed");
 
         assertUnchanged();
         assertEquals("unregistered script", Files.readString(target));
-        assertEquals("first script", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
+        assertEquals("first script", Files.readString(ConfigManager.PROFILES_DIR.resolve("First.lua")));
     }
 
     @Test
@@ -87,13 +130,13 @@ class ConfigManagerTest {
         ConfigManager.renameProfile("First", "Renamed");
 
         assertUnchanged();
-        assertEquals("first script", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
-        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("Renamed.lua")));
+        assertEquals("first script", Files.readString(ConfigManager.PROFILES_DIR.resolve("First.lua")));
+        assertFalse(Files.exists(ConfigManager.PROFILES_DIR.resolve("Renamed.lua")));
     }
 
     @Test
     void failedDeleteKeepsProfileRegistered() throws Exception {
-        Path script = ConfigManager.MOD_CONFIG_DIR.resolve("First.lua");
+        Path script = ConfigManager.PROFILES_DIR.resolve("First.lua");
         Files.delete(script);
         Files.createDirectory(script);
         Files.writeString(script.resolve("child"), "cannot delete as a file");
@@ -112,8 +155,8 @@ class ConfigManagerTest {
         ConfigManager.deleteProfile("First");
 
         assertUnchanged();
-        assertEquals("first script", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
-        try (var files = Files.list(ConfigManager.MOD_CONFIG_DIR)) {
+        assertEquals("first script", Files.readString(ConfigManager.PROFILES_DIR.resolve("First.lua")));
+        try (var files = Files.list(ConfigManager.PROFILES_DIR)) {
             assertEquals(2, files.count());
         }
     }
@@ -146,8 +189,8 @@ class ConfigManagerTest {
         ConfigManager.renameProfile("First", "Second");
 
         assertEquals(List.of("Second (1)", "Second"), names());
-        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
-        assertEquals("first script", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve("Second (1).lua")));
+        assertFalse(Files.exists(ConfigManager.PROFILES_DIR.resolve("First.lua")));
+        assertEquals("first script", Files.readString(ConfigManager.PROFILES_DIR.resolve("Second (1).lua")));
         assertCommittedProfilesAndSignals();
     }
 
@@ -156,16 +199,16 @@ class ConfigManagerTest {
         ConfigManager.deleteProfile("First");
 
         assertEquals(List.of("Second"), names());
-        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
+        assertFalse(Files.exists(ConfigManager.PROFILES_DIR.resolve("First.lua")));
         assertCommittedProfilesAndSignals();
-        try (var files = Files.list(ConfigManager.MOD_CONFIG_DIR)) {
+        try (var files = Files.list(ConfigManager.PROFILES_DIR)) {
             assertEquals(1, files.count());
         }
     }
 
     @Test
     void missingScriptCanStillBeRemovedFromConfig() throws Exception {
-        Files.delete(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua"));
+        Files.delete(ConfigManager.PROFILES_DIR.resolve("First.lua"));
 
         ConfigManager.deleteProfile("First");
 
@@ -187,12 +230,12 @@ class ConfigManagerTest {
 
     @Test
     void createdProfileHasUniqueNameAndEmptyScript() throws Exception {
-        Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("New Profile.lua"), "unregistered");
+        Files.writeString(ConfigManager.PROFILES_DIR.resolve("New Profile.lua"), "unregistered");
 
         ConfigManager.createProfile("New Profile");
 
         assertEquals(List.of("First", "Second", "New Profile (1)"), names());
-        Path script = ConfigManager.MOD_CONFIG_DIR.resolve("New Profile (1).lua");
+        Path script = ConfigManager.PROFILES_DIR.resolve("New Profile (1).lua");
         assertTrue(Files.isRegularFile(script));
         assertEquals("", Files.readString(script));
         assertCommittedProfilesAndSignals();
@@ -205,7 +248,7 @@ class ConfigManagerTest {
         ConfigManager.createProfile("New Profile");
 
         assertUnchanged();
-        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("New Profile.lua")));
+        assertFalse(Files.exists(ConfigManager.PROFILES_DIR.resolve("New Profile.lua")));
     }
 
     @ParameterizedTest
@@ -218,7 +261,7 @@ class ConfigManagerTest {
 
         assertUnchanged();
         assertEquals(originalJson, Files.readString(ConfigManager.JSON_CONFIG));
-        assertEquals("first script", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua")));
+        assertEquals("first script", Files.readString(ConfigManager.PROFILES_DIR.resolve("First.lua")));
     }
 
     @Test
@@ -260,7 +303,7 @@ class ConfigManagerTest {
         FileWatcher watcher = new FileWatcher();
         watcher.start();
         try {
-            Path script = ConfigManager.MOD_CONFIG_DIR.resolve("First.lua");
+            Path script = ConfigManager.PROFILES_DIR.resolve("First.lua");
             Files.delete(script);
             Thread.sleep(50); // A save may span multiple WatchService event batches.
             Files.writeString(script, "updated script");
@@ -279,14 +322,14 @@ class ConfigManagerTest {
 
     @Test
     void watcherDetectsRealCreationAndDeletionButIgnoresDirectories() throws Exception {
-        Files.createDirectory(ConfigManager.MOD_CONFIG_DIR.resolve("Directory.lua"));
+        Files.createDirectory(ConfigManager.PROFILES_DIR.resolve("Directory.lua"));
         FileWatcher watcher = new FileWatcher();
         watcher.start();
         try {
             assertFalse(ConfigManager.hasProfile("Directory"));
-            Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve("Third.lua"), "third script");
+            Files.writeString(ConfigManager.PROFILES_DIR.resolve("Third.lua"), "third script");
             await(() -> ConfigManager.hasProfile("Third"));
-            Files.delete(ConfigManager.MOD_CONFIG_DIR.resolve("First.lua"));
+            Files.delete(ConfigManager.PROFILES_DIR.resolve("First.lua"));
             await(() -> !ConfigManager.hasProfile("First"));
 
             assertEquals(List.of("Second", "Third"), names());

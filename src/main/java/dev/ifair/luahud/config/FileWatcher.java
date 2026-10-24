@@ -22,12 +22,12 @@ public class FileWatcher {
         stop(); // stop if already running
 
         try {
-            if (Files.notExists(ConfigManager.MOD_CONFIG_DIR)) {
-                Files.createDirectories(ConfigManager.MOD_CONFIG_DIR);
+            if (Files.notExists(ConfigManager.PROFILES_DIR)) {
+                Files.createDirectories(ConfigManager.PROFILES_DIR);
             }
 
             watchService = FileSystems.getDefault().newWatchService();
-            ConfigManager.MOD_CONFIG_DIR.register(
+            ConfigManager.PROFILES_DIR.register(
                     watchService,
                     StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_MODIFY,
@@ -48,9 +48,9 @@ public class FileWatcher {
         }
     }
 
-    // Make sure every .lua file in the MOD_CONFIG_DIR matches someone in the luahud.json
+    // Make sure every .lua file in the PROFILES_DIR matches someone in the luahud.json
     private void syncExistingFiles() {
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(ConfigManager.MOD_CONFIG_DIR, "*" + LUA_EXTENSION)) {
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(ConfigManager.PROFILES_DIR, "*" + LUA_EXTENSION)) {
             for (Path file : files) {
                 if (!Files.isRegularFile(file)) continue;
                 String profileName = stripExtension(file.getFileName().toString());
@@ -62,7 +62,7 @@ public class FileWatcher {
 
         for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) {
             String profileName = profile.getName();
-            Path expectedFile = ConfigManager.MOD_CONFIG_DIR.resolve(profileName + LUA_EXTENSION);
+            Path expectedFile = ConfigManager.PROFILES_DIR.resolve(profileName + LUA_EXTENSION);
             if (Files.notExists(expectedFile)) {
                 ConfigManager.removeProfile(profileName);
             }
@@ -116,7 +116,7 @@ public class FileWatcher {
         // Editors may delete and recreate a script during one save. Reconcile
         // only after the event burst settles, preserving its profile settings.
         String profileName = stripExtension(changedFile.toString());
-        Path profileFile = ConfigManager.MOD_CONFIG_DIR.resolve(changedFile);
+        Path profileFile = ConfigManager.PROFILES_DIR.resolve(changedFile);
         if (Files.notExists(profileFile)) {
             ConfigManager.removeProfile(profileName);
         } else if (Files.isRegularFile(profileFile) && !ConfigManager.hasProfile(profileName)) {

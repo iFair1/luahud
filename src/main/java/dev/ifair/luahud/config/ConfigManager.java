@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
 public class ConfigManager {
     static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir();
     static final Path MOD_CONFIG_DIR = CONFIG_DIR.resolve("luahud");
+    static final Path PROFILES_DIR = MOD_CONFIG_DIR.resolve("profiles");
+    static final Path API_DIR = MOD_CONFIG_DIR.resolve("api");
     static final Path JSON_CONFIG = CONFIG_DIR.resolve("luahud.json");
 
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -128,9 +130,13 @@ public class ConfigManager {
 
     // This is where the profiles live
     public static Path getScriptsDir() {
-        return MOD_CONFIG_DIR;
+        return PROFILES_DIR;
     }
 
+
+    public static Path getApiDir() {
+        return API_DIR;
+    }
 
     public static synchronized boolean isShowHiddenFilesEnabled() { return config.showHiddenFiles; }
     public static synchronized boolean isGenerateExampleProfilesEnabled() { return config.generateExampleProfiles; }
@@ -198,10 +204,10 @@ public class ConfigManager {
 
     public static synchronized void createProfile(String name) {
         if (!validateProfileName(name)) return;
-        Path profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
+        Path profileFile = PROFILES_DIR.resolve(name + ".lua").normalize();
         while (hasProfile(name) || Files.exists(profileFile)) {
             name = incrementSuffix(name);
-            profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
+            profileFile = PROFILES_DIR.resolve(name + ".lua").normalize();
         }
 
         ConfigData candidate = copyConfig();
@@ -236,7 +242,7 @@ public class ConfigManager {
         int index = indexOfProfile(name);
         if (index < 0) return;
 
-        Path profileFile = MOD_CONFIG_DIR.resolve(name + ".lua").normalize();
+        Path profileFile = PROFILES_DIR.resolve(name + ".lua").normalize();
         ConfigData candidate = copyConfig();
         candidate.profiles.remove(index);
         Path stagedFile = null;
@@ -246,7 +252,7 @@ public class ConfigManager {
                 if (!Files.isRegularFile(profileFile)) {
                     throw new IOException("Profile is not a regular file: " + profileFile);
                 }
-                stagedFile = Files.createTempFile(MOD_CONFIG_DIR, "luahud-delete-", ".tmp");
+                stagedFile = Files.createTempFile(PROFILES_DIR, "luahud-delete-", ".tmp");
                 Files.move(profileFile, stagedFile, StandardCopyOption.REPLACE_EXISTING);
                 deleteStagedFile = false;
             }
@@ -335,8 +341,8 @@ public class ConfigManager {
             newName = incrementSuffix(newName);
         }
 
-        Path oldFile = MOD_CONFIG_DIR.resolve(oldName + ".lua").normalize();
-        Path newFile = MOD_CONFIG_DIR.resolve(newName + ".lua").normalize();
+        Path oldFile = PROFILES_DIR.resolve(oldName + ".lua").normalize();
+        Path newFile = PROFILES_DIR.resolve(newName + ".lua").normalize();
 
         ConfigData candidate = copyConfig();
         candidate.profiles.get(indexOfProfile(oldName)).setName(newName);
