@@ -39,7 +39,7 @@ class CoreModelsTest {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");
         CoreModels models = CoreModels.register(api);
-        PlayerModule.register(api, null, models);
+        PlayerModule.register(api, null, models, DeathModel.register(api, models));
         var capture = api.root().function("capture", LuaType.nil(), "");
         capture.parameter("effect", models.statusEffect().inputType(), "");
         capture.call(args -> null);
@@ -184,7 +184,7 @@ class CoreModelsTest {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");
         CoreModels models = CoreModels.register(api);
-        PlayerModule.register(api, null, models);
+        PlayerModule.register(api, null, models, DeathModel.register(api, models));
         var capture = api.root().function("capture", LuaType.nil(), "");
         capture.parameter("entity", models.entity().inputType(), "");
         capture.call(args -> null);

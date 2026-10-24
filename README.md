@@ -287,9 +287,15 @@ The payload contains:
 - `x`, `y`, `z`: player coordinates captured at death.
 - `dimension`: namespaced dimension ID captured at death.
 - `message`: the server's death message as plain text.
-- `type`: latest client-observed damage type, or `minecraft:generic` when unavailable.
+- `damageType`: latest client-observed damage type, or `minecraft:generic` when unavailable.
 - `attacker`, `weapon`: the same entity and item models as the damage event, or nil
   when unavailable. The weapon is copied when the death notification arrives.
+
+`lh.player.lastDeath` exposes the latest observed death using the same `Death`
+model as the event, or nil before your first observed death in the current
+connection. It is updated before death callbacks run and survives respawns,
+dimension changes and profile reloads. Disconnecting and reconnecting starts
+with nil; death history is not saved to disk.
 
 The death packet does not include the fatal damage source. These damage fields
 use the player's recent client-observed source, which can differ from the server's

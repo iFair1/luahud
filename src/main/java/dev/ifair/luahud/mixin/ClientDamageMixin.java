@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.ifair.luahud.core.DamageEvent;
 import dev.ifair.luahud.core.DamageTracker;
 import dev.ifair.luahud.core.DeathEvent;
+import dev.ifair.luahud.core.DeathState;
 import dev.ifair.luahud.core.EventDispatcher;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
@@ -22,8 +23,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.List;
 
 @Mixin(ClientPlayNetworkHandler.class)
-public abstract class ClientDamageMixin {
+public abstract class ClientDamageMixin implements DeathState {
     @Unique private final DamageTracker luahud$damageTracker = new DamageTracker();
+    @Unique private DeathEvent luahud$lastDeath;
+
+    @Override
+    public DeathEvent luahud$getLastDeath() {
+        return luahud$lastDeath;
+    }
 
     @Unique
     private DamageTracker luahud$tracker() {
@@ -69,8 +76,9 @@ public abstract class ClientDamageMixin {
         MinecraftClient client = MinecraftClient.getInstance();
         ClientPlayerEntity player = client.player;
         if (player != null && client.world != null && packet.playerId() == player.getId()) {
-            EventDispatcher.fireEvent("death", DeathEvent.fromNotification(player,
-                    client.world.getRegistryKey().getValue().toString(), packet.message().getString()));
+            luahud$lastDeath = DeathEvent.fromNotification(player,
+                    client.world.getRegistryKey().getValue().toString(), packet.message().getString());
+            EventDispatcher.fireEvent("death", luahud$lastDeath);
         }
     }
 

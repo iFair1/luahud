@@ -3,8 +3,11 @@ package dev.ifair.luahud.api.modules;
 import dev.ifair.luahud.api.LuaApiRegistrar;
 import dev.ifair.luahud.api.LuaDoc;
 import dev.ifair.luahud.api.LuaType;
+import dev.ifair.luahud.api.ModelBuilder;
 import dev.ifair.luahud.api.models.CoreModels;
 import dev.ifair.luahud.api.models.RegistryIds;
+import dev.ifair.luahud.core.DeathEvent;
+import dev.ifair.luahud.core.DeathState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.attribute.EntityAttribute;
@@ -14,15 +17,26 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.GameMode;
 
 import java.util.Locale;
+import java.util.function.Supplier;
 
 public final class PlayerModule {
     private PlayerModule() {}
 
-    public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models) {
+    public static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models,
+                                ModelBuilder<DeathEvent> death) {
+        register(api, client, models, death, () -> client.getNetworkHandler() == null ? null
+                : ((DeathState) client.getNetworkHandler()).luahud$getLastDeath());
+    }
+
+    static void register(LuaApiRegistrar api, MinecraftClient client, CoreModels models,
+                         ModelBuilder<DeathEvent> death, Supplier<DeathEvent> lastDeath) {
         api.root().namespace("player", player -> {
             player.value("id", RegistryIds.ENTITY_TYPE, LuaDoc.of("Namespaced player entity type"), () -> Registries.ENTITY_TYPE.getId(client.player.getType()).toString())
                     .string("name", "Player display name", () -> client.player.getDisplayName().getString())
                     .string("uuid", "Player UUID", () -> client.player.getUuidAsString())
+                    .value("lastDeath", LuaType.optional(death.type()),
+                            LuaDoc.of("Last observed death in the current connection, or nil before dying. Survives respawns, dimension changes and profile reloads; resets on reconnect."),
+                            lastDeath)
                     .number("x", "X coordinate", () -> client.player.getX())
                     .number("y", "Y coordinate", () -> client.player.getY())
                     .number("z", "Z coordinate", () -> client.player.getZ())

@@ -25,7 +25,7 @@ class DeathModelTest {
                     x, y, z = event.x, event.y, event.z
                     dimension = event.dimension
                     message = event.message
-                    damageType = event.type
+                    damageType = event.damageType
                     noAttacker = event.attacker == nil
                     weaponId = event.weapon.id
                 end)
@@ -48,7 +48,7 @@ class DeathModelTest {
                 lh.on('death', function(event)
                     noAttacker = event.attacker == nil
                     noWeapon = event.weapon == nil
-                    damageType = event.type
+                    damageType = event.damageType
                 end)
                 """, "death");
         runtime.fireEvent("death", new DeathEvent(0, -64, 0, "minecraft:overworld",

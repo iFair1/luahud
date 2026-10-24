@@ -20,6 +20,7 @@ public final class CoreApi {
     static void register(ApiRegistry registry, MinecraftClient client) {
         LuaApiRegistrar api = registry.registrar("luahud");
         CoreModels models = CoreModels.register(api);
+        var death = DeathModel.register(api, models);
 
         RenderModule.register(api, models);
         PcModule.register(api, client);
@@ -29,7 +30,7 @@ public final class CoreApi {
         WeatherModule.register(api, client);
         SoundModule.register(api, client);
         PositionModule.register(api, client, models);
-        PlayerModule.register(api, client, models);
+        PlayerModule.register(api, client, models, death);
         SlotsModule.register(api, client, models);
         SessionModule.register(api, client);
         FunctionsModule.register(api, client, models);
@@ -41,7 +42,7 @@ public final class CoreApi {
         api.event("damage", DamageModel.register(api, models).type(),
                 "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
                         + "unmatched health loss uses minecraft:generic. Notification matching waits up to two client ticks.");
-        api.event("death", DeathModel.register(api, models).type(),
+        api.event("death", death.type(),
                 "Reports the server's local-player death notification with position, dimension, death message and available damage source. "
                         + "Also runs when the death screen is disabled (immediate respawn).");
         api.event("error", ErrorModel.register(api).type(),

@@ -21,6 +21,7 @@ class DocumentationGeneratorTest {
 
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@class Death\n"));
+        assertTrue(stub.contains("---@field lastDeath Death?"));
         assertTrue(stub.contains("---@field x number"));
         assertTrue(stub.contains("---@field y number"));
         assertTrue(stub.contains("---@field z number"));
