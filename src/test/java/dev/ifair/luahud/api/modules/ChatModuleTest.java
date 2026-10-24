@@ -7,6 +7,8 @@ import com.google.gson.JsonParser;
 import dev.ifair.luahud.core.CobaltRuntime;
 import net.minecraft.text.Text;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.squiddev.cobalt.LuaError;
 
 import java.util.ArrayList;
@@ -77,13 +79,13 @@ class ChatModuleTest {
         assertEquals("42 / true", messages.getFirst().getString());
     }
 
-    @Test void invalidMessagesFailWithoutAddingChatEntries() throws Exception {
-        CobaltRuntime runtime = runtime();
-        for (String value : List.of("nil", "42", "true", "{}", "{color='red'}",
+    @ParameterizedTest
+    @ValueSource(strings = {"nil", "42", "true", "{}", "{color='red'}",
                 "{text='x', extra={[2]={text='gap'}}}",
-                "{text='x', clickEvent={action='copy_to_clipboard', value='x'}}")) {
-            assertThrows(LuaError.class, () -> runtime.execute("lh.sendMessage(" + value + ")", "invalid-chat"), value);
-        }
+                "{text='x', clickEvent={action='copy_to_clipboard', value='x'}}"})
+    void invalidMessagesFailWithoutAddingChatEntries(String value) throws Exception {
+        CobaltRuntime runtime = runtime();
+        assertThrows(LuaError.class, () -> runtime.execute("lh.sendMessage(" + value + ")", "invalid-chat"), value);
         assertTrue(messages.isEmpty());
     }
 
@@ -120,16 +122,16 @@ class ChatModuleTest {
         assertTrue(extra.get("optional").getAsBoolean());
     }
 
-    @Test void schemasRejectInvalidNestedFieldsAndEventPayloads() throws Exception {
-        CobaltRuntime runtime = runtime();
-        for (String value : List.of(
+    @ParameterizedTest
+    @ValueSource(strings = {
                 "{text='x', colour='red'}",
                 "{text='x', extra={{text='y', colour='red'}}}",
                 "{text='x', click_event={action='open_url', value='https://example.com'}}",
                 "{text='x', hover_event={action='show_text', value={text='y', typo=true}}}",
-                "{text='x', hover_event={action='show_entity', id='minecraft:pig'}}")) {
-            assertThrows(LuaError.class, () -> runtime.execute("lh.sendMessage(" + value + ")", "invalid-schema"), value);
-        }
+                "{text='x', hover_event={action='show_entity', id='minecraft:pig'}}"})
+    void schemasRejectInvalidNestedFieldsAndEventPayloads(String value) throws Exception {
+        CobaltRuntime runtime = runtime();
+        assertThrows(LuaError.class, () -> runtime.execute("lh.sendMessage(" + value + ")", "invalid-schema"), value);
         assertTrue(messages.isEmpty());
     }
 
@@ -149,9 +151,8 @@ class ChatModuleTest {
         assertTrue(stub.contains("ChatShowEntity"));
     }
 
-    @Test void serverDependentContentAndActionsAreRejectedRecursively() throws Exception {
-        CobaltRuntime runtime = runtime();
-        for (String value : List.of(
+    @ParameterizedTest
+    @ValueSource(strings = {
                 "{score={name='player', objective='test'}}",
                 "{selector='@a'}",
                 "{nbt='name', storage='minecraft:test'}",
@@ -163,9 +164,10 @@ class ChatModuleTest {
                 "{text='x', click_event={action='custom', id='minecraft:test'}}",
                 "{text='x', click_event={action='show_dialog', dialog='minecraft:test'}}",
                 "{text='x', extra={{selector='@a'}}}",
-                "{text='x', hover_event={action='show_text', value={selector='@a'}}}")) {
-            assertThrows(LuaError.class, () -> runtime.execute("lh.sendMessage(" + value + ")", "server-content"), value);
-        }
+                "{text='x', hover_event={action='show_text', value={selector='@a'}}}"})
+    void serverDependentContentAndActionsAreRejectedRecursively(String value) throws Exception {
+        CobaltRuntime runtime = runtime();
+        assertThrows(LuaError.class, () -> runtime.execute("lh.sendMessage(" + value + ")", "server-content"), value);
         assertTrue(messages.isEmpty());
     }
 

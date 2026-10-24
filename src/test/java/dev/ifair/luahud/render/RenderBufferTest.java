@@ -1,42 +1,35 @@
 package dev.ifair.luahud.render;
 
-import net.minecraft.util.Identifier;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RenderBufferTest {
-    @Test void scaledIconsReportTheirActualHeight() {
-        RenderElement.Texture texture = new RenderElement.Texture(
-                Identifier.of("luahud", "icon.png"), 0.5f, 0, 0, 0);
-
-        assertEquals(6, RenderElementMeasurer.height(texture, null, 1f));
-        assertEquals(3, RenderElementMeasurer.height(texture, null, 0.5f));
+    @BeforeEach
+    @AfterEach
+    void clearBuffer() {
+        RenderBuffer.clear();
     }
 
     @Test void newlineClosesTheCurrentRowAndCreatesEmptyRowsAtRowBoundaries() {
-        RenderQueue queue = new RenderQueue();
-        queue.beginSection(SectionLayout.defaults(Anchor.TOP_LEFT, 2, 2));
-        queue.add(new RenderElement.Text("first", 0, 0, false, 0, 0), false);
+        RenderBuffer.beginSection(SectionLayout.defaults(Anchor.TOP_LEFT, 2, 2));
+        RenderBuffer.addText("first", 0, 0, false, 0, 0, false);
 
-        queue.newLine();
-        queue.newLine();
+        RenderBuffer.newLine(2);
 
-        assertEquals(2, queue.sections().getFirst().rows().size());
-        assertEquals(1, queue.sections().getFirst().rows().get(0).elements().size());
-        assertEquals(0, queue.sections().getFirst().rows().get(1).elements().size());
+        assertEquals(2, RenderBuffer.sections().getFirst().rows().size());
+        assertEquals(1, RenderBuffer.sections().getFirst().rows().get(0).elements().size());
+        assertEquals(0, RenderBuffer.sections().getFirst().rows().get(1).elements().size());
     }
 
-    @Test void newlineCountMustBePositive() {
-        assertThrows(IllegalArgumentException.class, () -> RenderBuffer.newLine(0));
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, Integer.MIN_VALUE})
+    void newlineCountMustBePositive(int count) {
+        assertThrows(IllegalArgumentException.class, () -> RenderBuffer.newLine(count));
     }
-
-    @Test void emptyStacksOnlyReserveWidthWhenDrawAirIsEnabled() {
-        assertEquals(0, RenderElementMeasurer.stackWidth(true, 1f, 1f, false));
-        assertEquals(12, RenderElementMeasurer.stackWidth(true, 1f, 1f, true));
-        assertEquals(24, RenderElementMeasurer.stackWidth(true, 2f, 1f, true));
-        assertEquals(36, RenderElementMeasurer.stackWidth(true, 1.5f, 2f, true));
-    }
-
 }

@@ -8,15 +8,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
-import java.time.Duration;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -161,18 +164,12 @@ class ConfigManagerTest {
         }
     }
 
-    @Test
-    void failedJsonWritesLeaveEverySettingAndRevisionUnchanged() throws Exception {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("settingChanges")
+    void failedJsonWriteLeavesSettingsAndRevisionsUnchanged(String name, Runnable change) throws Exception {
         blockJsonWrite();
 
-        ConfigManager.setShowHiddenFiles(true);
-        ConfigManager.setGenerateExampleProfiles(false);
-        ConfigManager.setProfileActive("First", false);
-        ConfigManager.setProfileHidden("First", true);
-        ConfigManager.setProfileKeybind("First", "key.keyboard.a");
-        ConfigManager.moveProfile("First", 1);
-        ConfigManager.removeProfile("First");
-        ConfigManager.addProfile("Third");
+        change.run();
 
         assertUnchanged();
         assertFalse(ConfigManager.isShowHiddenFilesEnabled());
@@ -182,6 +179,22 @@ class ConfigManagerTest {
         assertFalse(first.isHidden());
         assertEquals("key.keyboard.unknown", first.getKeybind());
         assertTrue(Files.exists(ConfigManager.JSON_CONFIG.resolve("blocker")));
+    }
+
+    private static Stream<Arguments> settingChanges() {
+        return Stream.of(
+                settingChange("show hidden files", () -> ConfigManager.setShowHiddenFiles(true)),
+                settingChange("example profiles", () -> ConfigManager.setGenerateExampleProfiles(false)),
+                settingChange("active profile", () -> ConfigManager.setProfileActive("First", false)),
+                settingChange("hidden profile", () -> ConfigManager.setProfileHidden("First", true)),
+                settingChange("profile keybind", () -> ConfigManager.setProfileKeybind("First", "key.keyboard.a")),
+                settingChange("profile order", () -> ConfigManager.moveProfile("First", 1)),
+                settingChange("remove profile", () -> ConfigManager.removeProfile("First")),
+                settingChange("add profile", () -> ConfigManager.addProfile("Third")));
+    }
+
+    private static Arguments settingChange(String name, Runnable change) {
+        return Arguments.of(name, change);
     }
 
     @Test

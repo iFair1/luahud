@@ -1,5 +1,6 @@
 package dev.ifair.luahud.core;
 
+import dev.ifair.luahud.api.LuaType;
 import dev.ifair.luahud.api.core.ApiRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -7,6 +8,7 @@ import org.squiddev.cobalt.LuaError;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicLong;
 import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -103,8 +105,17 @@ class LuaModulesTest {
 
     @Test void modulesCanBeRequiredFromCallbacksAndUseTheSameWatchdog() throws Exception {
         Files.writeString(directory.resolve("utils.lua"), "return 42");
-        Files.writeString(directory.resolve("loop.lua"), "while true do end");
-        CobaltRuntime runtime = runtime();
+        Files.writeString(directory.resolve("loop.lua"), "lh.expire(); while true do end");
+        AtomicLong clock = new AtomicLong();
+        ApiRegistry registry = registry();
+        registry.registrar("fixture").root().function("expire", LuaType.nil(), "")
+                .call(arguments -> {
+                    clock.set(26_000_000L);
+                    return null;
+                });
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 25, clock::get);
+        runtime.start(directory);
         runtime.execute("lh.on('tick', function() result=require('utils') end)", "callbacks");
         runtime.fireEvent("tick");
         assertEquals(42, runtime.global("result").checkInteger());
@@ -206,14 +217,19 @@ class LuaModulesTest {
     }
 
     private CobaltRuntime runtime() throws Exception {
+        ApiRegistry registry = registry();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start(directory);
+        return runtime;
+    }
+
+    private static ApiRegistry registry() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         registry.registrar("luahud").event("reload", "");
         registry.registrar("luahud").event("tick", "");
         registry.registrar("luahud").event("render", "");
         registry.addEventFunctions();
-        registry.freeze();
-        CobaltRuntime runtime = new CobaltRuntime(registry);
-        runtime.start(directory);
-        return runtime;
+        return registry;
     }
 }

@@ -10,6 +10,8 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigDataTest {
@@ -23,12 +25,17 @@ class ConfigDataTest {
         assertTrue(profile.normalize());
 
         assertEquals("key.keyboard.unknown", profile.getKeybind());
+        assertFalse(profile.normalize(), "Normalization must be idempotent");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"key.keyboard.a", "key.keyboard.unknown", "key.mouse.left", "scancode.30"})
     void validKeybindsArePreserved(String binding) {
-        assertEquals(binding, ConfigData.ProfileData.normalizeKeybind(binding));
+        ConfigData.ProfileData profile = new ConfigData.ProfileData("example");
+        profile.setKeybind(binding);
+
+        assertFalse(profile.normalize());
+        assertEquals(binding, profile.getKeybind());
     }
 
     @Test
@@ -47,10 +54,29 @@ class ConfigDataTest {
     }
 
     @Test
-    void profileCopyRetainsItsName() {
+    void profileCopyPreservesSettingsAndCanBeEditedIndependently() {
         ConfigData.ProfileData profile = new ConfigData.ProfileData("example");
+        profile.setActive(false);
+        profile.setHidden(true);
+        profile.setKeybind("key.keyboard.a");
 
-        assertEquals("example", profile.copy().getName());
+        ConfigData.ProfileData copy = profile.copy();
+
+        assertNotSame(profile, copy);
+        assertEquals("example", copy.getName());
+        assertFalse(copy.isActive());
+        assertTrue(copy.isHidden());
+        assertEquals("key.keyboard.a", copy.getKeybind());
+
+        copy.setName("renamed");
+        copy.setActive(true);
+        copy.setHidden(false);
+        copy.setKeybind("key.keyboard.b");
+
+        assertEquals("example", profile.getName());
+        assertFalse(profile.isActive());
+        assertTrue(profile.isHidden());
+        assertEquals("key.keyboard.a", profile.getKeybind());
     }
 
     @Test

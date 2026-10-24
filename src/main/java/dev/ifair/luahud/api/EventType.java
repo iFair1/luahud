@@ -12,7 +12,7 @@ public final class EventType<T> {
     private final LuaDoc doc;
 
     public EventType(String name, String providerId, LuaType<T> payloadType, LuaDoc doc) {
-        if (name == null || !name.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+        if (name == null || !name.matches("[A-Za-z_][A-Za-z0-9_-]*")) {
             throw new IllegalArgumentException("Invalid event name: " + name);
         }
         this.name = name;
