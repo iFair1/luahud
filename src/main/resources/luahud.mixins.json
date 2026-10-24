@@ -4,6 +4,7 @@
     "compatibilityLevel": "JAVA_21",
     "client": [
         "MinecraftClientMixin",
+        "ClientDamageMixin",
         "SoundManagerMixin",
         "ClientWorldSoundMixin",
         ${entity_lighting_mixins}

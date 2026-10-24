@@ -239,6 +239,45 @@ lh.setInterval(20, "render", function()
 end)
 ```
 
+## Local-player damage
+
+`lh.on("damage", callback)` reports damage to your player on the client thread.
+The payload contains:
+
+- `type`: namespaced damage type, such as `minecraft:fall` or `minecraft:arrow`.
+- `attacker`: the existing `Entity` model, or nil for environmental damage or
+  an attacker unavailable to the client.
+- `weapon`: the existing `ItemStack` model, copied from the damage source when
+  the notification arrives. An empty hand or unavailable weapon produces nil.
+  For melee this is the currently observed main-hand stack. For an arrow the
+  weapon means the bow/crossbow, not the arrow; vanilla generally does not
+  synchronize that original weapon to the client, so it can be nil.
+- `amount`: observed loss of normal health, in health points (two per heart).
+  Absorption hearts are excluded. A notification without observed health loss
+  reports 0. Raw damage before reductions is not exposed.
+
+LuaHUD matches damage notifications and health updates over up to two client
+network ticks. Changes received before publication are combined, using the
+latest notification's type, attacker and weapon. Health loss without a nearby
+notification uses `minecraft:generic` with nil attacker and weapon. Initialization,
+respawning and healing do not produce damage events. Separate healing updates
+do not subtract from already observed losses; healing combined with damage
+inside one server health update can still hide some loss. Amounts describe
+observed health loss, not an exact server-side calculation of each hit.
+
+The damage type identifies categories, not every potion or enchantment. For
+example, poison and some instant-damage effects share `minecraft:magic`;
+`minecraft:indirect_magic`, `minecraft:wither` and `minecraft:thorns` distinguish
+other causes. A melee weapon's `enchantments` are available through the normal
+`ItemStack` model, but do not identify how much damage each enchantment caused.
+
+```lua
+lh.on("damage", function(event)
+    local attacker = event.attacker and event.attacker.name or "Environment"
+    lh.sendMessage(attacker .. ": " .. event.type .. " (-" .. event.amount .. ")")
+end)
+```
+
 ## Lua modules
 
 `require("utils")` loads `config/luahud/profiles/utils.lua`, falling back to
