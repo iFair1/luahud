@@ -11,6 +11,8 @@ public final class RegistryIds {
             () -> Registries.BLOCK.getIds().stream().map(Object::toString).toList());
     public static final LuaType<String> ENTITY_TYPE = LuaType.stringAlias("EntityTypeId",
             () -> Registries.ENTITY_TYPE.getIds().stream().map(Object::toString).toList());
+    public static final LuaType<String> STATUS_EFFECT = LuaType.stringAlias("StatusEffectId",
+            () -> Registries.STATUS_EFFECT.getIds().stream().map(Object::toString).toList());
 
     private RegistryIds() {}
 }

@@ -57,7 +57,7 @@ public record CoreModels(
 
     private static ModelBuilder<StatusEffectInstance> registerStatusEffect(LuaApiRegistrar api) {
         ModelBuilder<StatusEffectInstance> model = api.model("StatusEffect", StatusEffectInstance.class);
-        var id = model.string("id", "Namespaced status effect ID",
+        var id = model.field("id", RegistryIds.STATUS_EFFECT, "Namespaced status effect ID",
                 value -> Registries.STATUS_EFFECT.getId(value.getEffectType().value()).toString()).inputRequired();
         model.string("name", "Localized effect name", value -> value.getEffectType().value().getName().getString());
         var level = model.integer("level", "Effect level; defaults to 1 for input tables",

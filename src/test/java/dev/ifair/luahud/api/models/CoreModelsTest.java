@@ -40,17 +40,29 @@ class CoreModelsTest {
         var api = registry.registrar("luahud");
         CoreModels models = CoreModels.register(api);
         PlayerModule.register(api, null, models);
+        var capture = api.root().function("capture", LuaType.nil(), "");
+        capture.parameter("effect", models.statusEffect().inputType(), "");
+        capture.call(args -> null);
         registry.freeze();
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@alias ItemId\n"));
         assertTrue(stub.contains("---| \"minecraft:diamond\"\n"));
         assertTrue(stub.contains("---@alias BlockId\n"));
         assertTrue(stub.contains("---@alias EntityTypeId\n"));
+        assertTrue(stub.contains("---@alias StatusEffectId\n"));
+        for (var effectId : net.minecraft.registry.Registries.STATUS_EFFECT.getIds()) {
+            assertTrue(stub.contains("---| \"" + effectId + "\"\n"));
+        }
+        assertTrue(stub.contains("---@field id StatusEffectId Namespaced status effect ID"));
+        String effectInput = stub.substring(stub.indexOf("---@class StatusEffectInput\n"));
+        effectInput = effectInput.substring(0, effectInput.indexOf("\n\n"));
+        assertTrue(effectInput.contains("---@field id StatusEffectId Namespaced status effect ID"));
         assertTrue(stub.contains("---@field id ItemId Namespaced item ID"));
         assertTrue(stub.contains("---@field id BlockId Namespaced block ID"));
         assertTrue(stub.contains("---@field id EntityTypeId Namespaced entity type"));
         assertTrue(stub.contains("---@field id EntityTypeId Namespaced player entity type"));
         assertEquals(net.minecraft.registry.Registries.ITEM.getIds().size(), RegistryIds.ITEM.stringValues().size());
+        assertEquals(net.minecraft.registry.Registries.STATUS_EFFECT.getIds().size(), RegistryIds.STATUS_EFFECT.stringValues().size());
     }
 
     @Test void statusEffectUsesDeclaredDurationNamesAndPreservesInfinity() throws Exception {
