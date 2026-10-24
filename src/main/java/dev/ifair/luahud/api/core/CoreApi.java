@@ -39,6 +39,9 @@ public final class CoreApi {
         api.event("reload", "Runs once after active profiles load, including first world entry.");
         api.event("tick", "Runs at the end of each client tick.");
         api.event("render", "Runs immediately before each HUD frame is painted.");
+        api.event("item-pickup", models.itemStack().type(),
+                "Reports a server-confirmed ground item pickup by the local player. "
+                        + "The ItemStack contains the picked-up count and preserves the item's components.");
         api.event("damage", DamageModel.register(api, models).type(),
                 "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
                         + "unmatched health loss uses minecraft:generic. Notification matching waits up to two client ticks.");

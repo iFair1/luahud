@@ -5,6 +5,7 @@
     "client": [
         "MinecraftClientMixin",
         "ClientDamageMixin",
+        "ClientItemPickupMixin",
         "SoundManagerMixin",
         "ClientWorldSoundMixin",
         ${entity_lighting_mixins}
