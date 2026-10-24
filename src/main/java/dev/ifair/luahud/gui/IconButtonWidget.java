@@ -4,10 +4,10 @@ import dev.ifair.luahud.compat.GuiCompat;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 public class IconButtonWidget extends ButtonWidget {
+    // Qualify text factories because ButtonWidget.Text shadows Text since 1.21.11.
     private Identifier icon;
     private String label;
 
@@ -25,14 +25,14 @@ public class IconButtonWidget extends ButtonWidget {
                 y,
                 width,
                 height,
-                Text.empty(),
+                net.minecraft.text.Text.empty(),
                 onPress,
                 DEFAULT_NARRATION_SUPPLIER
         );
 
         this.icon = icon;
         this.label = tooltip;
-        setTooltip(Tooltip.of(Text.literal(tooltip)));
+        setTooltip(Tooltip.of(net.minecraft.text.Text.literal(tooltip)));
     }
 
     @Override
@@ -69,7 +69,7 @@ public class IconButtonWidget extends ButtonWidget {
     public void setLabel(String label) {
         if (this.label.equals(label)) return;
         this.label = label;
-        setTooltip(Tooltip.of(Text.literal(label)));
+        setTooltip(Tooltip.of(net.minecraft.text.Text.literal(label)));
     }
 
     public void setIcon(Identifier icon) {
