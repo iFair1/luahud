@@ -10,6 +10,7 @@ public class GuiTextures {
     public static final Identifier GITHUB = id("textures/logo/github.png");
     public static final Identifier MODRINTH = id("textures/logo/modrinth.png");
     public static final Identifier DISCORD = id("textures/logo/discord.png");
+    public static final Identifier DOCUMENTATION = id("textures/20/question.png");
 
     public static final Identifier ENABLED = id("textures/16/enabled.png");
     public static final Identifier DISABLED = id("textures/16/disabled.png");

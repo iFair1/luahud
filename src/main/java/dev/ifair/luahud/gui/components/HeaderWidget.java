@@ -12,7 +12,7 @@ public class HeaderWidget {
     private static final String GITHUB_URL = "https://github.com/iFair1/luahud";
     private static final String MODRINTH_URL = "https://modrinth.com/mod/luahud";
     // TODO: Discord
-    // TODO: Documentation
+    public static final String DOCS_URL = "https://luahud.ifair.dev";
 
     public static final int MARGIN = 8;
     private static final int GAP = 4;
@@ -32,6 +32,7 @@ public class HeaderWidget {
         int left1 = MARGIN;
         int left2 = left1 + BUTTON_SIZE + GAP;
         int left3 = left2 + BUTTON_SIZE + GAP;
+        int left4 = left3 + BUTTON_SIZE + GAP;
 
         int right1 = screen.width - MARGIN - BUTTON_SIZE;
         int right2 = right1 - GAP - BUTTON_SIZE;
@@ -69,6 +70,17 @@ public class HeaderWidget {
                         "Discord",
                 ignored -> {}
             )
+        );
+        screen.addWidget(
+                new IconButtonWidget(
+                left4,
+                y,
+                BUTTON_SIZE,
+                BUTTON_SIZE,
+                GuiTextures.DOCUMENTATION,
+                "Documentation",
+                ignored -> GuiUtils.openInBrowser(DOCS_URL)
+                )
         );
 
 

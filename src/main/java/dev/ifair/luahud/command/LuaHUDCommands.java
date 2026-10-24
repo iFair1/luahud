@@ -3,8 +3,10 @@ package dev.ifair.luahud.command;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.ifair.luahud.core.Engine;
 import dev.ifair.luahud.error.ErrorManager;
+import dev.ifair.luahud.gui.GuiUtils;
 import dev.ifair.luahud.gui.LuaHUDErrorsScreen;
 import dev.ifair.luahud.gui.LuaHUDScreen;
+import dev.ifair.luahud.gui.components.HeaderWidget;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
@@ -39,6 +41,8 @@ public final class LuaHUDCommands {
                                                 getLong(context, "entry")))))
                         .then(literal("reload")
                                 .executes(context -> reload(context.getSource(), engine)))
+                        .then(literal("help")
+                                .executes(context -> GuiUtils.openInBrowser(HeaderWidget.DOCS_URL)))
                         .then(literal("report")
                                 .then(literal("system")
                                         .then(argument("phase", string())
