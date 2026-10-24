@@ -38,7 +38,7 @@ public final class CoreApi {
         api.event("tick", "Runs at the end of each client tick.");
         api.event("render", "Runs immediately before each HUD frame is painted.");
         api.event("damage", DamageModel.register(api, models).type(),
-                "Reports local-player damage with observed health loss. Nearby updates are combined using the latest damage source; "
+                "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
                         + "unmatched health loss uses minecraft:generic. Notification matching waits up to two client ticks.");
         api.event("error", ErrorModel.register(api).type(),
                 "Reports each recorded error occurrence on the next client lifecycle tick, after profiles load. "

@@ -10,11 +10,14 @@ import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.data.DataTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
 
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientDamageMixin {
@@ -42,6 +45,20 @@ public abstract class ClientDamageMixin {
     private void luahud$measureHealthLoss(ClientPlayerEntity player, float health, Operation<Void> original) {
         original.call(player, health);
         luahud$tracker().onHealthUpdate(Math.max(0.0f, health));
+    }
+
+    @WrapOperation(method = "onEntityTrackerUpdate", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/entity/data/DataTracker;writeUpdatedEntries(Ljava/util/List;)V"),
+            require = 1, allow = 1)
+    private void luahud$measureAbsorptionLoss(DataTracker dataTracker, List<DataTracker.SerializedEntry<?>> entries,
+                                            Operation<Void> original) {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        boolean localPlayer = player != null && dataTracker == player.getDataTracker();
+        float previous = localPlayer ? player.getAbsorptionAmount() : 0.0f;
+        original.call(dataTracker, entries);
+        if (localPlayer) {
+            luahud$tracker().onAbsorptionUpdate(previous, player.getAbsorptionAmount());
+        }
     }
 
     @Inject(method = "tick", at = @At("TAIL"))

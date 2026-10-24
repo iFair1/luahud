@@ -15,8 +15,8 @@ public final class DamageModel {
                 DamageEvent::attacker);
         model.optionalField("weapon", models.itemStack().type(), "Weapon stack observed at damage notification time; nil for an empty hand or unavailable weapon",
                 DamageEvent::weapon);
-        model.number("amount", "Observed normal-health loss in health points (two per heart), grouped with nearby damage notifications; "
-                + "0 if no health loss was observed. Excludes absorption and may combine multiple hits.", DamageEvent::amount);
+        model.number("amount", "Observed health loss including absorption in health points (two per heart), grouped with nearby damage notifications; "
+                + "0 if no loss was observed. Absorption loss requires a damage notification; may combine multiple hits.", DamageEvent::amount);
         return model;
     }
 }

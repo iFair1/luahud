@@ -1,6 +1,6 @@
 package dev.ifair.luahud.core;
 
-/** Pairs nearby damage notifications and observed health loss on the client thread. */
+/** Pairs nearby damage notifications and observed health/absorption loss on the client thread. */
 public final class DamageTracker {
     private static final int MATCH_TICKS = 2;
     private Object player;
@@ -8,6 +8,7 @@ public final class DamageTracker {
     private float previousHealth;
     private DamageEvent pending;
     private double healthLost;
+    private double absorptionLost;
     private int waitingTicks;
 
     /** A replacement player (including respawn) starts a fresh health baseline. */
@@ -34,16 +35,22 @@ public final class DamageTracker {
         previousHealth = current;
     }
 
+    public void onAbsorptionUpdate(float previous, float current) {
+        absorptionLost += Math.max(0.0, (double) previous - current);
+    }
+
     /**
      * Nearby changes are combined with the latest damage source. Wait briefly when one
      * packet is missing; health loss without a notification uses minecraft:generic.
+     * Absorption loss needs a notification so effect expiry alone is not reported as damage.
      */
     public DamageEvent tick() {
-        if (pending == null && healthLost == 0.0) return null;
-        if ((pending == null || healthLost == 0.0) && ++waitingTicks < MATCH_TICKS) return null;
+        if (pending == null && healthLost == 0.0 && absorptionLost == 0.0) return null;
+        // Health and absorption arrive in separate packets, possibly on adjacent ticks.
+        if (++waitingTicks < MATCH_TICKS) return null;
         DamageEvent event = pending == null
-                ? new DamageEvent("minecraft:generic", null, null, healthLost)
-                : pending.withAmount(healthLost);
+                ? (healthLost == 0.0 ? null : new DamageEvent("minecraft:generic", null, null, healthLost))
+                : pending.withAmount(healthLost + absorptionLost);
         clearPending();
         return event;
     }
@@ -51,6 +58,7 @@ public final class DamageTracker {
     private void clearPending() {
         pending = null;
         healthLost = 0.0;
+        absorptionLost = 0.0;
         waitingTicks = 0;
     }
 }

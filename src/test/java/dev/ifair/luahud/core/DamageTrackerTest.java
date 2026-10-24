@@ -11,6 +11,7 @@ class DamageTrackerTest {
             if (healthFirst) tracker.onHealthUpdate(17);
             tracker.onDamage(notification("minecraft:arrow"));
             if (!healthFirst) tracker.onHealthUpdate(17);
+            assertNull(tracker.tick());
             DamageEvent event = tracker.tick();
             assertNotNull(event);
             assertEquals("minecraft:arrow", event.type());
@@ -37,6 +38,7 @@ class DamageTrackerTest {
         tracker.onHealthUpdate(17);
         tracker.onDamage(notification("minecraft:fall"));
         tracker.onHealthUpdate(15);
+        assertNull(tracker.tick());
         DamageEvent event = tracker.tick();
         assertEquals("minecraft:fall", event.type());
         assertEquals(5.0, event.amount());
@@ -48,6 +50,7 @@ class DamageTrackerTest {
         tracker.onHealthUpdate(17);
         tracker.onHealthUpdate(17);
         tracker.onDamage(notification("minecraft:arrow"));
+        assertNull(tracker.tick());
         assertEquals(3.0, tracker.tick().amount());
         tracker.onHealthUpdate(17);
         assertNull(tracker.tick());
@@ -58,6 +61,7 @@ class DamageTrackerTest {
         tracker.onDamage(notification("minecraft:arrow"));
         tracker.onHealthUpdate(17);
         tracker.tick();
+        tracker.tick();
         tracker.onHealthUpdate(16);
         assertNull(tracker.tick());
         DamageEvent event = tracker.tick();
@@ -67,12 +71,75 @@ class DamageTrackerTest {
         assertNull(event.weapon());
     }
 
-    @Test void notificationWithoutNormalHealthLossReportsZeroOnce() {
+    @Test void notificationWithoutHealthOrAbsorptionLossReportsZeroOnce() {
         DamageTracker tracker = initialized();
         tracker.onDamage(notification("minecraft:arrow"));
         assertNull(tracker.tick());
         assertEquals(0.0, tracker.tick().amount());
         assertNull(tracker.tick());
+    }
+
+    @Test void goldenAppleAbsorptionAndHealthLossAddUpToTenPointsInEitherOrder() {
+        for (boolean absorptionFirst : new boolean[]{true, false}) {
+            DamageTracker tracker = initialized();
+            tracker.onAbsorptionUpdate(0, 4);
+            tracker.onDamage(notification("minecraft:fall"));
+            if (absorptionFirst) tracker.onAbsorptionUpdate(4, 0);
+            else tracker.onHealthUpdate(14);
+            assertNull(tracker.tick());
+            if (absorptionFirst) tracker.onHealthUpdate(14);
+            else tracker.onAbsorptionUpdate(4, 0);
+            DamageEvent event = tracker.tick();
+            assertEquals("minecraft:fall", event.type());
+            assertEquals(10.0, event.amount());
+            assertNull(tracker.tick());
+        }
+    }
+
+    @Test void fullyAbsorbedDamageMatchesNotificationsInEitherOrder() {
+        for (boolean absorptionFirst : new boolean[]{true, false}) {
+            DamageTracker tracker = initialized();
+            if (absorptionFirst) tracker.onAbsorptionUpdate(4, 2);
+            else tracker.onDamage(notification("minecraft:arrow"));
+            assertNull(tracker.tick());
+            if (absorptionFirst) tracker.onDamage(notification("minecraft:arrow"));
+            else tracker.onAbsorptionUpdate(4, 2);
+            assertEquals(2.0, tracker.tick().amount());
+            assertNull(tracker.tick());
+        }
+    }
+
+    @Test void absorptionGainAndExpiryDoNotGenerateDamageOrLeakIntoLaterHits() {
+        DamageTracker tracker = initialized();
+        tracker.onAbsorptionUpdate(0, 4);
+        assertNull(tracker.tick());
+        tracker.onAbsorptionUpdate(4, 0);
+        assertNull(tracker.tick());
+        assertNull(tracker.tick());
+        tracker.onDamage(notification("minecraft:fall"));
+        tracker.onHealthUpdate(18);
+        assertNull(tracker.tick());
+        assertEquals(2.0, tracker.tick().amount());
+    }
+
+    @Test void absorptionRefillDoesNotCancelDamageAndRepeatedMetadataDoesNotDuplicateIt() {
+        DamageTracker tracker = initialized();
+        tracker.onDamage(notification("minecraft:arrow"));
+        tracker.onAbsorptionUpdate(4, 2);
+        tracker.onAbsorptionUpdate(2, 2);
+        tracker.onAbsorptionUpdate(2, 4);
+        assertNull(tracker.tick());
+        assertEquals(2.0, tracker.tick().amount());
+    }
+
+    @Test void respawnClearsPendingAbsorptionLoss() {
+        DamageTracker tracker = initialized();
+        tracker.onAbsorptionUpdate(4, 0);
+        tracker.bind(new Object());
+        tracker.onHealthUpdate(20);
+        tracker.onDamage(notification("minecraft:fall"));
+        assertNull(tracker.tick());
+        assertEquals(0.0, tracker.tick().amount());
     }
 
     @Test void healingDoesNotGenerateDamageOrCancelAnObservedLoss() {

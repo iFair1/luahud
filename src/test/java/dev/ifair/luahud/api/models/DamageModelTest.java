@@ -63,6 +63,7 @@ class DamageModelTest {
         assertTrue(stub.contains("---@field attacker? Entity"));
         assertTrue(stub.contains("---@field weapon? ItemStack"));
         assertTrue(stub.contains("---@field amount number"));
+        assertTrue(stub.contains("including absorption in health points (two per heart)"));
         assertTrue(stub.contains("---@overload fun(event: \"damage\", callback: fun(event: Damage))"));
         assertThrows(IllegalArgumentException.class, () -> registry.event("entity_damage"));
     }
