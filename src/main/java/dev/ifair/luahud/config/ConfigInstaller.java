@@ -26,6 +26,7 @@ public class ConfigInstaller {
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
             generateExampleProfile("Welcome Profile", true, false, "key.keyboard.j");
+            generateExampleProfile("fun", false, true);
             // other default profiles will come here
 
             ConfigManager.setGenerateExampleProfiles(false);
