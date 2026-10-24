@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.ifair.luahud.core.DamageEvent;
 import dev.ifair.luahud.core.DamageTracker;
+import dev.ifair.luahud.core.DeathEvent;
 import dev.ifair.luahud.core.EventDispatcher;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
@@ -11,6 +12,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
+import net.minecraft.network.packet.s2c.play.DeathMessageS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -58,6 +60,17 @@ public abstract class ClientDamageMixin {
         original.call(dataTracker, entries);
         if (localPlayer) {
             luahud$tracker().onAbsorptionUpdate(previous, player.getAbsorptionAmount());
+        }
+    }
+
+    // TAIL runs after vanilla's client-thread check, including the immediate-respawn path.
+    @Inject(method = "onDeathMessage", at = @At("TAIL"))
+    private void luahud$notifyLocalPlayerDeath(DeathMessageS2CPacket packet, CallbackInfo ci) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        ClientPlayerEntity player = client.player;
+        if (player != null && client.world != null && packet.playerId() == player.getId()) {
+            EventDispatcher.fireEvent("death", DeathEvent.fromNotification(player,
+                    client.world.getRegistryKey().getValue().toString(), packet.message().getString()));
         }
     }
 

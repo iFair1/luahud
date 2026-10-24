@@ -12,6 +12,28 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentationGeneratorTest {
+    @Test void builtInDeathEventExportsItsModelAndCallbackType() {
+        net.minecraft.SharedConstants.createGameVersion();
+        net.minecraft.Bootstrap.initialize();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        CoreApi.register(registry, null);
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@class Death\n"));
+        assertTrue(stub.contains("---@field x number"));
+        assertTrue(stub.contains("---@field y number"));
+        assertTrue(stub.contains("---@field z number"));
+        assertTrue(stub.contains("---@field dimension string"));
+        assertTrue(stub.contains("---@field attacker? Entity"));
+        assertTrue(stub.contains("---@field weapon? ItemStack"));
+        assertTrue(stub.contains("---@overload fun(event: \"death\", callback: fun(event: Death))"));
+        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
+        JsonObject event = find(document.getAsJsonArray("events"), "name", "death");
+        assertTrue(event.get("hasPayload").getAsBoolean());
+        assertNotNull(find(document.getAsJsonArray("types"), "name", "Death"));
+    }
+
     @Test void builtInErrorEventExportsItsModelAndCallbackType() {
         net.minecraft.SharedConstants.createGameVersion();
         net.minecraft.Bootstrap.initialize();

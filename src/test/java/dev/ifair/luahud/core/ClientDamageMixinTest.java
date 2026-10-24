@@ -27,6 +27,11 @@ class ClientDamageMixinTest {
                 "(Ljava/util/List;)V");
     }
 
+    @Test void deathNotificationChecksTheClientThreadBeforeChoosingScreenOrImmediateRespawn() throws Exception {
+        assertClientThreadTarget("onDeathMessage", "net/minecraft/client/network/ClientPlayerEntity", "showsDeathScreen", "()Z");
+        assertClientThreadTarget("onDeathMessage", "net/minecraft/client/network/ClientPlayerEntity", "requestRespawn", "()V");
+    }
+
     private void assertClientThreadTarget(String methodName, String owner, String name, String descriptor) throws Exception {
         ClassNode handler = new ClassNode(Opcodes.ASM9);
         try (InputStream source = getClass().getResourceAsStream("/net/minecraft/client/network/ClientPlayNetworkHandler.class")) {

@@ -278,6 +278,30 @@ lh.on("damage", function(event)
 end)
 ```
 
+## Local-player death
+
+`lh.on("death", callback)` runs on the client thread when the server reports your
+player's death, including when immediate respawn disables the death screen.
+The payload contains:
+
+- `x`, `y`, `z`: player coordinates captured at death.
+- `dimension`: namespaced dimension ID captured at death.
+- `message`: the server's death message as plain text.
+- `type`: latest client-observed damage type, or `minecraft:generic` when unavailable.
+- `attacker`, `weapon`: the same entity and item models as the damage event, or nil
+  when unavailable. The weapon is copied when the death notification arrives.
+
+The death packet does not include the fatal damage source. These damage fields
+use the player's recent client-observed source, which can differ from the server's
+fatal source. No damage amount is inferred from the death notification.
+
+```lua
+lh.on("death", function(event)
+    lh.sendMessage(string.format("Died at %.1f, %.1f, %.1f (%s)",
+        event.x, event.y, event.z, event.dimension))
+end)
+```
+
 ## Lua modules
 
 `require("utils")` loads `config/luahud/profiles/utils.lua`, falling back to

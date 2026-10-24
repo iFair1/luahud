@@ -3,6 +3,7 @@ package dev.ifair.luahud.api.core;
 import dev.ifair.luahud.api.LuaApiRegistrar;
 import dev.ifair.luahud.api.models.CoreModels;
 import dev.ifair.luahud.api.models.DamageModel;
+import dev.ifair.luahud.api.models.DeathModel;
 import dev.ifair.luahud.api.models.ErrorModel;
 import dev.ifair.luahud.api.modules.*;
 import net.minecraft.client.MinecraftClient;
@@ -40,6 +41,9 @@ public final class CoreApi {
         api.event("damage", DamageModel.register(api, models).type(),
                 "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
                         + "unmatched health loss uses minecraft:generic. Notification matching waits up to two client ticks.");
+        api.event("death", DeathModel.register(api, models).type(),
+                "Reports the server's local-player death notification with position, dimension, death message and available damage source. "
+                        + "Also runs when the death screen is disabled (immediate respawn).");
         api.event("error", ErrorModel.register(api).type(),
                 "Reports each recorded error occurrence on the next client lifecycle tick, after profiles load. "
                         + "Repeated errors keep their ID and increment count; isNew is true only for the first occurrence. "
