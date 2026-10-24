@@ -7,6 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ErrorManagerTest {
@@ -25,6 +26,48 @@ class ErrorManagerTest {
         assertEquals(2, errors.getFirst().count());
         assertEquals(1, ErrorManager.drainNotifications().size());
         assertTrue(ErrorManager.drainNotifications().isEmpty());
+    }
+
+    @Test
+    void everyOccurrenceHasAnIndependentSnapshotAndStableId() {
+        ErrorManager.reportProfile("Example", "tick", "target is nil");
+        ErrorManager.reportProfile("Example", "tick", "target is nil");
+        List<ErrorEntry> events = ErrorManager.drainEvents();
+
+        assertEquals(2, events.size());
+        assertEquals(events.getFirst().id(), events.getLast().id());
+        assertEquals(1, events.getFirst().count());
+        assertTrue(events.getFirst().isNew());
+        assertEquals(2, events.getLast().count());
+        assertFalse(events.getLast().isNew());
+        assertTrue(ErrorManager.drainEvents().isEmpty());
+        assertEquals(1, ErrorManager.drainNotifications().size());
+    }
+
+    @Test
+    void suppressedEventsStillRecordErrorsAndRestoreDeliveryAfterFailure() {
+        assertThrows(IllegalStateException.class, () -> ErrorManager.withoutEvents(() -> {
+            ErrorManager.withoutEvents(() -> ErrorManager.reportProfile("Example", "error", "handler failed"));
+            ErrorManager.reportSystem("nested", "nested failure");
+            throw new IllegalStateException("test");
+        }));
+        assertTrue(ErrorManager.drainEvents().isEmpty());
+        assertEquals(2, ErrorManager.distinctCount());
+        assertEquals(2, ErrorManager.drainNotifications().size());
+
+        ErrorManager.reportProfile("Example", "tick", "normal failure");
+        assertEquals(1, ErrorManager.drainEvents().size());
+    }
+
+    @Test
+    void reloadDiscardsOldProfileEventsAndKeepsSystemEvents() {
+        ErrorManager.reportProfile("Example", "tick", "old failure");
+        ErrorManager.reportSystem("config", "bad JSON");
+        ErrorManager.beginProfileReload();
+
+        List<ErrorEntry> events = ErrorManager.drainEvents();
+        assertEquals(1, events.size());
+        assertTrue(events.getFirst().system());
     }
 
     @Test
@@ -59,6 +102,7 @@ class ErrorManagerTest {
         assertTrue(reportedAgain.id() > original.id());
         assertEquals(1, reportedAgain.count());
         assertEquals(List.of(reportedAgain), ErrorManager.drainNotifications());
+        assertTrue(reportedAgain.isNew());
     }
 
     @Test
@@ -119,6 +163,11 @@ class ErrorManagerTest {
         assertEquals("limit", overflow.phase());
         assertEquals(2, overflow.count());
         assertFalse(overflow.system());
+        List<ErrorEntry> events = ErrorManager.drainEvents();
+        assertEquals(ErrorManager.MAX_DISTINCT_PER_GROUP + 2, events.size());
+        assertEquals(overflow.id(), events.get(events.size() - 2).id());
+        assertTrue(events.get(events.size() - 2).isNew());
+        assertFalse(events.getLast().isNew());
     }
 
     @Test

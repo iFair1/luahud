@@ -16,6 +16,8 @@ public final class ErrorManager {
     private static final Map<String, ErrorGroup> profileGroups = new LinkedHashMap<>();
     private static final ErrorGroup systemGroup = new ErrorGroup(SYSTEM_GROUP, true);
     private static final ArrayDeque<Long> pendingNotifications = new ArrayDeque<>();
+    private static final ArrayDeque<ErrorEntry> pendingEvents = new ArrayDeque<>();
+    private static final ThreadLocal<Boolean> eventsSuppressed = ThreadLocal.withInitial(() -> false);
     private static long nextId = 1;
     private static long structureRevision;
 
@@ -25,6 +27,7 @@ public final class ErrorManager {
     public static synchronized void beginProfileReload() {
         pendingNotifications.removeIf(id -> findMutable(id).map(error -> !error.system).orElse(true));
         profileGroups.clear();
+        pendingEvents.removeIf(error -> !error.system());
         structureRevision++;
     }
 
@@ -83,6 +86,25 @@ public final class ErrorManager {
         return List.copyOf(result);
     }
 
+    /** Takes one immutable snapshot per occurrence, independently of user notifications. */
+    public static synchronized List<ErrorEntry> drainEvents() {
+        List<ErrorEntry> result = List.copyOf(pendingEvents);
+        pendingEvents.clear();
+        return result;
+    }
+
+    /** Records errors raised during delivery without recursively publishing more error events. */
+    public static void withoutEvents(Runnable action) {
+        boolean previous = eventsSuppressed.get();
+        eventsSuppressed.set(true);
+        try {
+            action.run();
+        } finally {
+            if (previous) eventsSuppressed.set(true);
+            else eventsSuppressed.remove();
+        }
+    }
+
     public static synchronized int distinctCount() {
         int count = systemGroup.entries.size();
         for (ErrorGroup group : profileGroups.values()) count += group.entries.size();
@@ -97,6 +119,7 @@ public final class ErrorManager {
         profileGroups.clear();
         systemGroup.entries.clear();
         pendingNotifications.clear();
+        pendingEvents.clear();
         nextId = 1;
         structureRevision = 0;
     }
@@ -109,6 +132,7 @@ public final class ErrorManager {
         MutableError existing = group.entries.get(key);
         if (existing != null) {
             existing.seen();
+            queueEvent(existing);
             return;
         }
 
@@ -123,6 +147,7 @@ public final class ErrorManager {
             } else {
                 overflow.seen();
             }
+            queueEvent(overflow);
             return;
         }
 
@@ -130,6 +155,11 @@ public final class ErrorManager {
         group.entries.put(key, added);
         pendingNotifications.addLast(added.id);
         structureRevision++;
+        queueEvent(added);
+    }
+
+    private static void queueEvent(MutableError error) {
+        if (!eventsSuppressed.get()) pendingEvents.addLast(error.snapshot());
     }
 
     private static int countRealErrors(ErrorGroup group) {

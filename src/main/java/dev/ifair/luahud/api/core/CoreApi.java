@@ -2,6 +2,7 @@ package dev.ifair.luahud.api.core;
 
 import dev.ifair.luahud.api.LuaApiRegistrar;
 import dev.ifair.luahud.api.models.CoreModels;
+import dev.ifair.luahud.api.models.ErrorModel;
 import dev.ifair.luahud.api.modules.*;
 import net.minecraft.client.MinecraftClient;
 
@@ -35,6 +36,10 @@ public final class CoreApi {
         api.event("reload", "Runs once after active profiles load, including first world entry.");
         api.event("tick", "Runs at the end of each client tick.");
         api.event("render", "Runs immediately before each HUD frame is painted.");
+        api.event("error", ErrorModel.register(api).type(),
+                "Reports each recorded error occurrence on the next client lifecycle tick, after profiles load. "
+                        + "Repeated errors keep their ID and increment count; isNew is true only for the first occurrence. "
+                        + "Errors raised by error handlers are recorded without producing another error event.");
         registry.addEventFunctions();
     }
 }

@@ -143,6 +143,14 @@ public final class CobaltRuntime {
 
     private void dispatchEvent(EventType<?> event, Object payload) {
         registry.validateEvent(event, payload);
+        if (event.name().equals("error") && event.providerId().equals("luahud")) {
+            ErrorManager.withoutEvents(() -> dispatchCallbacks(event, payload));
+        } else {
+            dispatchCallbacks(event, payload);
+        }
+    }
+
+    private void dispatchCallbacks(EventType<?> event, Object payload) {
         List<Callback> callbacks = listeners.get(event.name());
         if (callbacks == null) return;
         for (Callback callback : List.copyOf(callbacks)) {

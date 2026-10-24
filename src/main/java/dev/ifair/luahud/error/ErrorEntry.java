@@ -13,6 +13,11 @@ public record ErrorEntry(
         long firstSeen,
         long lastSeen
 ) {
+    /** Whether this immutable snapshot represents the first occurrence of the active error. */
+    public boolean isNew() {
+        return count == 1;
+    }
+
     private static final Pattern LUA_LOCATION = Pattern.compile("^(?:@)?(?:.*[/\\\\])?[^/\\\\:]+\\.lua:(\\d+):\\s?(.*)$");
 
     public String source() {

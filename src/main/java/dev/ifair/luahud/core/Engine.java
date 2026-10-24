@@ -7,6 +7,7 @@ import dev.ifair.luahud.api.modules.RenderModule;
 import dev.ifair.luahud.config.ConfigData;
 import dev.ifair.luahud.config.ConfigManager;
 import dev.ifair.luahud.config.FileWatcher;
+import dev.ifair.luahud.error.ErrorEntry;
 import dev.ifair.luahud.error.ErrorManager;
 import dev.ifair.luahud.render.RenderBuffer;
 import net.minecraft.client.MinecraftClient;
@@ -104,6 +105,7 @@ public final class Engine {
     /** Updates the world lifecycle even when no Lua runtime is ready yet. */
     public void checkForUpdates() {
         if (!inWorld.getAsBoolean()) {
+            ErrorManager.drainEvents();
             if (worldActive || runtime != null) {
                 runtime = null;
                 RenderBuffer.clear();
@@ -122,6 +124,10 @@ public final class Engine {
             reloadPending = true;
         }
         if (reloadPending) reloadAll();
+        // Deliver after Lua execution has unwound and every active profile has registered listeners.
+        for (ErrorEntry error : ErrorManager.drainEvents()) {
+            if (isReady()) runtime.fireEvent("error", error);
+        }
     }
 
     public boolean isReady() { return inWorld.getAsBoolean() && runtime != null && runtime.isReady(); }
@@ -146,6 +152,7 @@ public final class Engine {
         fileWatcher.stop();
         runtime = null;
         worldActive = false;
+        ErrorManager.drainEvents();
         reloadPending = true;
         RenderBuffer.clear();
         RenderModule.resetSection();

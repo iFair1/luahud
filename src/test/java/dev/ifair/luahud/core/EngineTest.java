@@ -1,6 +1,8 @@
 package dev.ifair.luahud.core;
 
 import dev.ifair.luahud.api.core.ApiRegistry;
+import dev.ifair.luahud.api.models.ErrorModel;
+import dev.ifair.luahud.error.ErrorEntry;
 import dev.ifair.luahud.error.ErrorManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -146,6 +148,68 @@ class EngineTest {
         ErrorManager.beginProfileReload();
     }
 
+    @Test void errorEventsDeliverOccurrencesAfterProfilesLoadAndDoNotRecurse() throws Exception {
+        ErrorManager.drainEvents();
+        Path broken = directory.resolve("Broken.lua");
+        Path observer = directory.resolve("Observer.lua");
+        Files.writeString(broken, "error('load failed')");
+        Files.writeString(observer, """
+                errors = {}
+                reloaded = false
+                lh.on('reload', function() reloaded = true end)
+                lh.on('error', function(err)
+                    assert(reloaded)
+                    errors[#errors + 1] = err
+                    error('observer failed')
+                end)
+                lh.on('tick', function() error('tick failed') end)
+                lh.setInterval(1, 'ticks', function() error('timer failed') end)
+                """);
+        ApiRegistry registry = registry();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        Engine engine = new Engine(() -> true, () -> runtime, value -> {
+            value.runScript(broken);
+            value.runScript(observer);
+        }, () -> false);
+
+        try {
+            engine.checkForUpdates();
+            runtime.execute("assert(#errors == 1); assert(errors[1].phase == 'load'); assert(errors[1].isNew)", "verify-load");
+            engine.checkForUpdates();
+            runtime.execute("assert(#errors == 1)", "verify-no-recursion");
+            engine.fireEvent("tick");
+            engine.fireEvent("tick");
+            engine.tickTimers();
+            engine.checkForUpdates();
+            runtime.execute("""
+                    assert(#errors == 4)
+                    assert(errors[2].id == errors[3].id)
+                    assert(errors[2].count == 1 and errors[2].isNew)
+                    assert(errors[3].count == 2 and not errors[3].isNew)
+                    assert(errors[2].group == 'Observer' and not errors[2].system)
+                    assert(errors[2].phase == 'tick')
+                    assert(string.find(errors[2].message, 'tick failed'))
+                    assert(errors[4].phase == 'timer')
+                    """, "verify-occurrences");
+            ErrorEntry handlerError = ErrorManager.snapshot().stream()
+                    .filter(error -> error.group().equals("Observer") && error.phase().equals("error"))
+                    .findFirst().orElseThrow();
+            assertEquals(4, handlerError.count());
+
+            ErrorManager.reportSystem("error-event-test", "system failure");
+            engine.checkForUpdates();
+            runtime.execute("assert(#errors == 5); assert(errors[5].system); assert(errors[5].group == 'LuaHUD')", "verify-system");
+            engine.checkForUpdates();
+            runtime.execute("assert(#errors == 5)", "verify-no-delayed-recursion");
+        } finally {
+            engine.shutdown();
+            ErrorManager.beginProfileReload();
+            for (ErrorEntry error : ErrorManager.snapshot()) {
+                if (error.phase().equals("error-event-test")) ErrorManager.dismiss(error.id());
+            }
+        }
+    }
+
     private static Engine engine(AtomicBoolean inWorld, AtomicBoolean reloadRequested,
                                  AtomicInteger creations, AtomicReference<CobaltRuntime> current, Path profile) {
         ApiRegistry registry = registry();
@@ -162,6 +226,8 @@ class EngineTest {
         registry.registrar("luahud").event("reload", "");
         registry.registrar("luahud").event("tick", "");
         registry.registrar("luahud").event("render", "");
+        var api = registry.registrar("luahud");
+        api.event("error", ErrorModel.register(api).type(), "");
         registry.addEventFunctions();
         registry.freeze();
         return registry;

@@ -12,6 +12,24 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentationGeneratorTest {
+    @Test void builtInErrorEventExportsItsModelAndCallbackType() {
+        net.minecraft.SharedConstants.createGameVersion();
+        net.minecraft.Bootstrap.initialize();
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        CoreApi.register(registry, null);
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@class Error\n"));
+        assertTrue(stub.contains("---@field isNew boolean"));
+        assertTrue(stub.contains("---@field count integer"));
+        assertTrue(stub.contains("---@overload fun(event: \"error\", callback: fun(event: Error))"));
+        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
+        JsonObject event = find(document.getAsJsonArray("events"), "name", "error");
+        assertTrue(event.get("hasPayload").getAsBoolean());
+        assertNotNull(find(document.getAsJsonArray("types"), "name", "Error"));
+    }
+
     @Test void exportsDescriptionsAndOrderedParametersWithoutRunningBindings() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");
