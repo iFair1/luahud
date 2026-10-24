@@ -174,7 +174,12 @@ class EngineTest {
 
         try {
             engine.checkForUpdates();
-            runtime.execute("assert(#errors == 1); assert(errors[1].phase == 'load'); assert(errors[1].isNew)", "verify-load");
+            runtime.execute("""
+                    assert(#errors == 1)
+                    assert(errors[1].phase == 'load' and errors[1].isNew)
+                    assert(errors[1].line == 1)
+                    assert(errors[1].message == 'load failed')
+                    """, "verify-load");
             engine.checkForUpdates();
             runtime.execute("assert(#errors == 1)", "verify-no-recursion");
             engine.fireEvent("tick");
@@ -188,7 +193,8 @@ class EngineTest {
                     assert(errors[3].count == 2 and not errors[3].isNew)
                     assert(errors[2].group == 'Observer' and not errors[2].system)
                     assert(errors[2].phase == 'tick')
-                    assert(string.find(errors[2].message, 'tick failed'))
+                    assert(errors[2].line == 9)
+                    assert(errors[2].message == 'tick failed')
                     assert(errors[4].phase == 'timer')
                     """, "verify-occurrences");
             ErrorEntry handlerError = ErrorManager.snapshot().stream()
@@ -198,7 +204,12 @@ class EngineTest {
 
             ErrorManager.reportSystem("error-event-test", "system failure");
             engine.checkForUpdates();
-            runtime.execute("assert(#errors == 5); assert(errors[5].system); assert(errors[5].group == 'LuaHUD')", "verify-system");
+            runtime.execute("""
+                    assert(#errors == 5)
+                    assert(errors[5].system and errors[5].group == 'LuaHUD')
+                    assert(errors[5].line == -1)
+                    assert(errors[5].message == 'system failure')
+                    """, "verify-system");
             engine.checkForUpdates();
             runtime.execute("assert(#errors == 5)", "verify-no-delayed-recursion");
         } finally {

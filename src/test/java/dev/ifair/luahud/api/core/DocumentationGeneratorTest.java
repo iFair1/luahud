@@ -21,6 +21,8 @@ class DocumentationGeneratorTest {
 
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@class Error\n"));
+        assertTrue(stub.contains("---@field line integer"));
+        assertTrue(stub.contains("---@field message string"));
         assertTrue(stub.contains("---@field isNew boolean"));
         assertTrue(stub.contains("---@field count integer"));
         assertTrue(stub.contains("---@overload fun(event: \"error\", callback: fun(event: Error))"));
