@@ -398,6 +398,8 @@ public final class CobaltRuntime {
     private boolean matchesJava(Object value, LuaType<?> type) {
         return switch (type.kind()) {
             case ALIAS -> matchesJava(value, type.elementType());
+            case OPTIONAL -> value == null || matchesJava(value, type.elementType());
+            case UNION -> type.alternatives().stream().anyMatch(part -> matchesJava(value, part));
             case STRING -> value instanceof String;
             case LITERAL -> type.displayName().equals(value);
             case INTEGER -> value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long;
@@ -405,7 +407,14 @@ public final class CobaltRuntime {
             case BOOLEAN -> value instanceof Boolean;
             case NIL -> value == null;
             case MODEL, MODEL_INPUT -> type.model().javaType().isInstance(value);
-            default -> true;
+            case LIST -> value instanceof List<?> list
+                    && list.stream().allMatch(item -> matchesJava(item, type.elementType()));
+            case MAP -> value instanceof Map<?, ?> map
+                    && map.keySet().stream().allMatch(String.class::isInstance)
+                    && map.values().stream().allMatch(item -> matchesJava(item, type.elementType()));
+            case INPUT_TABLE -> value instanceof LuaTableValue;
+            case ANY -> true;
+            case FUNCTION -> false;
         };
     }
 

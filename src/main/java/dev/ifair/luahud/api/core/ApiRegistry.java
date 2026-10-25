@@ -59,7 +59,12 @@ public final class ApiRegistry {
     public void registerAddon(String providerId, Consumer<LuaApiRegistrar> contribution) {
         mutable();
         ApiRegistry staged = new ApiRegistry(warnings);
-        contribution.accept(staged.new Registrar(providerId));
+        try {
+            contribution.accept(staged.new Registrar(providerId));
+            staged.freeze();
+        } finally {
+            staged.closeRegistration();
+        }
         merge(root, staged.root, "lh");
         staged.models.forEach(this::addModel);
         staged.events.values().forEach(this::addEvent);
@@ -89,6 +94,9 @@ public final class ApiRegistry {
     public void freeze() {
         mutable();
         validate(root, "lh");
+        closeRegistration();
+    }
+    private void closeRegistration() {
         models.forEach(ModelBuilder::freeze);
         frozen = true;
     }
@@ -182,19 +190,20 @@ public final class ApiRegistry {
         }
     }
 
-    private static final class Function<R> implements FunctionBuilder<R> {
+    private final class Function<R> implements FunctionBuilder<R> {
         private final FunctionNode node; private Function(FunctionNode node) { this.node = node; }
         public <T> LuaParameter<T> parameter(String name, LuaType<T> type, String doc) {
+            mutable();
             if (type.kind() == LuaType.Kind.FUNCTION) throw new IllegalArgumentException("Addon functions cannot receive Lua callbacks");
             LuaParameter<T> p = new LuaParameter<>(node, node.parameters.size(), name, type, LuaDoc.of(doc)); node.parameters.add(p); return p;
         }
         public <T> LuaParameter<T> optionalParameter(String name, LuaType<T> type, String doc) { return parameter(name, LuaType.optional(type), doc); }
-        public FunctionBuilder<R> call(LuaCallable<R> callable) { if (node.callable != null) throw new IllegalStateException("Function already implemented"); node.callable = Objects.requireNonNull(callable); return this; }
+        public FunctionBuilder<R> call(LuaCallable<R> callable) { mutable(); if (node.callable != null) throw new IllegalStateException("Function already implemented"); node.callable = Objects.requireNonNull(callable); return this; }
     }
-    private static final class IgnoredFunction<R> implements FunctionBuilder<R> {
+    private final class IgnoredFunction<R> implements FunctionBuilder<R> {
         private int index; private final Object owner = new Object();
-        public <T> LuaParameter<T> parameter(String n, LuaType<T> t, String d) { return new LuaParameter<>(owner, index++, n, t, LuaDoc.of(d)); }
+        public <T> LuaParameter<T> parameter(String n, LuaType<T> t, String d) { mutable(); return new LuaParameter<>(owner, index++, n, t, LuaDoc.of(d)); }
         public <T> LuaParameter<T> optionalParameter(String n, LuaType<T> t, String d) { return parameter(n, LuaType.optional(t), d); }
-        public FunctionBuilder<R> call(LuaCallable<R> c) { return this; }
+        public FunctionBuilder<R> call(LuaCallable<R> c) { mutable(); return this; }
     }
 }

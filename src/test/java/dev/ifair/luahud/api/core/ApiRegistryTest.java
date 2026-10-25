@@ -3,6 +3,8 @@ package dev.ifair.luahud.api.core;
 import dev.ifair.luahud.api.LuaApiRegistrar;
 import dev.ifair.luahud.api.LuaType;
 import dev.ifair.luahud.api.EventType;
+import dev.ifair.luahud.api.FunctionBuilder;
+import dev.ifair.luahud.api.NamespaceBuilder;
 import java.util.concurrent.atomic.AtomicReference;
 import dev.ifair.luahud.api.ModelBuilder;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,68 @@ class ApiRegistryTest {
         assertThrows(IllegalStateException.class, () -> root.integer("late", "", () -> 1));
         assertThrows(IllegalStateException.class, () -> model.string("late", "", value -> value));
         assertThrows(IllegalStateException.class, field::inputRequired);
+    }
+
+    @Test void incompleteAddonIsRejectedBeforeAnyContributionIsMerged() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        assertThrows(IllegalStateException.class, () -> registry.registerAddon("broken", api -> {
+            api.root().integer("partial", "", () -> 1);
+            api.root().namespace("nested", nested -> nested.function("missing", LuaType.nil(), ""));
+            api.model("Partial", String.class);
+            api.event("partial", "");
+        }));
+        assertTrue(registry.rootNode().children().isEmpty());
+        assertTrue(registry.models().isEmpty());
+        assertTrue(registry.events().isEmpty());
+        registry.registerAddon("healthy", api -> api.root().integer("kept", "", () -> 2));
+        assertDoesNotThrow(registry::freeze);
+        assertTrue(registry.rootNode().children().containsKey("kept"));
+    }
+
+    @Test void frozenFunctionsRejectRequiredOptionalAndImplementationChanges() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var function = registry.registrar("core").root().function("run", LuaType.nil(), "");
+        function.call(args -> null);
+        registry.freeze();
+        assertThrows(IllegalStateException.class, () -> function.parameter("late", LuaType.string(), ""));
+        assertThrows(IllegalStateException.class, () -> function.optionalParameter("late", LuaType.string(), ""));
+        assertThrows(IllegalStateException.class, () -> function.call(args -> null));
+    }
+
+    @Test void addonBuildersCloseWhenContributionReturnsOrThrows() {
+        for (boolean fail : List.of(false, true)) {
+            ApiRegistry registry = new ApiRegistry(ignored -> {});
+            AtomicReference<LuaApiRegistrar> registrar = new AtomicReference<>();
+            AtomicReference<NamespaceBuilder> namespace = new AtomicReference<>();
+            AtomicReference<FunctionBuilder<Void>> function = new AtomicReference<>();
+            AtomicReference<FunctionBuilder<Void>> ignoredFunction = new AtomicReference<>();
+            AtomicReference<ModelBuilder<String>> model = new AtomicReference<>();
+            java.util.function.Consumer<LuaApiRegistrar> contribution = api -> {
+                registrar.set(api);
+                api.root().namespace("addon", nested -> {
+                    namespace.set(nested);
+                    function.set(nested.function("run", LuaType.nil(), "").call(args -> null));
+                    ignoredFunction.set(nested.function("run", LuaType.nil(), ""));
+                });
+                model.set(api.model("Value", String.class));
+                model.get().string("text", "", value -> value);
+                if (fail) throw new IllegalStateException("broken");
+            };
+            if (fail) assertThrows(IllegalStateException.class, () -> registry.registerAddon("addon", contribution));
+            else registry.registerAddon("addon", contribution);
+
+            // The parent registry is still open; only the completed addon must be closed.
+            assertFalse(registry.isFrozen());
+            assertThrows(IllegalStateException.class, () -> registrar.get().event("late", ""));
+            assertThrows(IllegalStateException.class, () -> registrar.get().model("Late", String.class));
+            assertThrows(IllegalStateException.class, () -> namespace.get().integer("late", "", () -> 1));
+            assertThrows(IllegalStateException.class, () -> function.get().parameter("late", LuaType.string(), ""));
+            assertThrows(IllegalStateException.class, () -> ignoredFunction.get().parameter("late", LuaType.string(), ""));
+            assertThrows(IllegalStateException.class, () -> ignoredFunction.get().call(args -> null));
+            assertThrows(IllegalStateException.class, () -> model.get().string("late", "", value -> value));
+            assertThrows(IllegalStateException.class, () -> model.get().fields().getFirst().inputRequired());
+            assertDoesNotThrow(registry::freeze);
+        }
     }
 
     @Test void modelsComposeInheritedFields() {

@@ -96,6 +96,37 @@ class CobaltRuntimeTest {
         assertEquals(0xFF00FF00, captured.get());
     }
 
+    @Test void outputUnionsSelectMatchingCollectionsOptionalAndNestedAlternatives() throws Exception {
+        record OutputCase(LuaType<Object> type, Object value, String assertion) {}
+        var cases = List.of(
+                new OutputCase(LuaType.union(LuaType.list(LuaType.string()), LuaType.string()), "ok", "value == 'ok'"),
+                new OutputCase(LuaType.union(LuaType.map(LuaType.string()), LuaType.integer()), 7, "value == 7"),
+                new OutputCase(LuaType.union(LuaType.optional(LuaType.string()), LuaType.integer()), 8, "value == 8"),
+                new OutputCase(LuaType.union(LuaType.union(LuaType.string(), LuaType.bool()), LuaType.integer()), 9, "value == 9"),
+                new OutputCase(LuaType.union(LuaType.list(LuaType.string()), LuaType.list(LuaType.integer())), List.of(3), "value[1] == 3"),
+                new OutputCase(LuaType.union(LuaType.map(LuaType.string()), LuaType.map(LuaType.integer())), Map.of("count", 4), "value.count == 4"),
+                new OutputCase(LuaType.union(LuaType.list(LuaType.string()), LuaType.map(LuaType.integer())), Map.of("count", 5), "value.count == 5"),
+                new OutputCase(LuaType.union(LuaType.inputTable("Options", fields -> {}), LuaType.string()), "ok", "value == 'ok'"));
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var root = registry.registrar("fixture").root();
+        for (int i = 0; i < cases.size(); i++) {
+            OutputCase output = cases.get(i);
+            root.function("result" + i, output.type(), "").call(args -> output.value());
+            root.value("value" + i, output.type(), LuaDoc.NONE, output::value);
+        }
+        root.function("invalid", LuaType.union(LuaType.list(LuaType.string()), LuaType.map(LuaType.integer())), "")
+                .call(args -> true);
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry); runtime.start();
+        for (int i = 0; i < cases.size(); i++) {
+            String assertion = cases.get(i).assertion();
+            runtime.execute("local value=lh.result" + i + "(); assert(" + assertion + "); "
+                    + "value=lh.value" + i + "; assert(" + assertion + ")", "output-union-" + i);
+        }
+        LuaError error = assertThrows(LuaError.class, () -> runtime.execute("lh.invalid()", "invalid-output-union"));
+        assertTrue(error.getMessage().contains("value does not match declared union"));
+    }
+
     @Test void aliasesKeepUnderlyingRuntimeAndEventContractsWithoutReadingRegistryValues() throws Exception {
         LuaType<String> id = LuaType.stringAlias("ItemId", () -> {
             throw new AssertionError("Runtime must not read stub values");
