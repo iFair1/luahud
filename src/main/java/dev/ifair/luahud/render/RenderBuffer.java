@@ -44,6 +44,11 @@ public final class RenderBuffer {
         invalidateLayout();
     }
 
+    public static void hideSection(String id) {
+        QUEUE.hideSection(id);
+        invalidateLayout();
+    }
+
     public static void beginSection(SectionLayout layout) {
         QUEUE.beginSection(layout);
         invalidateLayout();

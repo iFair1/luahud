@@ -152,6 +152,7 @@ public final class RenderModule {
                     .optional("offsetY", LuaType.integer(), section ? "Vertical screen-edge inset" : "Local vertical offset");
             if (section) {
                 fields.optional("id", LuaType.string(), "Shared section ID; replaces any existing section with this ID")
+                        .optional("visible", LuaType.bool(), "Whether this section is drawn; defaults to true")
                         .optional("duration", LuaType.number(), "Positive lifetime in seconds; omitted sections last until this callback runs again")
                         .optional("anchor", LuaType.union(
                                 LuaType.literal("topLeft"), LuaType.literal("topCenter"), LuaType.literal("topRight"),
@@ -209,6 +210,11 @@ public final class RenderModule {
         SectionState state = sectionState(options);
         String id = options == null ? null : options.string("id", null);
         Double duration = options == null || !options.contains("duration") ? null : options.number("duration", 0);
+        if (options != null && !options.bool("visible", true)) {
+            RenderBuffer.hideSection(id);
+            currentState = state;
+            return;
+        }
         RenderBuffer.beginSection(state.layout(), id, duration);
         currentState = state;
     }

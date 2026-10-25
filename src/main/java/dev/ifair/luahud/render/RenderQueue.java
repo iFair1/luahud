@@ -69,6 +69,11 @@ final class RenderQueue {
         entries.add(new Entry(current.section, current.owner, id, duration, now()));
     }
 
+    void hideSection(String id) {
+        if (id != null) entries.removeIf(entry -> id.equals(entry.id()));
+        current.section = null;
+    }
+
     static void validateOptions(String id, Double duration) {
         if (id != null && id.isBlank()) throw new IllegalArgumentException("Section id must not be blank");
         if (duration != null && (!Double.isFinite(duration) || duration <= 0)) {
