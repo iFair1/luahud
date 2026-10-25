@@ -3,6 +3,9 @@ package dev.ifair.luahud.api;
 public interface LuaApiRegistrar {
     NamespaceBuilder root();
 
+    /** Returns LuaHUD's existing model types; their definitions cannot be modified. */
+    BuiltinModels models();
+
     <T> ModelBuilder<T> model(String name, Class<T> javaType);
 
     /** Registers a callback event with no arguments. Names are shared across all providers. */

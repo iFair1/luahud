@@ -1,12 +1,22 @@
 package dev.ifair.luahud.api.core;
 
 import dev.ifair.luahud.api.LuaApiRegistrar;
+import dev.ifair.luahud.api.BuiltinModels;
+import dev.ifair.luahud.api.LuaType;
+import dev.ifair.luahud.api.ModelBuilder;
 import dev.ifair.luahud.api.models.CoreModels;
 import dev.ifair.luahud.api.models.DamageModel;
 import dev.ifair.luahud.api.models.DeathModel;
 import dev.ifair.luahud.api.models.ErrorModel;
 import dev.ifair.luahud.api.modules.*;
 import net.minecraft.client.MinecraftClient;
+import dev.ifair.luahud.core.DamageEvent;
+import dev.ifair.luahud.core.DeathEvent;
+import dev.ifair.luahud.error.ErrorEntry;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.passive.AbstractHorseEntity;
+import net.minecraft.item.ItemStack;
 
 /** Registers LuaHUD's built-in API using the same builders exposed to addons. */
 public final class CoreApi {
@@ -42,16 +52,33 @@ public final class CoreApi {
         api.event("item-pickup", models.itemStack().type(),
                 "Reports a server-confirmed ground item pickup by the local player. "
                         + "The ItemStack contains the picked-up count and preserves the item's components.");
-        api.event("damage", DamageModel.register(api, models).type(),
+        var damage = DamageModel.register(api, models);
+        api.event("damage", damage.type(),
                 "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
                         + "unmatched health loss uses minecraft:generic. Notification matching waits up to two client ticks.");
         api.event("death", death.type(),
                 "Reports the server's local-player death notification with position, dimension, death message and available damage source. "
                         + "Also runs when the death screen is disabled (immediate respawn).");
-        api.event("error", ErrorModel.register(api).type(),
+        var error = ErrorModel.register(api);
+        api.event("error", error.type(),
                 "Reports each recorded error occurrence on the next client lifecycle tick, after profiles load. "
                         + "Repeated errors keep their ID and increment count; isNew is true only for the first occurrence. "
                         + "Errors raised by error handlers are recorded without producing another error event.");
         registry.addEventFunctions();
+        // LuaType exposes model metadata, so freeze definitions before sharing them with addons.
+        registry.models().forEach(ModelBuilder::freeze);
+        registry.builtinModels(new ModelTypes(models.block().type(), models.entity().type(), models.itemStack().type(),
+                models.statusEffect().type(), models.horse().type(), damage.type(), death.type(), error.type()));
     }
+
+    private record ModelTypes(
+            LuaType<CoreModels.BlockView> block,
+            LuaType<Entity> entity,
+            LuaType<ItemStack> itemStack,
+            LuaType<StatusEffectInstance> statusEffect,
+            LuaType<AbstractHorseEntity> horse,
+            LuaType<DamageEvent> damage,
+            LuaType<DeathEvent> death,
+            LuaType<ErrorEntry> error
+    ) implements BuiltinModels {}
 }

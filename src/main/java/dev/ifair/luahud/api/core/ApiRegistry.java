@@ -50,6 +50,13 @@ public final class ApiRegistry {
     private final Map<String, EventType<?>> events = new LinkedHashMap<>();
     private final Consumer<String> warnings;
     private boolean frozen;
+    private BuiltinModels builtinModels;
+
+    void builtinModels(BuiltinModels models) {
+        mutable();
+        if (builtinModels != null) throw new IllegalStateException("Built-in models are already initialized");
+        builtinModels = Objects.requireNonNull(models);
+    }
 
     public ApiRegistry() { this(LuaHUD.LOGGER::warn); }
     public ApiRegistry(Consumer<String> warnings) { this.warnings = Objects.requireNonNull(warnings); }
@@ -59,6 +66,7 @@ public final class ApiRegistry {
     public void registerAddon(String providerId, Consumer<LuaApiRegistrar> contribution) {
         mutable();
         ApiRegistry staged = new ApiRegistry(warnings);
+        staged.builtinModels = builtinModels;
         try {
             contribution.accept(staged.new Registrar(providerId));
             staged.freeze();
@@ -161,6 +169,10 @@ public final class ApiRegistry {
     private final class Registrar implements LuaApiRegistrar {
         private final String provider;
         private Registrar(String provider) { this.provider = Objects.requireNonNull(provider); }
+        public BuiltinModels models() {
+            if (builtinModels == null) throw new IllegalStateException("Built-in models have not been initialized");
+            return builtinModels;
+        }
         public NamespaceBuilder root() { mutable(); return new Namespace(provider, root, "lh"); }
         public <T> EventType<T> event(String name, LuaType<T> type, String description) {
             mutable();
