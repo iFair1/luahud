@@ -105,6 +105,7 @@ public record CoreModels(
         model.integer("maxHealth", "Maximum health, or 0 for non-living entities", value -> value instanceof LivingEntity living ? (int) living.getMaxHealth() : 0);
         model.field("effects", LuaType.map(RegistryIds.STATUS_EFFECT, statusEffect.type()), "Active status effects keyed by namespaced ID", CoreModels::statusEffects);
         model.bool("isLiving", "Whether the entity is a living entity", value -> value instanceof LivingEntity);
+        model.bool("isBaby", "Whether the entity is a baby", value -> value instanceof LivingEntity living && living.isBaby());
         model.optionalField("horse", horse.type(), "Horse-family properties, or nil for other entities", CoreModels::horse);
         model.fromFields(fields -> entity(fields.get(uuid)));
     }
