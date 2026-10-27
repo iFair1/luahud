@@ -5,15 +5,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.ifair.luahud.api.LuaParameter;
-import dev.ifair.luahud.api.EventType;
 import dev.ifair.luahud.api.LuaType;
-import dev.ifair.luahud.api.ModelBuilder;
 
 import java.util.Comparator;
-import java.util.Locale;
-import java.util.Map;
 
-/** Exports the frozen Lua API as data for a documentation site's reference pages. */
+/** Exports the frozen Lua API using the documentation site's version 2 reference schema. */
 public final class DocumentationGenerator {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
@@ -24,155 +20,92 @@ public final class DocumentationGenerator {
         if (!registry.isFrozen()) {
             throw new IllegalArgumentException("Registry must be frozen before generating its documentation");
         }
-        ApiTypeContext context = new ApiTypeContext(registry);
         JsonObject document = new JsonObject();
-        document.addProperty("schemaVersion", 1);
-        document.addProperty("root", "lh");
-        JsonArray namespaces = new JsonArray();
-        JsonArray properties = new JsonArray();
-        JsonArray functions = new JsonArray();
-        collect(registry.rootNode(), "lh", context, namespaces, properties, functions);
-        document.add("namespaces", namespaces);
-        document.add("properties", properties);
-        document.add("functions", functions);
-        JsonArray events = new JsonArray();
-        registry.events().stream().sorted(Comparator.comparing(EventType::name)).forEach(event -> {
-            JsonObject item = new JsonObject();
-            item.addProperty("name", event.name());
-            item.addProperty("providerId", event.providerId());
-            item.addProperty("description", event.doc().description());
-            item.addProperty("hasPayload", event.hasPayload());
-            item.add("payloadType", type(event.payloadType(), event.providerId(), context, false));
-            events.add(item);
-        });
-        document.add("events", events);
-
-        JsonArray types = new JsonArray();
-        context.namedTypes.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(entry -> {
-            Object definition = entry.getKey();
-            JsonObject type = new JsonObject();
-            type.addProperty("name", entry.getValue());
-            JsonArray fields = new JsonArray();
-            if (definition instanceof ModelBuilder<?> model) {
-                type.addProperty("kind", "model");
-                type.addProperty("providerId", model.providerId());
-                type.addProperty("acceptsTable", model.canDecode());
-                model.fields().stream().sorted(Comparator.comparing(ModelBuilder.Field::name)).forEach(field -> {
-                    JsonObject item = field(field.name(), field.doc().description(), field.type(),
-                            field.optional(), model.providerId(), context, false);
-                    item.addProperty("inputMode", lower(field.inputMode()));
-                    fields.add(item);
-                });
-            } else if (definition instanceof ApiTypeContext.InputModel input) {
-                ModelBuilder<?> model = input.model();
-                type.addProperty("kind", "model_input");
-                type.addProperty("providerId", model.providerId());
-                type.addProperty("outputType", context.namedTypes.get(model));
-                model.fields().stream().filter(field -> field.inputMode() != ModelBuilder.InputMode.OUTPUT_ONLY)
-                        .sorted(Comparator.comparing(ModelBuilder.Field::name)).forEach(field -> {
-                            JsonObject item = field(field.name(), field.doc().description(), field.type(),
-                                    field.inputMode() != ModelBuilder.InputMode.REQUIRED, model.providerId(), context, true);
-                            item.addProperty("inputMode", lower(field.inputMode()));
-                            fields.add(item);
-                        });
-            } else if (definition instanceof LuaType<?> table) {
-                String provider = context.owners.get(table);
-                type.addProperty("kind", table.kind() == LuaType.Kind.ALIAS ? "alias" : "input_table");
-                if (table.kind() == LuaType.Kind.ALIAS) {
-                    type.add("underlyingType", type(table.elementType(), provider, context, false));
-                }
-                type.addProperty("providerId", provider);
-                table.inputFields().values().stream().sorted(Comparator.comparing(LuaType.InputField::name))
-                        .forEach(field -> fields.add(field(field.name(), field.doc().description(), field.type(),
-                                field.optional(), provider, context, false)));
-            }
-            type.add("fields", fields);
-            types.add(type);
-        });
-        document.add("types", types);
+        document.addProperty("schemaVersion", 2);
+        document.add("root", node(registry.rootNode(), "lh"));
         return GSON.toJson(document) + "\n";
-    }
-
-    private static void collect(ApiRegistry.NamespaceNode namespace, String path, ApiTypeContext context,
-                                JsonArray namespaces, JsonArray properties, JsonArray functions) {
-        namespaces.add(node(namespace, path));
-        namespace.children().values().stream().sorted(Comparator.comparing(ApiRegistry.Node::name)).forEach(child -> {
-            String childPath = path + "." + child.name();
-            if (child instanceof ApiRegistry.NamespaceNode nested) {
-                collect(nested, childPath, context, namespaces, properties, functions);
-            } else if (child instanceof ApiRegistry.ValueNode value) {
-                JsonObject property = node(value, childPath);
-                property.add("type", type(value.type(), value.providerId(), context, false));
-                properties.add(property);
-            } else if (child instanceof ApiRegistry.FunctionNode function) {
-                JsonObject item = node(function, childPath);
-                JsonArray parameters = new JsonArray();
-                for (LuaParameter<?> parameter : function.parameters()) {
-                    parameters.add(field(parameter.name(), parameter.doc().description(), parameter.type(),
-                            parameter.type().kind() == LuaType.Kind.OPTIONAL, function.providerId(), context, false));
-                }
-                item.add("parameters", parameters);
-                item.add("returnType", type(function.returnType(), function.providerId(), context, false));
-                functions.add(item);
-            }
-        });
     }
 
     private static JsonObject node(ApiRegistry.Node node, String path) {
         JsonObject item = new JsonObject();
-        item.addProperty("path", path);
         item.addProperty("name", node.name());
-        item.addProperty("providerId", node.providerId());
+        item.addProperty("path", path);
         item.addProperty("description", node.doc().description());
-        return item;
-    }
-
-    private static JsonObject field(String name, String description, LuaType<?> type, boolean optional,
-                                    String provider, ApiTypeContext context, boolean input) {
-        JsonObject field = new JsonObject();
-        field.addProperty("name", name);
-        field.addProperty("description", description);
-        field.addProperty("optional", optional);
-        field.add("type", type(type, provider, context, input));
-        return field;
-    }
-
-    private static JsonObject type(LuaType<?> type, String provider, ApiTypeContext context, boolean input) {
-        JsonObject item = new JsonObject();
-        boolean modelInput = type.kind() == LuaType.Kind.MODEL_INPUT || input && type.kind() == LuaType.Kind.MODEL;
-        item.addProperty("kind", modelInput ? "model_input" : lower(type.kind()));
-        item.addProperty("display", input ? context.inputFieldType(type, provider) : context.type(type, provider));
-        if (type.keyType() != null) {
-            item.add("keyType", type(type.keyType(), provider, context, false));
-        }
-        if (type.elementType() != null) {
-            item.add("elementType", type(type.elementType(), provider, context, input));
-        }
-        if (type.kind() == LuaType.Kind.UNION) {
-            JsonArray alternatives = new JsonArray();
-            type.alternatives().forEach(value -> alternatives.add(type(value, provider, context, input)));
-            item.add("alternatives", alternatives);
-        }
-        if (type.kind() == LuaType.Kind.LITERAL) item.addProperty("value", type.displayName());
-        if (type.model() != null || type.kind() == LuaType.Kind.INPUT_TABLE || type.kind() == LuaType.Kind.ALIAS) {
-            JsonArray references = new JsonArray();
-            if (type.model() != null) {
-                references.add(context.namedTypes.get(type.model()));
-                if (modelInput && type.model().canDecode()) {
-                    context.namedTypes.entrySet().stream()
-                            .filter(entry -> entry.getKey() instanceof ApiTypeContext.InputModel definition
-                                    && definition.model() == type.model())
-                            .forEach(entry -> references.add(entry.getValue()));
-                }
-            } else {
-                references.add(context.namedTypes.get(type));
+        if (node instanceof ApiRegistry.NamespaceNode namespace) {
+            item.addProperty("kind", "namespace");
+            JsonArray children = new JsonArray();
+            namespace.children().values().stream().sorted(Comparator.comparing(ApiRegistry.Node::name))
+                    .forEach(child -> children.add(node(child, path + "." + child.name())));
+            item.add("children", children);
+        } else if (node instanceof ApiRegistry.ValueNode value) {
+            item.addProperty("kind", "property");
+            item.add("type", type(value.type()));
+        } else if (node instanceof ApiRegistry.FunctionNode function) {
+            item.addProperty("kind", "function");
+            JsonArray parameters = new JsonArray();
+            for (LuaParameter<?> parameter : function.parameters()) {
+                JsonObject field = new JsonObject();
+                field.addProperty("name", parameter.name());
+                field.addProperty("description", parameter.doc().description());
+                boolean optional = parameter.type().kind() == LuaType.Kind.OPTIONAL;
+                field.addProperty("optional", optional);
+                // Argument omission is represented by the parameter flag; nullable values
+                // elsewhere retain their optional type wrapper.
+                field.add("type", type(optional ? parameter.type().elementType() : parameter.type()));
+                parameters.add(field);
             }
-            item.add("references", references);
+            item.add("parameters", parameters);
+            item.add("returnType", type(function.returnType()));
         }
         return item;
     }
 
-    private static String lower(Enum<?> value) {
-        return value.name().toLowerCase(Locale.ROOT);
+    private static JsonObject type(LuaType<?> type) {
+        JsonObject item = new JsonObject();
+        switch (type.kind()) {
+            case NIL, ANY, STRING, INTEGER, NUMBER, BOOLEAN, FUNCTION -> {
+                item.addProperty("kind", "primitive");
+                item.addProperty("name", type.luaName());
+            }
+            case MODEL, INPUT_TABLE, ALIAS -> {
+                return reference(type.displayName());
+            }
+            case MODEL_INPUT -> {
+                JsonObject output = reference(type.model().name());
+                if (!type.model().canDecode()) return output;
+                item.addProperty("kind", "union");
+                JsonArray alternatives = new JsonArray();
+                alternatives.add(output);
+                alternatives.add(reference(type.model().name() + "Input"));
+                item.add("alternatives", alternatives);
+            }
+            case OPTIONAL, LIST -> {
+                item.addProperty("kind", type.kind() == LuaType.Kind.OPTIONAL ? "optional" : "list");
+                item.add("element", type(type.elementType()));
+            }
+            case MAP -> {
+                item.addProperty("kind", "map");
+                item.add("key", type(type.keyType()));
+                item.add("value", type(type.elementType()));
+            }
+            case UNION -> {
+                item.addProperty("kind", "union");
+                JsonArray alternatives = new JsonArray();
+                type.alternatives().forEach(value -> alternatives.add(type(value)));
+                item.add("alternatives", alternatives);
+            }
+            case LITERAL -> {
+                item.addProperty("kind", "literal");
+                item.addProperty("value", type.displayName());
+            }
+        }
+        return item;
+    }
+
+    private static JsonObject reference(String id) {
+        JsonObject item = new JsonObject();
+        item.addProperty("kind", "reference");
+        item.addProperty("id", id);
+        return item;
     }
 }

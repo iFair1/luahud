@@ -3,6 +3,7 @@ package dev.ifair.luahud.api.core;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.ifair.luahud.api.LuaDoc;
 import dev.ifair.luahud.api.LuaType;
 import org.junit.jupiter.api.Test;
 
@@ -12,71 +13,95 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentationGeneratorTest {
-    @Test void exportsDescriptionsAndOrderedParametersWithoutRunningBindings() {
+    @Test void exportsTreeAndOrderedParametersWithoutRunningBindings() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");
         String description = "Quoted \"text\"\n<example> & Türkçe";
         api.root().namespace("player", ns -> ns.string("name", description, () -> {
             throw new AssertionError("Documentation must not evaluate suppliers");
         }));
-        var function = api.root().function("example", LuaType.string(), description);
+        var function = api.root().function("example", LuaType.optional(LuaType.string()), description);
         function.parameter("z", LuaType.integer(), "First");
         function.parameter("a", LuaType.optional(LuaType.string()), "Second");
         function.call(args -> { throw new AssertionError("Must not invoke functions"); });
-        registry.registrar("luahud").event("reload", "");
-        registry.registrar("luahud").event("tick", "");
-        registry.registrar("luahud").event("render", "");
+        api.event("reload", "");
+        api.event("tick", "");
+        api.event("render", "");
         registry.addEventFunctions();
         registry.freeze();
 
         String json = DocumentationGenerator.generate(registry);
         assertEquals(json, DocumentationGenerator.generate(registry));
         JsonObject document = JsonParser.parseString(json).getAsJsonObject();
-        assertEquals(1, document.get("schemaVersion").getAsInt());
-        JsonObject property = document.getAsJsonArray("properties").get(0).getAsJsonObject();
+        assertEquals(Set.of("schemaVersion", "root"), document.keySet());
+        assertEquals(2, document.get("schemaVersion").getAsInt());
+        JsonObject root = document.getAsJsonObject("root");
+        assertEquals("lh", root.get("name").getAsString());
+        validateTree(root, "lh", new HashSet<>());
+        JsonObject property = find(find(root, "player"), "name");
         assertEquals("lh.player.name", property.get("path").getAsString());
+        assertEquals("property", property.get("kind").getAsString());
         assertEquals(description, property.get("description").getAsString());
-        JsonObject example = find(document.getAsJsonArray("functions"), "path", "lh.example");
+        JsonObject example = find(root, "example");
+        assertEquals("function", example.get("kind").getAsString());
         JsonArray parameters = example.getAsJsonArray("parameters");
         assertEquals("z", parameters.get(0).getAsJsonObject().get("name").getAsString());
+        assertFalse(parameters.get(0).getAsJsonObject().get("optional").getAsBoolean());
         assertEquals("a", parameters.get(1).getAsJsonObject().get("name").getAsString());
         assertTrue(parameters.get(1).getAsJsonObject().get("optional").getAsBoolean());
-        JsonObject on = find(document.getAsJsonArray("functions"), "path", "lh.on");
-        assertEquals("string", on.getAsJsonArray("parameters").get(0).getAsJsonObject()
-                .getAsJsonObject("type").get("kind").getAsString());
+        assertJson("{kind:'primitive',name:'string'}", parameters.get(1).getAsJsonObject().getAsJsonObject("type"));
+        assertJson("{kind:'optional',element:{kind:'primitive',name:'string'}}", example.getAsJsonObject("returnType"));
+        assertJson("{kind:'primitive',name:'string'}", find(root, "on").getAsJsonArray("parameters")
+                .get(0).getAsJsonObject().getAsJsonObject("type"));
     }
 
-    @Test void recursiveModelsAndInputTablesUseResolvableStubNames() {
+    @Test void namedReferencesOmitProviderPrefixesAndDoNotExpandRecursiveDefinitions() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("example-addon");
         var model = api.model("Value", String.class);
         var text = model.string("text", "Required input", value -> value).inputRequired();
         model.optionalField("next", model.type(), "Recursive output", value -> null);
-        model.integer("count", "Default input", value -> 1).inputDefault(1);
         model.fromFields(fields -> fields.get(text));
-        var table = LuaType.inputTable("Options", fields -> fields.field("values", LuaType.list(model.inputType()), "Values"));
+        var table = LuaType.inputTable("Options", (fields, self) -> fields.optional("next", self, "Recursive input"));
         var function = api.root().function("echo", model.type(), "Echo");
-        function.parameter("options", table, "Options");
+        function.parameter("options", LuaType.optional(table), "Options");
+        function.parameter("values", LuaType.list(model.inputType()), "Values");
         function.call(args -> null);
         registry.freeze();
 
-        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
-        JsonArray types = document.getAsJsonArray("types");
-        String stub = StubGenerator.generate(registry);
-        Set<String> names = new HashSet<>();
-        types.forEach(value -> {
-            String name = value.getAsJsonObject().get("name").getAsString();
-            assertTrue(names.add(name));
-            assertTrue(stub.contains("---@class " + name + "\n"));
+        JsonObject echo = find(root(registry), "echo");
+        assertJson("{kind:'reference',id:'Value'}", echo.getAsJsonObject("returnType"));
+        JsonArray parameters = echo.getAsJsonArray("parameters");
+        assertJson("{kind:'reference',id:'Options'}", parameters.get(0).getAsJsonObject().getAsJsonObject("type"));
+        assertJson("{kind:'list',element:{kind:'union',alternatives:[{kind:'reference',id:'Value'},"
+                + "{kind:'reference',id:'ValueInput'}]}}", parameters.get(1).getAsJsonObject().getAsJsonObject("type"));
+    }
+
+    @Test void exportsCompoundTypesAndAliasesWithoutReadingAliasValues() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("addon");
+        var id = LuaType.stringAlias("ItemId", () -> {
+            throw new AssertionError("Documentation must not evaluate alias suppliers");
         });
-        JsonObject input = find(types, "name", "example_addon_ValueInput");
-        assertEquals(2, input.getAsJsonArray("fields").size());
-        assertFalse(find(input.getAsJsonArray("fields"), "name", "text").get("optional").getAsBoolean());
-        assertEquals("default", find(input.getAsJsonArray("fields"), "name", "count").get("inputMode").getAsString());
-        JsonObject options = find(types, "name", "example_addon_Options");
-        JsonObject list = options.getAsJsonArray("fields").get(0).getAsJsonObject().getAsJsonObject("type");
-        assertEquals("(example_addon_Value | example_addon_ValueInput)[]", list.get("display").getAsString());
-        list.getAsJsonObject("elementType").getAsJsonArray("references").forEach(ref -> assertTrue(names.contains(ref.getAsString())));
+        var value = LuaType.optional(LuaType.list(LuaType.union(LuaType.bool(), LuaType.literal("quoted \"value\""))));
+        api.root().value("items", LuaType.map(id, value), LuaDoc.NONE, () -> {
+            throw new AssertionError("Must not evaluate suppliers");
+        });
+        var opaque = api.model("Opaque", String.class);
+        opaque.string("value", "", text -> text);
+        var function = api.root().function("echo", LuaType.nil(), "");
+        function.parameter("value", opaque.inputType(), "");
+        function.call(args -> null);
+        registry.freeze();
+
+        JsonObject root = root(registry);
+        JsonObject type = find(root, "items").getAsJsonObject("type");
+        assertEquals("map", type.get("kind").getAsString());
+        assertJson("{kind:'reference',id:'ItemId'}", type.getAsJsonObject("key"));
+        assertJson("{kind:'optional',element:{kind:'list',element:{kind:'union',alternatives:"
+                + "[{kind:'primitive',name:'boolean'},{kind:'literal',value:'quoted \"value\"'}]}}}", type.getAsJsonObject("value"));
+        assertJson("{kind:'reference',id:'Opaque'}", find(root, "echo").getAsJsonArray("parameters")
+                .get(0).getAsJsonObject().getAsJsonObject("type"));
     }
 
     @Test void requiresFrozenDefinitionsAndDropsRemovedAddons() {
@@ -88,30 +113,37 @@ class DocumentationGeneratorTest {
         ApiRegistry withoutAddon = new ApiRegistry(ignored -> {});
         withoutAddon.freeze();
         assertFalse(DocumentationGenerator.generate(withoutAddon).contains("lh.addonCount"));
+        assertTrue(root(withoutAddon).getAsJsonArray("children").isEmpty());
     }
 
-    @Test void eventMetadataIncludesProviderAndResolvablePayloadTypes() {
-        ApiRegistry registry = new ApiRegistry(ignored -> {});
-        var api = registry.registrar("addon");
-        var model = api.model("Damage", String.class);
-        model.string("attacker", "", value -> value);
-        api.event("damage", model.type(), "Damage details");
-        api.event("reload", "Reloaded");
-        registry.addEventFunctions();
-        registry.freeze();
-        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
-        JsonObject damage = find(document.getAsJsonArray("events"), "name", "damage");
-        assertEquals("addon", damage.get("providerId").getAsString());
-        assertTrue(damage.get("hasPayload").getAsBoolean());
-        assertEquals("addon_Damage", damage.getAsJsonObject("payloadType").get("display").getAsString());
-        assertFalse(find(document.getAsJsonArray("events"), "name", "reload").get("hasPayload").getAsBoolean());
+    private static JsonObject root(ApiRegistry registry) {
+        return JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject().getAsJsonObject("root");
     }
 
-    private static JsonObject find(JsonArray values, String key, String expected) {
-        for (var value : values) {
-            JsonObject item = value.getAsJsonObject();
-            if (item.get(key).getAsString().equals(expected)) return item;
+    private static void assertJson(String expected, JsonObject actual) {
+        assertEquals(JsonParser.parseString(expected), actual);
+    }
+
+    private static void validateTree(JsonObject node, String path, Set<String> paths) {
+        assertEquals(path, node.get("path").getAsString());
+        assertTrue(paths.add(path));
+        assertTrue(node.has("description"));
+        if (!node.get("kind").getAsString().equals("namespace")) return;
+        String previous = "";
+        for (var child : node.getAsJsonArray("children")) {
+            JsonObject item = child.getAsJsonObject();
+            String name = item.get("name").getAsString();
+            assertTrue(previous.compareTo(name) < 0);
+            previous = name;
+            validateTree(item, path + "." + name, paths);
         }
-        throw new AssertionError("Missing " + expected);
+    }
+
+    private static JsonObject find(JsonObject namespace, String name) {
+        for (var value : namespace.getAsJsonArray("children")) {
+            JsonObject item = value.getAsJsonObject();
+            if (item.get("name").getAsString().equals(name)) return item;
+        }
+        throw new AssertionError("Missing " + name);
     }
 }
