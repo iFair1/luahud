@@ -22,7 +22,10 @@ public final class PositionModule {
                     .string("name", "Localized biome name", () -> biomeName(client)));
 
             pos.namespace("chunk", chunk -> chunk
-                    .bool("isSlimeChunk", "Whether the chunk is a slime chunk", () -> isSlimeChunk(client)));
+                    .bool("isSlimeChunk", "Whether the chunk is a slime chunk", () -> isSlimeChunk(client))
+                    .integer("icx", "In chunk x coordinate", () -> client.player.getBlockX() & 15)
+                    .integer("icy", "In chunk y coordinate", () -> client.player.getBlockY() & 15)
+                    .integer("icz", "In chunk z coordinate", () -> client.player.getBlockZ() & 15));
 
             pos.string("dimension", "Namespaced dimension ID", () -> client.world.getRegistryKey().getValue().toString())
                     .model("highestBlock", block, "Highest block at player coordinates", () -> getHighestBlock(client));
