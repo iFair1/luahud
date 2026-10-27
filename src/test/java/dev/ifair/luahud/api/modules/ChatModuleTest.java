@@ -106,20 +106,24 @@ class ChatModuleTest {
         assertTrue(stub.contains("never sends it to the server"));
     }
 
-    @Test void documentationExportsRecursiveTextAndEventFields() {
-        var types = JsonParser.parseString(DocumentationGenerator.generate(registry()))
-                .getAsJsonObject().getAsJsonArray("types");
-        var text = java.util.stream.StreamSupport.stream(types.spliterator(), false)
+    @Test void documentationReferencesChatTextAndItsSchemaRetainsRecursiveFields() {
+        var children = JsonParser.parseString(DocumentationGenerator.generate(registry()))
+                .getAsJsonObject().getAsJsonObject("root").getAsJsonArray("children");
+        var sendMessage = java.util.stream.StreamSupport.stream(children.spliterator(), false)
                 .map(value -> value.getAsJsonObject())
-                .filter(value -> value.get("name").getAsString().equals("ChatText"))
+                .filter(value -> value.get("name").getAsString().equals("sendMessage"))
                 .findFirst().orElseThrow();
-        assertEquals("input_table", text.get("kind").getAsString());
-        var extra = java.util.stream.StreamSupport.stream(text.getAsJsonArray("fields").spliterator(), false)
-                .map(value -> value.getAsJsonObject())
-                .filter(value -> value.get("name").getAsString().equals("extra"))
-                .findFirst().orElseThrow();
-        assertEquals("(string | ChatText)[]", extra.getAsJsonObject("type").get("display").getAsString());
-        assertTrue(extra.get("optional").getAsBoolean());
+        assertEquals(JsonParser.parseString(
+                "{kind:'union',alternatives:[{kind:'primitive',name:'string'},{kind:'reference',id:'ChatText'}]}"),
+                sendMessage.getAsJsonArray("parameters").get(0).getAsJsonObject().getAsJsonObject("type"));
+
+        var text = dev.ifair.luahud.api.models.ChatTypes.text();
+        var extra = text.inputFields().get("extra");
+        assertEquals(dev.ifair.luahud.api.LuaType.Kind.LIST, extra.type().kind());
+        assertEquals(dev.ifair.luahud.api.LuaType.Kind.UNION, extra.type().elementType().kind());
+        assertEquals("string", extra.type().elementType().alternatives().get(0).displayName());
+        assertSame(text, extra.type().elementType().alternatives().get(1));
+        assertTrue(extra.optional());
     }
 
     @ParameterizedTest

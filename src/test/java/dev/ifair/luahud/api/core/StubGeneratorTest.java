@@ -142,9 +142,10 @@ class StubGeneratorTest {
         assertTrue(StubGenerator.generate(registry, true).contains("table<EffectId, number>"));
         assertEquals("table<EffectId, integer>", effects.luaName());
         var documentation = com.google.gson.JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
-        var parameter = documentation.getAsJsonArray("functions").get(0).getAsJsonObject()
+        var parameter = documentation.getAsJsonObject("root").getAsJsonArray("children").get(0).getAsJsonObject()
                 .getAsJsonArray("parameters").get(0).getAsJsonObject().getAsJsonObject("type");
-        assertEquals("EffectId", parameter.getAsJsonObject("keyType").get("display").getAsString());
+        assertEquals(com.google.gson.JsonParser.parseString(
+                "{kind:'map',key:{kind:'reference',id:'EffectId'},value:{kind:'primitive',name:'integer'}}"), parameter);
         var runtime = new dev.ifair.luahud.core.CobaltRuntime(registry);
         runtime.start();
         runtime.execute("assert(lh.echo({['minecraft:speed']=2})['minecraft:speed'] == 2)", "registry-map");
