@@ -20,13 +20,19 @@ final class ApiTypeContext {
     private final Set<Object> collected = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<String> names = new HashSet<>();
     private final boolean integersAsNumbers;
+    private final boolean qualifyProviders;
 
     ApiTypeContext(ApiRegistry registry) {
         this(registry, false);
     }
 
     ApiTypeContext(ApiRegistry registry, boolean integersAsNumbers) {
+        this(registry, integersAsNumbers, true);
+    }
+
+    ApiTypeContext(ApiRegistry registry, boolean integersAsNumbers, boolean qualifyProviders) {
         this.integersAsNumbers = integersAsNumbers;
+        this.qualifyProviders = qualifyProviders;
         for (ModelBuilder<?> model : registry.models()) add(model, model.providerId(), model.name());
         registry.models().forEach(model -> collect(model.type(), model.providerId()));
         collect(registry.rootNode());
@@ -65,12 +71,16 @@ final class ApiTypeContext {
         };
     }
 
+    String inputModelName(ModelBuilder<?> model) {
+        return namedTypes.get(inputModels.get(model));
+    }
+
     private String inputType(ModelBuilder<?> model) {
         String output = namedTypes.get(model);
         return model.canDecode() ? output + " | " + namedTypes.get(inputModels.get(model)) : output;
     }
 
-    private void add(Object key, String provider, String friendly) { if (namedTypes.containsKey(key)) return; String base = provider.equals("luahud") ? safe(friendly) : safe(provider) + "_" + safe(friendly); String name = base; int suffix = 2; while (!names.add(name)) name = base + "_" + suffix++; namedTypes.put(key, name); }
+    private void add(Object key, String provider, String friendly) { if (namedTypes.containsKey(key)) return; String base = !qualifyProviders || provider.equals("luahud") ? safe(friendly) : safe(provider) + "_" + safe(friendly); String name = base; int suffix = 2; while (!names.add(name)) name = base + "_" + suffix++; namedTypes.put(key, name); }
     private String groupedType(LuaType<?> type, String provider) {
         String value = type(type, provider);
         return type.kind() == LuaType.Kind.UNION || type.kind() == LuaType.Kind.MODEL_INPUT && type.model().canDecode()

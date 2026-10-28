@@ -33,8 +33,8 @@ class DocumentationGeneratorTest {
         String json = DocumentationGenerator.generate(registry);
         assertEquals(json, DocumentationGenerator.generate(registry));
         JsonObject document = JsonParser.parseString(json).getAsJsonObject();
-        assertEquals(Set.of("schemaVersion", "root"), document.keySet());
-        assertEquals(2, document.get("schemaVersion").getAsInt());
+        assertEquals(Set.of("schemaVersion", "root", "types", "events"), document.keySet());
+        assertEquals(3, document.get("schemaVersion").getAsInt());
         JsonObject root = document.getAsJsonObject("root");
         assertEquals("lh", root.get("name").getAsString());
         validateTree(root, "lh", new HashSet<>());
@@ -114,6 +114,129 @@ class DocumentationGeneratorTest {
         withoutAddon.freeze();
         assertFalse(DocumentationGenerator.generate(withoutAddon).contains("lh.addonCount"));
         assertTrue(root(withoutAddon).getAsJsonArray("children").isEmpty());
+    }
+
+    @Test void exportsSeparateOutputAndRecursiveInputDefinitions() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        var model = api.model("Value", String.class);
+        model.string("text", "Required text", value -> {
+            throw new AssertionError("Must not evaluate model accessors");
+        }).inputRequired();
+        model.integer("count", "Count", value -> 1).inputDefault(1);
+        model.optionalField("next", LuaType.list(model.type()), "Nested values", value -> null).inputOptional();
+        model.string("output", "Output only", value -> value);
+        model.fromFields(fields -> { throw new AssertionError("Must not decode models"); });
+        var options = LuaType.inputTable("Options", (fields, self) -> fields
+                .field("value", model.inputType(), "Value")
+                .optional("next", self, "Nested options"));
+        var fn = api.root().function("use", LuaType.nil(), "");
+        fn.parameter("options", options, "");
+        fn.call(args -> null);
+        registry.freeze();
+
+        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
+        JsonArray types = document.getAsJsonArray("types");
+        JsonObject output = definition(types, "Value");
+        assertEquals("model", output.get("kind").getAsString());
+        assertEquals(4, output.getAsJsonArray("fields").size());
+        assertJson("{name:'next',description:'Nested values',optional:true,type:{kind:'list',element:{kind:'reference',id:'Value'}}}",
+                fieldNamed(output, "next"));
+        JsonObject input = definition(types, "ValueInput");
+        assertEquals("input", input.get("kind").getAsString());
+        assertJson("{kind:'reference',id:'Value'}", input.getAsJsonObject("model"));
+        assertEquals(3, input.getAsJsonArray("fields").size());
+        assertFalse(fieldNamed(input, "text").get("optional").getAsBoolean());
+        assertTrue(fieldNamed(input, "count").get("optional").getAsBoolean());
+        assertJson("{kind:'list',element:{kind:'union',alternatives:[{kind:'reference',id:'Value'},{kind:'reference',id:'ValueInput'}]}}",
+                fieldNamed(input, "next").getAsJsonObject("type"));
+        assertJson("{kind:'reference',id:'Options'}", fieldNamed(definition(types, "Options"), "next").getAsJsonObject("type"));
+        assertReferencesResolve(document, types);
+    }
+
+    @Test void exportsAliasDescriptionsAndEventPayloadsWithoutRegistrySnapshots() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        var id = LuaType.stringAlias("ItemId", "Namespaced item registry ID", () -> {
+            throw new AssertionError("Must not read registry IDs");
+        });
+        var payload = api.model("Pickup", String.class);
+        payload.field("id", id, "Item ID", value -> value);
+        api.event("pickup", payload.type(), "Picked up an item");
+        api.event("reload", "Reloaded");
+        var alias = LuaType.alias("Choice", LuaType.union(LuaType.literal("one"), LuaType.literal("two")));
+        api.root().value("choice", alias, LuaDoc.NONE, () -> "one");
+        registry.freeze();
+
+        JsonObject document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
+        JsonArray types = document.getAsJsonArray("types");
+        assertJson("{id:'ItemId',name:'ItemId',kind:'alias',description:'Namespaced item registry ID',type:{kind:'primitive',name:'string'}}",
+                definition(types, "ItemId"));
+        assertEquals("union", definition(types, "Choice").getAsJsonObject("type").get("kind").getAsString());
+        assertJson("{name:'pickup',description:'Picked up an item',payloadType:{kind:'reference',id:'Pickup'}}",
+                document.getAsJsonArray("events").get(0).getAsJsonObject());
+        assertJson("{name:'reload',description:'Reloaded',payloadType:{kind:'primitive',name:'nil'}}",
+                document.getAsJsonArray("events").get(1).getAsJsonObject());
+        assertReferencesResolve(document, types);
+    }
+
+    @Test void disambiguatesTypeNamesIncludingGeneratedInputNames() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        var reserved = api.model("ValueInput", String.class);
+        var value = api.model("Value", String.class);
+        var text = value.string("text", "", v -> v).inputRequired();
+        value.fromFields(fields -> fields.get(text));
+        registry.registerAddon("addon", addon -> {
+            var other = addon.model("Value", Integer.class);
+            addon.event("other", other.type(), "");
+        });
+        api.event("input", value.type(), "");
+        var fn = api.root().function("use", reserved.type(), "");
+        fn.parameter("value", value.inputType(), "");
+        fn.call(args -> null);
+        registry.freeze();
+
+        String json = DocumentationGenerator.generate(registry);
+        assertEquals(json, DocumentationGenerator.generate(registry));
+        JsonObject document = JsonParser.parseString(json).getAsJsonObject();
+        JsonArray types = document.getAsJsonArray("types");
+        assertEquals(4, types.size());
+        assertEquals("model", definition(types, "ValueInput").get("kind").getAsString());
+        assertEquals("input", definition(types, "ValueInput_2").get("kind").getAsString());
+        assertReferencesResolve(document, types);
+    }
+
+    private static JsonObject definition(JsonArray types, String id) {
+        for (var entry : types) {
+            if (entry.getAsJsonObject().get("id").getAsString().equals(id)) return entry.getAsJsonObject();
+        }
+        throw new AssertionError("Missing definition " + id);
+    }
+
+    private static JsonObject fieldNamed(JsonObject definition, String name) {
+        for (var entry : definition.getAsJsonArray("fields")) {
+            if (entry.getAsJsonObject().get("name").getAsString().equals(name)) return entry.getAsJsonObject();
+        }
+        throw new AssertionError("Missing field " + name);
+    }
+
+    private static void assertReferencesResolve(JsonObject document, JsonArray types) {
+        Set<String> ids = new HashSet<>();
+        for (var entry : types) assertTrue(ids.add(entry.getAsJsonObject().get("id").getAsString()));
+        assertReferencesResolve(document, ids);
+    }
+
+    private static void assertReferencesResolve(com.google.gson.JsonElement element, Set<String> ids) {
+        if (element.isJsonArray()) {
+            element.getAsJsonArray().forEach(child -> assertReferencesResolve(child, ids));
+        } else if (element.isJsonObject()) {
+            JsonObject object = element.getAsJsonObject();
+            if (object.has("kind") && object.get("kind").getAsString().equals("reference")) {
+                assertTrue(ids.contains(object.get("id").getAsString()), "Unresolved reference: " + object);
+            }
+            object.entrySet().forEach(entry -> assertReferencesResolve(entry.getValue(), ids));
+        }
     }
 
     private static JsonObject root(ApiRegistry registry) {

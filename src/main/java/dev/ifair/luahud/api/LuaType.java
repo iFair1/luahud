@@ -38,6 +38,7 @@ public final class LuaType<T> {
 
     private final Supplier<? extends Collection<String>> stringValues;
 
+    private final LuaDoc doc;
     private final Kind kind;
     private final String displayName;
     private final List<LuaType<?>> alternatives;
@@ -60,6 +61,13 @@ public final class LuaType<T> {
     private LuaType(Kind kind, String displayName, List<LuaType<?>> alternatives, LuaType<?> elementType,
                     ModelBuilder<?> model, Map<String, InputField> inputFields,
                     Supplier<? extends Collection<String>> stringValues, LuaType<String> keyType) {
+        this(kind, displayName, alternatives, elementType, model, inputFields, stringValues, keyType, LuaDoc.NONE);
+    }
+
+    private LuaType(Kind kind, String displayName, List<LuaType<?>> alternatives, LuaType<?> elementType,
+                    ModelBuilder<?> model, Map<String, InputField> inputFields,
+                    Supplier<? extends Collection<String>> stringValues, LuaType<String> keyType, LuaDoc doc) {
+        this.doc = Objects.requireNonNull(doc);
         this.keyType = keyType;
         this.stringValues = stringValues;
         this.kind = kind;
@@ -89,8 +97,14 @@ public final class LuaType<T> {
      * Runtime conversion remains string-based, so registry validation stays with the API consumer.
      */
     public static LuaType<String> stringAlias(String name, Supplier<? extends Collection<String>> values) {
+        return stringAlias(name, "", values);
+    }
+
+    /** Creates a registry-style alias with a description independent of its runtime ID snapshot. */
+    public static LuaType<String> stringAlias(String name, String description, Supplier<? extends Collection<String>> values) {
         validateName(name);
-        return new LuaType<>(Kind.ALIAS, name, null, string(), null, null, Objects.requireNonNull(values));
+        return new LuaType<>(Kind.ALIAS, name, null, string(), null, null, Objects.requireNonNull(values), null,
+                LuaDoc.of(description));
     }
 
     /** Returns a fresh, deterministic snapshot of the alias's documented string literals. */
@@ -163,6 +177,7 @@ public final class LuaType<T> {
         return new LuaType<>(kind, name, null, null, null, null);
     }
 
+    public LuaDoc doc() { return doc; }
     public Kind kind() { return kind; }
     public String displayName() { return displayName; }
     public List<LuaType<?>> alternatives() { return alternatives; }
