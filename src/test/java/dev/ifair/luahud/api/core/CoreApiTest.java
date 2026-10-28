@@ -1,15 +1,22 @@
 package dev.ifair.luahud.api.core;
 
 import dev.ifair.luahud.api.LuaType;
+import dev.ifair.luahud.core.CobaltRuntime;
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.StringVisitable;
+import net.minecraft.util.Language;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.squiddev.cobalt.LuaError;
 
 class CoreApiTest {
     private ApiRegistry registry;
@@ -25,6 +32,47 @@ class CoreApiTest {
         registry = new ApiRegistry(message -> { throw new AssertionError(message); });
         CoreApi.register(registry, null);
         registry.freeze();
+    }
+
+    @Test
+    void getTranslationUsesTheCurrentLanguageOnEveryCallAndFallsBackToTheKey() throws Exception {
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        Language original = Language.getInstance();
+        try {
+            Language.setInstance(language("Hello"));
+            runtime.execute("first = lh.getTranslation('luahud.test.greeting')", "translation");
+            assertEquals("Hello", runtime.global("first").checkString());
+
+            Language.setInstance(language("Merhaba"));
+            runtime.execute("second = lh.getTranslation('luahud.test.greeting'); missing = lh.getTranslation('luahud.test.missing')", "translation");
+            assertEquals("Merhaba", runtime.global("second").checkString());
+            assertEquals("luahud.test.missing", runtime.global("missing").checkString());
+        } finally {
+            Language.setInstance(original);
+        }
+    }
+
+    @Test
+    void getTranslationRequiresAKeyAndExposesItsSignatureInStubs() throws Exception {
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        assertThrows(LuaError.class, () -> runtime.execute("lh.getTranslation()", "missing-key"));
+        assertThrows(LuaError.class, () -> runtime.execute("lh.getTranslation({})", "invalid-key"));
+        assertTrue(StubGenerator.generate(registry).contains("function lh.getTranslation(key) end"));
+    }
+
+    private static Language language(String greeting) {
+        return new Language() {
+            @Override public String get(String key, String fallback) {
+                return hasTranslation(key) ? greeting : fallback;
+            }
+            @Override public boolean hasTranslation(String key) {
+                return key.equals("luahud.test.greeting");
+            }
+            @Override public boolean isRightToLeft() { return false; }
+            @Override public OrderedText reorder(StringVisitable text) { return OrderedText.EMPTY; }
+        };
     }
 
     @ParameterizedTest
