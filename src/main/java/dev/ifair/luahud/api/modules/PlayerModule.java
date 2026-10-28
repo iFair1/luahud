@@ -59,9 +59,9 @@ public final class PlayerModule {
                     .number("saturation", "Saturation level", () -> (double) client.player.getHungerManager().getSaturationLevel()));
             player.namespace("armor", armor -> armor
                     //? if <1.21.2 {
-                    .number("armor", "Armor attribute", () -> attribute(client, EntityAttributes.GENERIC_ARMOR))
+                    .number("value", "Armor attribute", () -> attribute(client, EntityAttributes.GENERIC_ARMOR))
                     //?} else {
-                    /*.number("armor", "Armor attribute", () -> attribute(client, EntityAttributes.ARMOR))
+                    /*.number("value", "Armor attribute", () -> attribute(client, EntityAttributes.ARMOR))
                     *///?}
                     //? if <1.21.2 {
                     .number("toughness", "Armor toughness attribute", () -> attribute(client, EntityAttributes.GENERIC_ARMOR_TOUGHNESS))
