@@ -56,6 +56,14 @@ public final class CoreApi {
         api.event("damage", damage.type(),
                 "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
                         + "unmatched health loss uses minecraft:generic. Notification matching waits up to two client ticks.");
+        api.event("attack", damage.type(),
+                "Reports server-observed damage dealt by the local player, including projectiles. "
+                        + "Uses the Damage model with victim and observed health/absorption loss, matched over two client ticks. "
+                        + "Nearby hits on each victim are combined using the latest source; unavailable loss is 0.");
+        api.event("kill", death.type(),
+                "Reports a tracked living entity death whose latest client-observed damage source names the local player as attacker. "
+                        + "Uses the Death model with victim; message is generated from the observed source. "
+                        + "Limited to entities and damage sources visible to the client; this is not the server kill-credit statistic.");
         api.event("death", death.type(),
                 "Reports the server's local-player death notification with position, dimension, death message and available damage source. "
                         + "Also runs when the death screen is disabled (immediate respawn).");

@@ -77,7 +77,7 @@ class CoreApiTest {
 
     @ParameterizedTest
     @CsvSource({"reload, nil", "tick, nil", "render, nil", "item-pickup, ItemStack",
-            "damage, Damage", "death, Death", "error, Error"})
+            "damage, Damage", "attack, Damage", "death, Death", "kill, Death", "error, Error"})
     void builtInEventsHaveMatchingRegistryAndLuaOverloads(String name, String payload) {
         var event = registry.event(name);
         boolean hasPayload = !payload.equals("nil");
@@ -98,6 +98,7 @@ class CoreApiTest {
     @CsvSource({
             "Death, x, number, false", "Death, y, number, false", "Death, z, number, false",
             "Death, dimension, string, false", "Death, message, string, false",
+            "Damage, victim, Entity, true", "Death, victim, Entity, true",
             "Death, damageType, string, false", "Death, attacker, Entity, true", "Death, weapon, ItemStack, true",
             "Error, id, number, false", "Error, group, string, false", "Error, system, boolean, false",
             "Error, phase, string, false", "Error, line, integer, false", "Error, message, string, false",

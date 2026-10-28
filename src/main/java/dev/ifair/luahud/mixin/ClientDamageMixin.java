@@ -45,7 +45,7 @@ public abstract class ClientDamageMixin implements DeathState {
     private void luahud$notifyLocalPlayerDamage(Entity entity, DamageSource source, Operation<Void> original) {
         original.call(entity, source);
         if (entity == MinecraftClient.getInstance().player) {
-            luahud$tracker().onDamage(DamageEvent.fromNotification(source));
+            luahud$tracker().onDamage(DamageEvent.fromNotification(entity, source));
         }
     }
 

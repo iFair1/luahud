@@ -1,5 +1,7 @@
 package dev.ifair.luahud.core;
 
+import net.minecraft.entity.Entity;
+
 /** Pairs nearby damage notifications and observed health/absorption loss on the client thread. */
 public final class DamageTracker {
     private static final int MATCH_TICKS = 2;
@@ -49,10 +51,14 @@ public final class DamageTracker {
         // Health and absorption arrive in separate packets, possibly on adjacent ticks.
         if (++waitingTicks < MATCH_TICKS) return null;
         DamageEvent event = pending == null
-                ? (healthLost == 0.0 ? null : new DamageEvent("minecraft:generic", null, null, healthLost))
+                ? (healthLost == 0.0 ? null : new DamageEvent("minecraft:generic", null, null, healthLost, player instanceof Entity entity ? entity : null))
                 : pending.withAmount(healthLost + absorptionLost);
         clearPending();
         return event;
+    }
+
+    public boolean isIdle() {
+        return pending == null && healthLost == 0.0 && absorptionLost == 0.0;
     }
 
     private void clearPending() {

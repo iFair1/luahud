@@ -5,6 +5,7 @@
     "client": [
         "MinecraftClientMixin",
         "ClientDamageMixin",
+        "ClientAttackMixin",
         "ClientItemPickupMixin",
         "SoundManagerMixin",
         "ClientWorldSoundMixin",
