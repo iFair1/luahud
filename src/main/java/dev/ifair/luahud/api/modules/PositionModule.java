@@ -32,10 +32,10 @@ public final class PositionModule {
                     .integer("grassColor", "Grass color of the biome", () -> biome(client).getGrassColorAt(client.player.getBlockX(), client.player.getBlockZ())));
 
             pos.namespace("chunk", chunk -> chunk
-                    .bool("isSlimeChunk", "Whether the chunk is a slime chunk", () -> isSlimeChunk(client))
-                    .integer("icx", "In chunk x coordinate", () -> client.player.getBlockX() & 15)
-                    .integer("icy", "In chunk y coordinate", () -> client.player.getBlockY() & 15)
-                    .integer("icz", "In chunk z coordinate", () -> client.player.getBlockZ() & 15));
+                    .bool("slimeChunk", "Whether the chunk is a slime chunk", () -> isSlimeChunk(client))
+                    .integer("localX", "In chunk x coordinate", () -> client.player.getBlockX() & 15)
+                    .integer("localY", "In chunk y coordinate", () -> client.player.getBlockY() & 15)
+                    .integer("localZ", "In chunk z coordinate", () -> client.player.getBlockZ() & 15));
 
             pos.string("dimension", "Namespaced dimension ID", () -> client.world.getRegistryKey().getValue().toString())
                     .model("highestBlock", block, "Highest block at player coordinates", () -> getHighestBlock(client));

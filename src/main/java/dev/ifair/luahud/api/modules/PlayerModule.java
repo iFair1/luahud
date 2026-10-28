@@ -48,7 +48,7 @@ public final class PlayerModule {
                     /*.string("username", "Account username", () -> client.player.getGameProfile().name())
                     *///?}
                     .bool("sprinting", "Whether the character is sprinting", () -> client.player.isSprinting())
-                    .bool("sprintHeld", "Whether the sprint key is held", () -> client.options.sprintKey.isPressed())
+                    .bool("sprintHeld", "Whether the sprint key is held or toggled", () -> client.options.sprintKey.isPressed())
                     .string("gamemode", "Current game mode", () -> gameMode(client))
                     .value("effects", LuaType.map(RegistryIds.STATUS_EFFECT, models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
                             () -> CoreModels.statusEffects(client.player))

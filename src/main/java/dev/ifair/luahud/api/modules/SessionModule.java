@@ -9,7 +9,7 @@ public class SessionModule {
 
     public static void register(LuaApiRegistrar api, MinecraftClient client) {
         api.root().namespace("session", session -> session
-                .bool("isMultiplayer", "Whether it's multiplayer", () -> isMultiplayer(client))
+                .bool("multiplayer", "Whether it's multiplayer", () -> isMultiplayer(client))
                 .string("name", "Name of the world or server", () -> {
                     if (isMultiplayer(client)) {
                         return getCurrentServer(client).name;
