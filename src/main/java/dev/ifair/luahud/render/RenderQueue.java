@@ -10,6 +10,7 @@ import java.util.function.LongSupplier;
 final class RenderQueue {
     private record Entry(RenderSection section, Object owner, String id, Double duration, long startedAt) {}
     private static final class Invocation {
+        float opacity = 1;
         final Object owner;
         RenderSection section;
         RenderSection savedSection;
@@ -92,7 +93,18 @@ final class RenderQueue {
         if (current.section == null) beginSection(current.layout);
     }
 
+    void opacity(float value) { current.opacity = value; }
+
     void add(RenderElement element, boolean endsRow) {
+        float opacity = current.opacity;
+        element = switch (element) {
+            case RenderElement.Text e -> new RenderElement.Text(e.value(), e.textColor(), e.backgroundColor(), e.shadow(), e.offsetX(), e.offsetY(), opacity);
+            case RenderElement.Item e -> new RenderElement.Item(e.value(), e.scale(), e.backgroundColor(), e.offsetX(), e.offsetY(), opacity);
+            case RenderElement.Stack e -> new RenderElement.Stack(e.value(), e.scale(), e.backgroundColor(), e.offsetX(), e.offsetY(), e.drawAir(), opacity);
+            case RenderElement.Entity e -> new RenderElement.Entity(e.value(), e.scale(), e.yaw(), e.pitch(), e.fullBright(), e.useEntityRotation(), e.backgroundColor(), e.offsetX(), e.offsetY(), opacity);
+            case RenderElement.Texture e -> new RenderElement.Texture(e.value(), e.scale(), e.backgroundColor(), e.offsetX(), e.offsetY(), opacity);
+            default -> element;
+        };
         if (current.canvas != null) {
             if (endsRow) throw new IllegalArgumentException("Canvas does not support automatic line breaks");
             current.canvas.add(new CanvasDrawing.Content(element, current.transform));
@@ -108,7 +120,7 @@ final class RenderQueue {
 
     void command(CanvasDrawing.Command command) {
         if (current.canvas == null) throw new IllegalStateException("Select a canvas before drawing shapes");
-        current.canvas.add(command);
+        current.canvas.add(current.opacity == 1 ? command : new CanvasDrawing.Faded(command, current.opacity));
     }
 
     void beginCanvas(SectionLayout layout, float width, float height, float scale,

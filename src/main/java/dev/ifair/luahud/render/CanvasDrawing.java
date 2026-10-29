@@ -22,7 +22,8 @@ final class CanvasDrawing {
         this.visible = visible;
     }
 
-    sealed interface Command permits Content, Mesh, Image {}
+    sealed interface Command permits Content, Mesh, Image, Faded {}
+    record Faded(Command command, float opacity) implements Command {}
     record Content(RenderElement element, CanvasTransform transform) implements Command {}
     record Mesh(List<CanvasGeometry.Quad> quads) implements Command {
         Mesh { quads = List.copyOf(quads); }

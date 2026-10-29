@@ -34,16 +34,19 @@ final class CanvasModule {
 
     static void register(LuaApiRegistrar api, LuaType<Object> color) {
         LuaType<LuaTableValue> rect = LuaType.inputTable("RectOptions", fields -> fields
+                .optional("opacity", LuaType.number(), "Opacity from 0 to 1; multiplies canvas opacity; defaults to 1")
                 .optional("color", color, "Fill color; defaults to white")
                 .optional("radius", LuaType.number(), "Corner radius; defaults to zero")
                 .optional("borderColor", color, "Border color; defaults to white")
                 .optional("borderWidth", LuaType.number(), "Inset border width; defaults to zero"));
         LuaType<LuaTableValue> gradient = LuaType.inputTable("GradientOptions", fields -> fields
+                .optional("opacity", LuaType.number(), "Opacity from 0 to 1; multiplies canvas opacity; defaults to 1")
                 .field("fromColor", color, "Top or left color")
                 .field("toColor", color, "Bottom or right color")
                 .optional("direction", LuaType.union(LuaType.literal("horizontal"), LuaType.literal("vertical")),
                         "Gradient direction; defaults to vertical"));
         LuaType<LuaTableValue> stroke = LuaType.inputTable("StrokeOptions", fields -> fields
+                .optional("opacity", LuaType.number(), "Opacity from 0 to 1; multiplies canvas opacity; defaults to 1")
                 .optional("color", color, "Color; defaults to white")
                 .optional("thickness", LuaType.number(), "Stroke width; circle defaults to filled, line and arc to 1"));
         registerShape(api, "drawRect", List.of("x", "y", "width", "height"), rect, false,
@@ -95,6 +98,7 @@ final class CanvasModule {
                 }
                 values[i] = (float) value;
             }
+            RenderBuffer.opacity(RenderModule.currentSectionState().opacity() * RenderModule.opacity(args.get(opts)));
             RenderBuffer.addMesh(shape.create(values, args.get(opts)));
             return null;
         });

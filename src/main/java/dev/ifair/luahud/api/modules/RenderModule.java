@@ -174,7 +174,7 @@ public final class RenderModule {
                     .optional("inline", LuaType.bool(), "Insert into the current section; defaults to false")
                     .optional("clip", LuaType.bool(), "Clip to the canvas bounds; defaults to true");
             var sectionFields = optionsType("CanvasSectionBase", color, true, true, false, false).inputFields();
-            for (String key : java.util.List.of("anchor", "offsetX", "offsetY", "scale", "id", "duration", "visible",
+            for (String key : java.util.List.of("anchor", "offsetX", "offsetY", "scale", "opacity", "id", "duration", "visible",
                     "textColor", "shadow")) {
                 var field = sectionFields.get(key);
                 fields.field(field.name(), field.type(), field.doc(), field.optional());
@@ -203,7 +203,8 @@ public final class RenderModule {
             canvasPreviousState = previous;
             // Canvas content has no implicit row background or icon scale.
             currentState = sectionState(new LuaTableValue(java.util.Map.of(
-                    "backgroundColor", 0, "textColor", canvasState.textColor(), "shadow", canvasState.shadow())));
+                    "backgroundColor", 0, "textColor", canvasState.textColor(), "shadow", canvasState.shadow(),
+                    "opacity", canvasState.opacity() * (inline ? previous.opacity() : 1))));
             return null;
         });
         var end = api.root().function("endCanvas", LuaType.nil(), "Close the canvas and resume the previous section.");
@@ -222,6 +223,7 @@ public final class RenderModule {
     }
 
     private static CanvasTransform prepareDraw(LuaTableValue options) {
+        RenderBuffer.opacity(currentState.opacity() * opacity(options));
         if (!RenderBuffer.isCanvas()) {
             if (options != null) {
                 for (String key : java.util.List.of("x", "y", "rotation", "originX", "originY")) {
@@ -261,7 +263,8 @@ public final class RenderModule {
     ) {
         return LuaType.inputTable(name, fields -> {
             if (!section) canvasFields(fields, text);
-            fields.optional("backgroundColor", color, "ARGB integer or RGB/ARGB hex string")
+            fields.optional("opacity", LuaType.number(), "Opacity from 0 to 1; multiplies section opacity and color alpha; defaults to 1")
+                    .optional("backgroundColor", color, "ARGB integer or RGB/ARGB hex string")
                     .optional("offsetX", LuaType.integer(), section
                             ? "Horizontal inset for edge anchors or signed shift for center anchors"
                             : "Local horizontal offset")
@@ -372,7 +375,8 @@ public final class RenderModule {
                 rowHeight.value(),
                 rowHeight.auto(),
                 options == null ? defaults.lineSpacing() : options.integer("lineSpacing", defaults.lineSpacing()),
-                options == null ? defaults.inlineSpacing() : options.integer("inlineSpacing", defaults.inlineSpacing())
+                options == null ? defaults.inlineSpacing() : options.integer("inlineSpacing", defaults.inlineSpacing()),
+                opacity(options)
         );
     }
 
@@ -519,6 +523,13 @@ public final class RenderModule {
 
     static boolean newLine(LuaTableValue options) {
         return bool(options, "newLine", false);
+    }
+
+    static float opacity(LuaTableValue options) {
+        double value = options == null ? 1 : options.number("opacity", 1);
+        if (!Double.isFinite(value) || value < 0 || value > 1)
+            throw new IllegalArgumentException("Opacity must be finite and between 0 and 1");
+        return (float) value;
     }
 
     private static float scale(LuaTableValue options, String key, float fallback) {

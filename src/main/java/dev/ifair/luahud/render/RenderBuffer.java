@@ -67,6 +67,8 @@ public final class RenderBuffer {
         QUEUE.closeCanvas();
     }
 
+    public static void opacity(float value) { QUEUE.opacity(value); }
+
     public static void canvasTransform(CanvasTransform transform) { QUEUE.transform(transform); }
 
     public static void addMesh(List<CanvasGeometry.Quad> quads) {

@@ -14,6 +14,35 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CanvasRenderingTest {
+    @org.junit.jupiter.api.BeforeAll static void bootstrapMinecraft() {
+        net.minecraft.SharedConstants.createGameVersion();
+        net.minecraft.Bootstrap.initialize();
+    }
+
+    @Test void opacityMultipliesAcrossSectionsAndInlineCanvases() throws Exception {
+        var runtime = runtime();
+        runtime.execute("lh.section({opacity=0.5}); lh.draw('a',{opacity=0.5}); lh.draw('b'); "
+                + "lh.canvas({inline=true,width=20,height=20,opacity=0.5}); "
+                + "lh.draw('c',{opacity=0.5}); lh.drawRect(0,0,2,2,{opacity=0.5}); "
+                + "lh.endCanvas(); lh.draw('d'); lh.section(); lh.draw('e')", "opacity");
+        var elements = RenderBuffer.sections().getFirst().rows().getFirst().elements();
+        assertEquals(0.25f, elements.get(0).opacity());
+        assertEquals(0.5f, elements.get(1).opacity());
+        var canvas = ((RenderElement.Canvas) elements.get(2)).drawing();
+        assertEquals(0.125f, ((CanvasDrawing.Content) canvas.commands().get(0)).element().opacity());
+        assertEquals(0.125f, ((CanvasDrawing.Faded) canvas.commands().get(1)).opacity());
+        assertEquals(0.5f, elements.get(3).opacity());
+        assertEquals(1, RenderBuffer.sections().get(1).rows().getFirst().elements().getFirst().opacity());
+    }
+
+    @Test void opacityRejectsValuesOutsideUnitInterval() throws Exception {
+        var runtime = runtime();
+        for (String value : List.of("-0.1", "1.1", "0/0", "math.huge")) {
+            assertThrows(LuaError.class, () -> runtime.execute("lh.section({opacity=" + value + "})", "opacity"));
+            assertThrows(LuaError.class, () -> runtime.execute("lh.draw('a',{opacity=" + value + "})", "opacity"));
+        }
+    }
+
     @AfterEach void clear() { RenderBuffer.clear(); RenderModule.resetSection(); }
 
     private static CobaltRuntime runtime() throws Exception {

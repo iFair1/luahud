@@ -26,27 +26,35 @@ final class CanvasPainter {
                 *///?}
                 clipped = true;
             }
-            for (var command : canvas.commands()) {
-                CanvasCompat.nextLayer(context);
-                switch (command) {
-                    case CanvasDrawing.Mesh mesh -> CanvasCompat.mesh(context, mesh.quads());
-                    case CanvasDrawing.Content content -> {
-                        CanvasCompat.push(context, content.transform());
-                        try {
-                            content(context, textRenderer, content.element());
-                            if (content.element() instanceof RenderElement.Entity
-                                    || content.element() instanceof RenderElement.Item
-                                    || content.element() instanceof RenderElement.Stack) {
-                                CanvasCompat.finishModel(context);
-                            }
-                        } finally { GuiCompat.pop(context); }
+            for (var recorded : canvas.commands()) {
+                var command = recorded instanceof CanvasDrawing.Faded faded ? faded.command() : recorded;
+                float opacity = recorded instanceof CanvasDrawing.Faded faded ? faded.opacity()
+                        : command instanceof CanvasDrawing.Content content ? content.element().opacity() : 1;
+                if (opacity == 0) continue;
+                Opacity.begin(context, opacity);
+                try {
+                    CanvasCompat.nextLayer(context);
+                    switch (command) {
+                        case CanvasDrawing.Faded ignored -> throw new IllegalStateException("Nested opacity command");
+                        case CanvasDrawing.Mesh mesh -> CanvasCompat.mesh(context, mesh.quads());
+                        case CanvasDrawing.Content content -> {
+                            CanvasCompat.push(context, content.transform());
+                            try {
+                                content(context, textRenderer, content.element());
+                                if (content.element() instanceof RenderElement.Entity
+                                        || content.element() instanceof RenderElement.Item
+                                        || content.element() instanceof RenderElement.Stack) {
+                                    CanvasCompat.finishModel(context);
+                                }
+                            } finally { GuiCompat.pop(context); }
+                        }
+                        case CanvasDrawing.Image image -> {
+                            CanvasCompat.push(context, image.transform());
+                            try { image(context, image); }
+                            finally { GuiCompat.pop(context); }
+                        }
                     }
-                    case CanvasDrawing.Image image -> {
-                        CanvasCompat.push(context, image.transform());
-                        try { image(context, image); }
-                        finally { GuiCompat.pop(context); }
-                    }
-                }
+                } finally { Opacity.end(context); }
             }
             CanvasCompat.nextLayer(context);
         } finally {

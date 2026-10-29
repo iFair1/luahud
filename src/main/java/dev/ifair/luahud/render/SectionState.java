@@ -18,9 +18,12 @@ public record SectionState(
         int rowHeight,
         boolean autoRowHeight,
         int lineSpacing,
-        int inlineSpacing
+        int inlineSpacing,
+        float opacity
 ) {
     public SectionState {
+        if (!Float.isFinite(opacity) || opacity < 0 || opacity > 1)
+            throw new IllegalArgumentException("Opacity must be finite and between 0 and 1");
         Objects.requireNonNull(anchor, "anchor");
         Objects.requireNonNull(rowAlignment, "rowAlignment");
         Objects.requireNonNull(inlineAlignment, "inlineAlignment");
@@ -45,6 +48,14 @@ public record SectionState(
     ) {
         this(anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
                 shadow, textColor, backgroundColor, scale, iconScale, rowHeight, autoRowHeight, lineSpacing, 0);
+    }
+
+    public SectionState(Anchor anchor, int offsetX, int offsetY, RowAlignment rowAlignment,
+            InlineAlignment inlineAlignment, InlineDirection inlineDirection, RowDirection rowDirection,
+            boolean shadow, int textColor, int backgroundColor, float scale, float iconScale,
+            int rowHeight, boolean autoRowHeight, int lineSpacing, int inlineSpacing) {
+        this(anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
+                shadow, textColor, backgroundColor, scale, iconScale, rowHeight, autoRowHeight, lineSpacing, inlineSpacing, 1);
     }
 
     public static SectionState defaults() {

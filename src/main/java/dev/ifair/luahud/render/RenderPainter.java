@@ -11,15 +11,19 @@ final class RenderPainter {
     static void paint(DrawContext context, TextRenderer textRenderer, RenderLayout layout) {
         for (RenderLayout.PositionedElement positioned : layout.elements()) {
             RenderElement element = positioned.element();
-            drawBackground(
-                    context,
-                    element.backgroundColor(),
-                    positioned.backgroundX(),
-                    positioned.backgroundY(),
-                    positioned.backgroundX() + positioned.backgroundWidth(),
-                    positioned.backgroundY() + positioned.rowHeight()
-            );
-            paintContent(context, textRenderer, positioned);
+            if (element.opacity() == 0) continue;
+            Opacity.begin(context, element.opacity());
+            try {
+                drawBackground(
+                        context,
+                        element.backgroundColor(),
+                        positioned.backgroundX(),
+                        positioned.backgroundY(),
+                        positioned.backgroundX() + positioned.backgroundWidth(),
+                        positioned.backgroundY() + positioned.rowHeight()
+                );
+                paintContent(context, textRenderer, positioned);
+            } finally { Opacity.end(context); }
         }
     }
 
