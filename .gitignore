@@ -41,6 +41,11 @@ replay_*.log
 *.hprof
 *.jfr
 
+# python
+__pycache__/*
 
 # logs
 logs/
+
+# Local publishing credentials
+.env

@@ -20,7 +20,7 @@ Minecraft **1.21** is the development baseline. Stonecutter shares the root
 ```
 
 Jars are written to `versions/1.21/build/libs/`, with the Minecraft version in
-the filename, for example `luahud-0.1.0+mc1.21.jar`.
+the filename, for example `luahud-0.2.0+1.21.jar`.
 
 ## License
 
