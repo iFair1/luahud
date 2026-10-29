@@ -10,7 +10,7 @@ public final class PerformanceModule {
     public static void register(LuaApiRegistrar api, MinecraftClient client) {
         api.root().namespace("perf", perf -> perf
                 .integer("fps", "Current rendered frames per second", () -> client.getCurrentFps())
-                .integer("maxFps", "Fps limit; -1 if infinite", () -> maxFps(client))
+                .integer("maxFps", "Fps limit; 260 if infinite", () -> client.options.getMaxFps().getValue())
                 .integer("ping", "Player latency in milliseconds", () -> ping(client))
                 .number("tps", "Integrated-server ticks per second", () -> tps(client)));
     }
@@ -25,10 +25,5 @@ public final class PerformanceModule {
         if (client.getServer() == null) return 0;
         float mspt = client.getServer().getAverageTickTime();
         return mspt <= 0 ? 0 : Math.min(20, 1000.0 / mspt);
-    }
-
-    private static int maxFps(MinecraftClient client) {
-        int fps = client.options.getMaxFps().getValue();
-        return fps == 260 ? -1 : fps;
     }
 }
