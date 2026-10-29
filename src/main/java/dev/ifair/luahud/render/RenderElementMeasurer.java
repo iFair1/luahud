@@ -8,6 +8,7 @@ final class RenderElementMeasurer {
 
     static int width(RenderElement element, TextRenderer textRenderer, float sectionScale) {
         return switch (element) {
+            case RenderElement.Canvas canvas -> (int) Math.ceil(canvas.drawing().width * canvas.drawing().scale * sectionScale);
             case RenderElement.Text text -> RenderDimensions.scaleLength(
                     textRenderer.getWidth(text.value()), sectionScale);
             case RenderElement.Stack stack -> stackWidth(
@@ -20,6 +21,7 @@ final class RenderElementMeasurer {
 
     static int height(RenderElement element, TextRenderer textRenderer, float sectionScale) {
         return switch (element) {
+            case RenderElement.Canvas canvas -> (int) Math.ceil(canvas.drawing().height * canvas.drawing().scale * sectionScale);
             case RenderElement.Text ignored -> RenderDimensions.scaleLength(
                     textRenderer.fontHeight, sectionScale);
             case RenderElement.Stack stack -> stackHeight(

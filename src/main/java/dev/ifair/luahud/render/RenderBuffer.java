@@ -54,6 +54,35 @@ public final class RenderBuffer {
         invalidateLayout();
     }
 
+    public static boolean isCanvas() { return QUEUE.isCanvas(); }
+
+    public static void beginCanvas(SectionLayout layout, float width, float height, float scale,
+                                   boolean clip, boolean visible, boolean inline, String id, Double duration) {
+        QUEUE.beginCanvas(layout, width, height, scale, clip, visible, inline, id, duration);
+        invalidateLayout();
+    }
+
+    public static void endCanvas() {
+        if (!QUEUE.isCanvas()) throw new IllegalStateException("No canvas is selected");
+        QUEUE.closeCanvas();
+    }
+
+    public static void canvasTransform(CanvasTransform transform) { QUEUE.transform(transform); }
+
+    public static void addMesh(List<CanvasGeometry.Quad> quads) {
+        QUEUE.command(new CanvasDrawing.Mesh(quads));
+        invalidateLayout();
+    }
+
+    public static void addImage(Identifier texture, int sourceWidth, int sourceHeight, float width, float height,
+                                int sourceX, int sourceY, int regionWidth, int regionHeight,
+                                int left, int right, int top, int bottom, boolean nineSlice,
+                                CanvasTransform transform) {
+        QUEUE.command(new CanvasDrawing.Image(texture, sourceWidth, sourceHeight, width, height,
+                sourceX, sourceY, regionWidth, regionHeight, left, right, top, bottom, nineSlice, transform));
+        invalidateLayout();
+    }
+
     public static void newLine(int count) {
         if (count <= 0) throw new IllegalArgumentException("Newline count must be greater than zero");
         for (int i = 0; i < count; i++) QUEUE.newLine();

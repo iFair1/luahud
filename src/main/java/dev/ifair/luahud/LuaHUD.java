@@ -59,6 +59,18 @@ public class LuaHUD implements ClientModInitializer {
 		Engine engine = new Engine(api);
 		EventDispatcher.attach(engine);
 		engine.init();
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.resource.ResourceType.CLIENT_RESOURCES)
+                .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
+                    @Override public net.minecraft.util.Identifier getFabricId() {
+                        return net.minecraft.util.Identifier.of(MOD_ID, "canvas_textures");
+                    }
+                    @Override public void reload(net.minecraft.resource.ResourceManager manager) {
+                        MinecraftClient.getInstance().execute(() -> {
+                            dev.ifair.luahud.api.modules.RenderModule.clearTextureCache();
+                            engine.reloadAll();
+                        });
+                    }
+                });
 
 		LuaHUDCommands.register(engine);
 

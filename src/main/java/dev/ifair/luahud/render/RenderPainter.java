@@ -33,6 +33,8 @@ final class RenderPainter {
         int y = positioned.contentY();
 
         switch (element) {
+            case RenderElement.Canvas canvas -> CanvasPainter.paint(context, textRenderer,
+                    canvas.drawing(), x, y, positioned.sectionScale());
             case RenderElement.Text text -> paintText(
                     context, textRenderer, text, positioned.sectionScale(), x, y);
             case RenderElement.Stack stack -> paintItem(

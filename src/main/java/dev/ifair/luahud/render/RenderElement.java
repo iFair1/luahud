@@ -3,10 +3,14 @@ package dev.ifair.luahud.render;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 
-sealed interface RenderElement permits RenderElement.Text, RenderElement.Stack, RenderElement.Item, RenderElement.Entity, RenderElement.Texture {
+sealed interface RenderElement permits RenderElement.Text, RenderElement.Stack, RenderElement.Item, RenderElement.Entity, RenderElement.Texture, RenderElement.Canvas {
     int backgroundColor();
     int offsetX();
     int offsetY();
+
+    record Canvas(CanvasDrawing drawing, int offsetX, int offsetY) implements RenderElement {
+        @Override public int backgroundColor() { return 0; }
+    }
 
     record Text(
             String value,

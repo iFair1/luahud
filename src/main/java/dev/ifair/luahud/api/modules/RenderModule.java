@@ -4,6 +4,7 @@ import dev.ifair.luahud.api.*;
 import dev.ifair.luahud.api.models.CoreModels;
 import dev.ifair.luahud.api.models.RegistryIds;
 import dev.ifair.luahud.render.Anchor;
+import dev.ifair.luahud.render.CanvasTransform;
 import dev.ifair.luahud.render.InlineAlignment;
 import dev.ifair.luahud.render.InlineDirection;
 import dev.ifair.luahud.render.RenderBuffer;
@@ -34,25 +35,30 @@ public final class RenderModule {
         }
     };
     private static SectionState currentState = SectionState.defaults();
-    private static final Deque<SectionState> INVOCATION_STATES = new ArrayDeque<>();
+    private static SectionState canvasPreviousState;
+    private record InvocationState(SectionState section, SectionState canvasPrevious) {}
+    private static final Deque<InvocationState> INVOCATION_STATES = new ArrayDeque<>();
     private static ClientWorld entityCacheWorld;
 
     private RenderModule() {}
 
     public static void resetSection() {
         currentState = SectionState.defaults();
+        canvasPreviousState = null;
         RenderBuffer.selectDefault(currentState.layout());
     }
 
     public static void beginInvocation(Object owner) {
-        INVOCATION_STATES.push(currentState);
+        INVOCATION_STATES.push(new InvocationState(currentState, canvasPreviousState));
         RenderBuffer.beginInvocation(owner);
         resetSection();
     }
 
     public static void endInvocation() {
         RenderBuffer.endInvocation();
-        currentState = INVOCATION_STATES.pop();
+        InvocationState previous = INVOCATION_STATES.pop();
+        currentState = previous.section();
+        canvasPreviousState = previous.canvasPrevious();
     }
 
     static SectionState currentSectionState() {
@@ -64,8 +70,12 @@ public final class RenderModule {
         LuaType<LuaTableValue> sectionOptions = optionsType("SectionOptions", color, true, true, false, false);
         LuaType<LuaTableValue> textOptions = optionsType("TextOptions", color, false, true, false, false);
         LuaType<LuaTableValue> iconOptions = optionsType("IconOptions", color, false, false, false, false);
+        LuaType<LuaTableValue> textureOptions = textureOptions(color);
         LuaType<LuaTableValue> stackOptions = optionsType("StackOptions", color, false, false, true, false);
         LuaType<LuaTableValue> entityOptions = optionsType("EntityOptions", color, false, false, false, true);
+
+        registerCanvas(api, color);
+        CanvasModule.register(api, color);
 
         FunctionBuilder<Void> section = api.root().function(
                 "section", LuaType.nil(), "Start an independent drawing section with fresh options.");
@@ -118,11 +128,116 @@ public final class RenderModule {
 
         FunctionBuilder<Void> drawTexture = api.root().function("drawTexture", LuaType.nil(), "Draw a texture by namespaced path.");
         LuaParameter<String> texturePath = drawTexture.parameter("path", LuaType.string(), "Namespaced texture path");
-        LuaParameter<LuaTableValue> textureOpts = drawTexture.optionalParameter("options", iconOptions, "Rendering options");
+        LuaParameter<LuaTableValue> textureOpts = drawTexture.optionalParameter("options", textureOptions, "Rendering options");
         drawTexture.call(arguments -> {
             drawTexture(arguments.get(texturePath), arguments.get(textureOpts));
             return null;
         });
+    }
+
+    public static void clearTextureCache() { CanvasModule.clearImageSizes(); }
+
+    private static void canvasFields(LuaType.InputTableBuilder fields, boolean text) {
+        fields.optional("x", LuaType.number(), "Canvas-local X; defaults to 0")
+                .optional("y", LuaType.number(), "Canvas-local Y; defaults to 0")
+                .optional("rotation", LuaType.number(), "Canvas-only clockwise 2D rotation in degrees")
+                .optional("originX", LuaType.number(), "Canvas-only rotation pivot X relative to the element")
+                .optional("originY", LuaType.number(), "Canvas-only rotation pivot Y relative to the element");
+        if (text) fields.optional("scale", LuaType.number(), "Canvas-only text scale; defaults to 1");
+    }
+
+    private static LuaType<LuaTableValue> textureOptions(LuaType<Object> color) {
+        var region = LuaType.inputTable("TextureRegion", fields -> fields
+                .field("x", LuaType.integer(), "Source X in pixels")
+                .field("y", LuaType.integer(), "Source Y in pixels")
+                .field("width", LuaType.integer(), "Source width in pixels")
+                .field("height", LuaType.integer(), "Source height in pixels"));
+        var slice = LuaType.inputTable("NineSlice", fields -> fields
+                .field("left", LuaType.integer(), "Left source border in pixels")
+                .field("right", LuaType.integer(), "Right source border in pixels")
+                .field("top", LuaType.integer(), "Top source border in pixels")
+                .field("bottom", LuaType.integer(), "Bottom source border in pixels"));
+        return LuaType.inputTable("TextureOptions", fields -> {
+            optionsType("TextureBase", color, false, false, false, false).inputFields().values()
+                    .forEach(field -> fields.field(field.name(), field.type(), field.doc(), field.optional()));
+            fields.optional("width", LuaType.number(), "Canvas target width; defaults to source region width")
+                    .optional("height", LuaType.number(), "Canvas target height; defaults to source region height")
+                    .optional("region", region, "Canvas-only source rectangle")
+                    .optional("nineSlice", slice, "Canvas-only nine-slice borders; incompatible with region");
+        });
+    }
+
+    private static void registerCanvas(LuaApiRegistrar api, LuaType<Object> color) {
+        var options = LuaType.inputTable("CanvasOptions", fields -> {
+            fields.field("width", LuaType.number(), "Positive local width")
+                    .field("height", LuaType.number(), "Positive local height")
+                    .optional("inline", LuaType.bool(), "Insert into the current section; defaults to false")
+                    .optional("clip", LuaType.bool(), "Clip to the canvas bounds; defaults to true");
+            var sectionFields = optionsType("CanvasSectionBase", color, true, true, false, false).inputFields();
+            for (String key : java.util.List.of("anchor", "offsetX", "offsetY", "scale", "id", "duration", "visible",
+                    "textColor", "shadow")) {
+                var field = sectionFields.get(key);
+                fields.field(field.name(), field.type(), field.doc(), field.optional());
+            }
+        });
+        var canvas = api.root().function("canvas", LuaType.nil(),
+                "Select a fixed-size 2D canvas. A new canvas closes the previous one; nesting is not supported.");
+        var opts = canvas.parameter("options", options, "Canvas placement and dimensions");
+        canvas.call(args -> {
+            LuaTableValue o = args.get(opts);
+            float width = CanvasModule.length(o, "width", 0);
+            float height = CanvasModule.length(o, "height", 0);
+            if (width == 0 || height == 0) throw new IllegalArgumentException("Canvas dimensions must be greater than zero");
+            boolean inline = o.bool("inline", false);
+            if (inline) {
+                for (String key : java.util.List.of("anchor", "offsetX", "offsetY", "id", "duration", "visible")) {
+                    if (o.contains(key)) throw new IllegalArgumentException(key + " is not supported by inline canvases");
+                }
+            }
+            SectionState canvasState = sectionState(o);
+            closeCanvas();
+            SectionState previous = currentState;
+            RenderBuffer.beginCanvas(canvasState.layout(), width, height, inline ? canvasState.scale() : 1,
+                    o.bool("clip", true), o.bool("visible", true), inline,
+                    o.string("id", null), o.contains("duration") ? o.number("duration", 0) : null);
+            canvasPreviousState = previous;
+            // Canvas content has no implicit row background or icon scale.
+            currentState = sectionState(new LuaTableValue(java.util.Map.of(
+                    "backgroundColor", 0, "textColor", canvasState.textColor(), "shadow", canvasState.shadow())));
+            return null;
+        });
+        var end = api.root().function("endCanvas", LuaType.nil(), "Close the canvas and resume the previous section.");
+        end.call(args -> {
+            if (!RenderBuffer.isCanvas()) throw new IllegalStateException("No canvas is selected");
+            closeCanvas();
+            return null;
+        });
+    }
+
+    private static void closeCanvas() {
+        if (!RenderBuffer.isCanvas()) return;
+        RenderBuffer.endCanvas();
+        currentState = canvasPreviousState;
+        canvasPreviousState = null;
+    }
+
+    private static CanvasTransform prepareDraw(LuaTableValue options) {
+        if (!RenderBuffer.isCanvas()) {
+            if (options != null) {
+                for (String key : java.util.List.of("x", "y", "rotation", "originX", "originY")) {
+                    if (options.contains(key)) throw new IllegalArgumentException(key + " requires a canvas");
+                }
+            }
+            return CanvasTransform.IDENTITY;
+        }
+        if (newLine(options)) throw new IllegalArgumentException("Canvas does not support automatic line breaks");
+        CanvasTransform transform = new CanvasTransform(
+                CanvasModule.number(options, "x", 0) + offset(options, "offsetX"),
+                CanvasModule.number(options, "y", 0) + offset(options, "offsetY"),
+                CanvasModule.number(options, "scale", 1), CanvasModule.number(options, "rotation", 0),
+                CanvasModule.number(options, "originX", 0), CanvasModule.number(options, "originY", 0));
+        RenderBuffer.canvasTransform(transform);
+        return transform;
     }
 
     private static void registerDraw(LuaApiRegistrar api, String name, boolean newline, LuaType<LuaTableValue> type) {
@@ -145,6 +260,7 @@ public final class RenderModule {
             boolean entity
     ) {
         return LuaType.inputTable(name, fields -> {
+            if (!section) canvasFields(fields, text);
             fields.optional("backgroundColor", color, "ARGB integer or RGB/ARGB hex string")
                     .optional("offsetX", LuaType.integer(), section
                             ? "Horizontal inset for edge anchors or signed shift for center anchors"
@@ -207,6 +323,7 @@ public final class RenderModule {
     }
 
     private static void applySection(LuaTableValue options) {
+        closeCanvas();
         SectionState state = sectionState(options);
         String id = options == null ? null : options.string("id", null);
         Double duration = options == null || !options.contains("duration") ? null : options.number("duration", 0);
@@ -272,6 +389,11 @@ public final class RenderModule {
     }
 
     private static void drawText(String text, LuaTableValue options, boolean newline) {
+        prepareDraw(options);
+        if (!RenderBuffer.isCanvas() && options != null && options.contains("scale")) {
+            throw new IllegalArgumentException("Text scale requires a canvas");
+        }
+        if (RenderBuffer.isCanvas() && newline) throw new IllegalArgumentException("Canvas does not support line breaks");
         RenderBuffer.addText(text,
                 resolveColor(options, "textColor", currentState.textColor()),
                 resolveColor(options, "backgroundColor", currentState.backgroundColor()),
@@ -280,6 +402,7 @@ public final class RenderModule {
     }
 
     private static void drawStack(ItemStack stack, LuaTableValue options) {
+        prepareDraw(options);
         boolean showCount = options == null || options.bool("showCount", true);
         boolean showDurability = options == null || options.bool("showDurabilityBar", true);
         boolean drawAir = options != null && options.bool("drawAir", false);
@@ -294,6 +417,7 @@ public final class RenderModule {
     }
 
     private static void drawItem(Object reference, LuaTableValue options) {
+        prepareDraw(options);
         Item item = reference instanceof ItemStack stack
                 ? stack.getItem()
                 : Registries.ITEM.get(itemIdentifier((String) reference, Registries.ITEM::containsId));
@@ -313,6 +437,7 @@ public final class RenderModule {
     }
 
     private static void drawEntity(Object reference, LuaTableValue options) {
+        prepareDraw(options);
         Entity entity = reference instanceof Entity value ? value : findEntity((String) reference);
         RenderBuffer.addEntity(entity, iconScale(options), angle(options, "yaw"), angle(options, "pitch"),
                 bool(options, "fullBright", true), bool(options, "useEntityRotation", false),
@@ -351,9 +476,18 @@ public final class RenderModule {
     }
 
     private static void drawTexture(String path, LuaTableValue options) {
+        CanvasTransform transform = prepareDraw(options);
         MinecraftClient client = MinecraftClient.getInstance();
         Identifier texture = textureIdentifier(path,
                 identifier -> client.getResourceManager().getResource(identifier).isPresent());
+        if (RenderBuffer.isCanvas()) {
+            CanvasModule.drawImage(texture, options, transform);
+            return;
+        }
+        if (options != null && (options.contains("width") || options.contains("height")
+                || options.contains("region") || options.contains("nineSlice"))) {
+            throw new IllegalArgumentException("Texture size, region and nineSlice require a canvas");
+        }
         RenderBuffer.addTexture(texture, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 offset(options, "offsetX"), offset(options, "offsetY"), newLine(options));
     }
@@ -370,7 +504,7 @@ public final class RenderModule {
     }
 
     private static float iconScale(LuaTableValue options) {
-        return scale(options, "scale", currentState.iconScale());
+        return RenderBuffer.isCanvas() ? 1 : scale(options, "scale", currentState.iconScale());
     }
 
     static float angle(LuaTableValue options, String key) {

@@ -8,6 +8,10 @@ final class RenderSection {
     private final SectionLayout layout;
     private final List<RenderRow> rows = new ArrayList<>();
     private RenderRow currentRow;
+    private RenderElement.Canvas canvas;
+
+    RenderElement.Canvas canvas() { return canvas; }
+    void canvas(RenderElement.Canvas value) { canvas = value; }
 
     RenderSection(SectionLayout layout) {
         this.layout = layout;

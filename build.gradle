@@ -10,6 +10,8 @@ base {
 	archivesName = 'luahud'
 }
 
+loom { accessWidenerPath = rootProject.file('src/main/resources/luahud.accesswidener') }
+
 loom.runs.configureEach {
 	// Loom does not generate IDE runs for Stonecutter subprojects by default.
 	generateRunConfig = project.name == '1.21'
@@ -91,9 +93,12 @@ tasks.register('generateApiDocs', JavaExec) {
 processResources {
     def entityLightingMixins = (stonecutter.eval(stonecutter.current.version, '>=1.21.6') && stonecutter.eval(stonecutter.current.version, '<1.21.9'))
             ? '"EntityRenderStateMixin", "EntityGuiLightingMixin",' : ''
+    def canvasMixins = stonecutter.eval(stonecutter.current.version, '>=1.21.6')
+            ? '"CanvasDrawContextAccessor",' : ''
+    inputs.property 'canvas_mixins', canvasMixins
     inputs.property 'entity_lighting_mixins', entityLightingMixins
     filesMatching('luahud.mixins.json') {
-        expand 'entity_lighting_mixins': entityLightingMixins
+        expand 'entity_lighting_mixins': entityLightingMixins, 'canvas_mixins': canvasMixins
     }
 
 	def version = project.version

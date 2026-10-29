@@ -12,6 +12,10 @@ final class RenderQueue {
     private static final class Invocation {
         final Object owner;
         RenderSection section;
+        RenderSection savedSection;
+        SectionLayout savedLayout;
+        CanvasDrawing canvas;
+        CanvasTransform transform = CanvasTransform.IDENTITY;
         SectionLayout layout = SectionLayout.defaults(Anchor.TOP_LEFT, 2, 2);
         Invocation(Object owner) { this.owner = owner; }
     }
@@ -55,6 +59,7 @@ final class RenderQueue {
     }
 
     void selectDefault(SectionLayout layout) {
+        closeCanvas();
         current.layout = layout;
         current.section = null;
     }
@@ -62,6 +67,7 @@ final class RenderQueue {
     void beginSection(SectionLayout layout) { beginSection(layout, null, null); }
 
     void beginSection(SectionLayout layout, String id, Double duration) {
+        closeCanvas();
         validateOptions(id, duration);
         if (id != null) entries.removeIf(entry -> id.equals(entry.id()));
         current.layout = layout;
@@ -70,6 +76,7 @@ final class RenderQueue {
     }
 
     void hideSection(String id) {
+        closeCanvas();
         if (id != null) entries.removeIf(entry -> id.equals(entry.id()));
         current.section = null;
     }
@@ -86,11 +93,60 @@ final class RenderQueue {
     }
 
     void add(RenderElement element, boolean endsRow) {
+        if (current.canvas != null) {
+            if (endsRow) throw new IllegalArgumentException("Canvas does not support automatic line breaks");
+            current.canvas.add(new CanvasDrawing.Content(element, current.transform));
+            return;
+        }
         ensureSection();
         current.section.add(element, endsRow);
     }
 
+    boolean isCanvas() { return current.canvas != null; }
+
+    void transform(CanvasTransform transform) { current.transform = transform; }
+
+    void command(CanvasDrawing.Command command) {
+        if (current.canvas == null) throw new IllegalStateException("Select a canvas before drawing shapes");
+        current.canvas.add(command);
+    }
+
+    void beginCanvas(SectionLayout layout, float width, float height, float scale,
+                     boolean clip, boolean visible, boolean inline, String id, Double duration) {
+        CanvasGeometry.length(width); CanvasGeometry.length(height);
+        if (width == 0 || height == 0) throw new IllegalArgumentException("Canvas dimensions must be greater than zero");
+        validateOptions(id, duration);
+        closeCanvas();
+        CanvasDrawing drawing = new CanvasDrawing(width, height, scale, clip, visible);
+        RenderElement.Canvas element = new RenderElement.Canvas(drawing, 0, 0);
+        if (inline) {
+            ensureSection();
+            current.section.add(element, false);
+        }
+        RenderSection previous = current.section;
+        SectionLayout previousLayout = current.layout;
+        if (!inline) {
+            beginSection(layout, id, duration);
+            current.section.canvas(element);
+        }
+        current.savedSection = previous;
+        current.savedLayout = previousLayout;
+        current.canvas = drawing;
+        current.transform = CanvasTransform.IDENTITY;
+    }
+
+    void closeCanvas() {
+        if (current.canvas == null) return;
+        current.section = current.savedSection;
+        current.layout = current.savedLayout;
+        current.savedSection = null;
+        current.savedLayout = null;
+        current.canvas = null;
+        current.transform = CanvasTransform.IDENTITY;
+    }
+
     void newLine() {
+        if (isCanvas()) throw new IllegalArgumentException("Canvas does not support line breaks");
         ensureSection();
         current.section.newLine();
     }

@@ -88,7 +88,7 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field enchantments? table<EnchantmentId, integer>"));
         assertTrue(stub.contains("---@field maxDamage? integer Maximum durability"));
         assertTrue(stub.contains("---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
-        assertEquals(3, count(stub, "---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
+        assertEquals(4, count(stub, "---@field newLine? boolean Advance to the next line after drawing; defaults to false"));
         String entityOptions = stub.substring(stub.indexOf("---@class EntityOptions"));
         entityOptions = entityOptions.substring(0, entityOptions.indexOf("\n\n"));
         assertTrue(entityOptions.contains("---@field newLine? boolean Advance to the next line after drawing; defaults to false"));

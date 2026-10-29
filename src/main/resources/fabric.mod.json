@@ -5,7 +5,7 @@
 	"name": "LuaHUD",
 	"description": "Creates highly flexible and fully customizable HUDs using Lua scripting",
 	"authors": [
-		"iFair_"
+		"iFair"
 	],
 	"contact": {
 		"homepage": "https://modrinth.com/mod/luahud",
@@ -22,6 +22,7 @@
 			"dev.ifair.luahud.ModMenuIntegration"
 		]
 	},
+	"accessWidener": "luahud.accesswidener",
 	"mixins": [
 		"luahud.mixins.json"
 	],

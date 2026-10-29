@@ -19,6 +19,26 @@ import org.joml.Vector3f;
 final class EntityPainter {
     private EntityPainter() {}
 
+    static void paintCanvas(DrawContext context, RenderElement.Entity entity) {
+        //? if <1.21.6 {
+        paint(context, entity.value(), 1, entity.yaw(), entity.pitch(), entity.fullBright(),
+                entity.useEntityRotation(), 1, 0, 0);
+        //?} else {
+        /*var pose = context.getMatrices();
+        float scale = (float) Math.hypot(pose.m00(), pose.m01());
+        float size = RenderDimensions.BASE_ICON_SIZE;
+        var center = pose.transformPosition(size / 2, size / 2, new org.joml.Vector2f());
+        paint(context, entity.value(), scale, entity.yaw(), entity.pitch(), entity.fullBright(),
+                entity.useEntityRotation(), 1, Math.round(center.x - size * scale / 2),
+                Math.round(center.y - size * scale / 2), (float) Math.atan2(pose.m01(), pose.m00()));
+        *///?}
+    }
+
+    static void paint(DrawContext context, Entity entity, float iconScale, float yaw, float pitch,
+                      boolean fullBright, boolean useEntityRotation, float sectionScale, int x, int y) {
+        paint(context, entity, iconScale, yaw, pitch, fullBright, useEntityRotation, sectionScale, x, y, 0);
+    }
+
     @SuppressWarnings("deprecation")
     static void paint(
             DrawContext context,
@@ -30,7 +50,8 @@ final class EntityPainter {
             boolean useEntityRotation,
             float sectionScale,
             int x,
-            int y
+            int y,
+            float screenRotation
     ) {
         Entity entity = renderEntity(requestedEntity);
         if (entity == null || entity.isRemoved()) return;
@@ -113,7 +134,7 @@ final class EntityPainter {
         state.debugInfo = null;
         //?}
         Quaternionf vertical = new Quaternionf().rotateX((float) Math.toRadians(pitch));
-        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI)
+        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI + screenRotation)
                 .mul(vertical).rotateY((float) Math.toRadians(yaw));
         // The deferred renderer clips to its render texture, even without a scissor.
         // Use the screen as the viewport so heads and animated limbs can overflow

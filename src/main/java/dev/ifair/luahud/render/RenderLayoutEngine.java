@@ -18,6 +18,15 @@ final class RenderLayoutEngine {
 
         for (RenderSection section : sections) {
             SectionLayout options = section.layout();
+            if (section.canvas() != null) {
+                RenderElement.Canvas canvas = section.canvas();
+                int width = widthProvider.width(canvas, options.scale());
+                int height = heightProvider.height(canvas, options.scale());
+                int x = options.anchor().resolveX(screenWidth, width, options.offsetX());
+                int y = options.anchor().resolveY(screenHeight, height, options.offsetY());
+                positioned.add(new RenderLayout.PositionedElement(canvas, x, y, y, y, x, width, options.scale(), height));
+                continue;
+            }
             List<MeasuredRow> rows = measure(section, widthProvider, heightProvider, options);
             int sectionWidth = rows.stream().mapToInt(MeasuredRow::width).max().orElse(0);
             int sectionHeight = rows.stream().mapToInt(row -> occupiedHeight(row, options)).sum();

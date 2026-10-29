@@ -9,6 +9,7 @@
         "ClientItemPickupMixin",
         "SoundManagerMixin",
         "ClientWorldSoundMixin",
+        ${canvas_mixins}
         ${entity_lighting_mixins}
         "WorldRendererMixin"
     ],
