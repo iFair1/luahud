@@ -145,6 +145,7 @@ public record CoreModels(
         var id = model.field("id", RegistryIds.ITEM, "Namespaced item ID", value -> Registries.ITEM.getId(value.getItem()).toString()).inputRequired();
         model.string("name", "Localized item name", value -> value.getName().getString());
         var count = model.integer("count", "Stack count; defaults to 1 for input tables", ItemStack::getCount).inputDefault(1);
+        model.integer("maxCount", "Maximum stack count", ItemStack::getMaxCount);
         var damage = model.optionalInteger("damage", "Current item damage", value -> value.isDamageable() ? value.getDamage() : null).inputOptional();
         var damageLeft = model.optionalInteger("damageLeft", "Remaining durability", value -> value.isDamageable() ? value.getMaxDamage() - value.getDamage() : null).inputOptional();
         model.optionalInteger("maxDamage", "Maximum durability", value -> value.isDamageable() ? value.getMaxDamage() : null);
