@@ -3,7 +3,7 @@ plugins {
 	id 'maven-publish'
 }
 
-version = "${project.mod_version}+mc${project.minecraft_version}"
+version = "${project.mod_version}+${project.minecraft_version}"
 group = project.maven_group
 
 base {
@@ -82,8 +82,8 @@ tasks.register('generateApiDocs', JavaExec) {
 	classpath = sourceSets.documentation.runtimeClasspath
 	mainClass = 'dev.ifair.luahud.api.core.DocumentationExportLauncher'
 	def outputFile = project.name == '1.21'
-			? rootProject.layout.buildDirectory.file('generated/api/api.json')
-			: layout.buildDirectory.file('generated/api/api.json')
+			? rootProject.layout.buildDirectory.file("generated/api/v${project.mod_version}.json")
+			: layout.buildDirectory.file("generated/api/v${project.mod_version}.json")
 	inputs.files(sourceSets.main.output, sourceSets.documentation.output)
 	outputs.file(outputFile)
 	args outputFile.get().asFile.absolutePath
