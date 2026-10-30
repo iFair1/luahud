@@ -76,7 +76,7 @@ class CoreApiTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"reload, nil", "tick, nil", "render, nil", "item-pickup, ItemStack",
+    @CsvSource({"reload, Profile[]", "tick, nil", "render, nil", "item-pickup, ItemStack",
             "damage, Damage", "attack, Damage", "death, Death", "kill, Death", "error, Error"})
     void builtInEventsHaveMatchingRegistryAndLuaOverloads(String name, String payload) {
         var event = registry.event(name);
@@ -84,10 +84,11 @@ class CoreApiTest {
 
         assertEquals("luahud", event.providerId());
         assertEquals(hasPayload, event.hasPayload());
-        assertEquals(payload, event.payloadType().displayName());
+        assertEquals(name.equals("reload") ? "list" : payload, event.payloadType().displayName());
         if (hasPayload) {
-            assertEquals(LuaType.Kind.MODEL, event.payloadType().kind());
-            assertTrue(registry.models().contains(event.payloadType().model()));
+            var modelType = name.equals("reload") ? event.payloadType().elementType() : event.payloadType();
+            assertEquals(LuaType.Kind.MODEL, modelType.kind());
+            assertTrue(registry.models().contains(modelType.model()));
         }
         String callback = hasPayload ? "fun(event: " + payload + ")" : "fun()";
         assertTrue(StubGenerator.generate(registry).contains(

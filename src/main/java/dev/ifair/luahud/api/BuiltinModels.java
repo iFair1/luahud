@@ -22,4 +22,5 @@ public interface BuiltinModels {
     LuaType<DamageEvent> damage();
     LuaType<DeathEvent> death();
     LuaType<ErrorEntry> error();
+    LuaType<dev.ifair.luahud.core.Profile> profile();
 }

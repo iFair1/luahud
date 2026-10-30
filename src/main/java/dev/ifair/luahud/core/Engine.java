@@ -15,6 +15,7 @@ import net.minecraft.client.MinecraftClient;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -30,6 +31,8 @@ public final class Engine {
     private boolean reloadPending = true;
     private final FileWatcher fileWatcher = new FileWatcher();
     private CobaltRuntime runtime;
+    private final Map<String, Boolean> knownProfiles = new LinkedHashMap<>();
+    private final List<Profile> loadedProfiles = new ArrayList<>();
 
     public Engine(ApiRegistry registry) {
         this.registry = registry;
@@ -81,11 +84,49 @@ public final class Engine {
             ErrorManager.reportSystem("runtime", error);
             return;
         }
+        loadedProfiles.clear();
         profileLoader.accept(this);
-        fireEvent("reload");
+        rememberProfiles();
+        fireReload();
     }
 
-    public void runProfile(String name) { runScript(ConfigManager.getScriptsDir().resolve(name + ".lua"), name); }
+    public void runProfile(String name) {
+        runScript(ConfigManager.getScriptsDir().resolve(name + ".lua"), name);
+        ConfigManager.getProfiles().stream().filter(profile -> profile.getName().equals(name)).findFirst()
+                .ifPresent(profile -> loadedProfiles.add(new Profile(name, true, profile.isHidden(), profile.getKeybind())));
+    }
+
+    private void fireReload() {
+        // Test/addon registries may still declare reload without a payload.
+        if (registry == null) runtime.fireEvent("reload");
+        else fireEvent("reload", List.copyOf(loadedProfiles));
+    }
+
+    private void rememberProfiles() {
+        knownProfiles.clear();
+        ConfigManager.getProfiles().forEach(profile -> knownProfiles.put(profile.getName(), profile.isActive()));
+    }
+
+    private void reloadChangedProfiles() {
+        Set<String> changed = fileWatcher.consumeChangedProfiles();
+        List<ConfigData.ProfileData> profiles = ConfigManager.getProfiles();
+        Map<String, Boolean> current = new LinkedHashMap<>();
+        profiles.forEach(profile -> current.put(profile.getName(), profile.isActive()));
+        current.forEach((name, active) -> {
+            if (!Objects.equals(knownProfiles.get(name), active)) changed.add(name);
+        });
+        knownProfiles.keySet().stream().filter(name -> !current.containsKey(name)).forEach(changed::add);
+        loadedProfiles.clear();
+        for (String name : changed) {
+            runtime.unloadProfile(name);
+            ErrorManager.beginProfileReload(name);
+        }
+        for (ConfigData.ProfileData profile : profiles) {
+            if (profile.isActive() && changed.contains(profile.getName())) runProfile(profile.getName());
+        }
+        rememberProfiles();
+        if (!changed.isEmpty()) fireReload();
+    }
     public void runScript(Path file) { runScript(file, stripExtension(file.getFileName().toString())); }
     private void runScript(Path file, String profile) {
         if (!isReady()) return;
@@ -121,9 +162,13 @@ public final class Engine {
         }
         if (reloadRequested.getAsBoolean()) {
             LuaHUD.LOGGER.info("A profile or script change was detected. HUD is reloading...");
-            reloadPending = true;
+            if (registry == null || !isReady()) reloadPending = true;
+            else if (!reloadPending) reloadChangedProfiles();
         }
-        if (reloadPending) reloadAll();
+        if (reloadPending) {
+            fileWatcher.consumeChangedProfiles();
+            reloadAll();
+        }
         // Deliver after Lua execution has unwound and every active profile has registered listeners.
         for (ErrorEntry error : ErrorManager.drainEvents()) {
             if (isReady()) runtime.fireEvent("error", error);

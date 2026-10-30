@@ -24,6 +24,14 @@ public final class ErrorManager {
     private ErrorManager() {
     }
 
+    public static synchronized void beginProfileReload(String profile) {
+        pendingNotifications.removeIf(id -> findMutable(id)
+                .map(error -> !error.system && error.group.equals(profile)).orElse(false));
+        profileGroups.remove(profile);
+        pendingEvents.removeIf(error -> !error.system() && error.group().equals(profile));
+        structureRevision++;
+    }
+
     public static synchronized void beginProfileReload() {
         pendingNotifications.removeIf(id -> findMutable(id).map(error -> !error.system).orElse(true));
         profileGroups.clear();

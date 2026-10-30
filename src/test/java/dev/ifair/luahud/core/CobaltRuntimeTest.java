@@ -15,6 +15,31 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CobaltRuntimeTest {
+    @Test void replacingOneProfilePreservesOtherCallbacksAndTimers() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        api.event("tick", "");
+        api.event("reload", LuaType.list(dev.ifair.luahud.api.models.ProfileModel.register(api).type()), "");
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry);
+        runtime.start();
+        runtime.execute("first=0; lh.on('tick', function() first=first+1 end); "
+                + "lh.setInterval(1, 'tick', function() first=first+10 end)", "first");
+        runtime.execute("second=0; lh.on('tick', function() second=second+1 end); "
+                + "lh.setInterval(2, 'tick', function() second=second+10 end); "
+                + "lh.on('reload', function(profiles) assert(#profiles==1); "
+                + "assert(profiles[1].name=='first' and profiles[1].active); "
+                + "assert(profiles[1].hidden and profiles[1].keybind=='key.keyboard.j') end)", "second");
+        runtime.fireEvent("tick");
+        runtime.unloadProfile("first");
+        runtime.execute("lh.on('tick', function() first=first+100 end)", "first");
+        runtime.fireEvent("reload", List.of(new Profile("first", true, true, "key.keyboard.j")));
+        runtime.fireEvent("tick");
+        assertEquals(111, runtime.global("first").checkInteger());
+        assertEquals(12, runtime.global("second").checkInteger());
+    }
+
     private record Data(String label, Integer count) {}
 
     @Test void valuesModelsCollectionsFunctionsAndLazyEvaluationWork() throws Exception {

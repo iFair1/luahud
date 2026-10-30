@@ -18,6 +18,11 @@ public final class RenderBuffer {
 
     private RenderBuffer() {}
 
+    public static void removeOwner(Object owner) {
+        QUEUE.removeOwner(owner);
+        invalidateLayout();
+    }
+
     public static void clear() {
         QUEUE.clear();
         invalidateLayout();

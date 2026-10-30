@@ -8,6 +8,7 @@ import dev.ifair.luahud.api.models.CoreModels;
 import dev.ifair.luahud.api.models.DamageModel;
 import dev.ifair.luahud.api.models.DeathModel;
 import dev.ifair.luahud.api.models.ErrorModel;
+import dev.ifair.luahud.api.models.ProfileModel;
 import dev.ifair.luahud.api.modules.*;
 import net.minecraft.client.MinecraftClient;
 import dev.ifair.luahud.core.DamageEvent;
@@ -46,7 +47,9 @@ public final class CoreApi {
         FunctionsModule.register(api, client, models);
         ChatModule.register(api, client);
         DisplayModule.register(api, client);
-        api.event("reload", "Runs once after active profiles load, including first world entry.");
+        var profile = ProfileModel.register(api);
+        api.event("reload", LuaType.list(profile.type()),
+                "Reports the profiles loaded by this reload, including first world entry.");
         api.event("tick", "Runs at the end of each client tick.");
         api.event("render", "Runs immediately before each HUD frame is painted.");
         api.event("item-pickup", models.itemStack().type(),
@@ -76,7 +79,7 @@ public final class CoreApi {
         // LuaType exposes model metadata, so freeze definitions before sharing them with addons.
         registry.models().forEach(ModelBuilder::freeze);
         registry.builtinModels(new ModelTypes(models.block().type(), models.entity().type(), models.itemStack().type(),
-                models.statusEffect().type(), models.horse().type(), damage.type(), death.type(), error.type()));
+                models.statusEffect().type(), models.horse().type(), damage.type(), death.type(), error.type(), profile.type()));
     }
 
     private record ModelTypes(
@@ -87,6 +90,7 @@ public final class CoreApi {
             LuaType<AbstractHorseEntity> horse,
             LuaType<DamageEvent> damage,
             LuaType<DeathEvent> death,
-            LuaType<ErrorEntry> error
+            LuaType<ErrorEntry> error,
+            LuaType<dev.ifair.luahud.core.Profile> profile
     ) implements BuiltinModels {}
 }

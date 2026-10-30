@@ -13,6 +13,7 @@ public class FileWatcher {
     private static final String LUA_EXTENSION = ".lua";
     private static final long SAVE_QUIET_PERIOD_MS = 150;
 
+    private final Set<String> changedProfiles = new LinkedHashSet<>();
     private final AtomicBoolean reloadNeeded = new AtomicBoolean(false);
     private WatchService watchService;
     private Thread watchThread;
@@ -82,6 +83,10 @@ public class FileWatcher {
                         if (overflow) syncExistingFiles();
                         for (Path changedFile : changedFiles) reconcileFile(changedFile);
                     }
+                    synchronized (changedProfiles) {
+                        if (overflow) ConfigManager.getProfiles().forEach(profile -> changedProfiles.add(profile.getName()));
+                        for (Path file : changedFiles) changedProfiles.add(stripExtension(file.toString()));
+                    }
                     reloadNeeded.set(true);
                     changedFiles.clear();
                     overflow = false;
@@ -131,6 +136,14 @@ public class FileWatcher {
     // This should be called by main thread to see if needsReload
     public boolean consumeReloadSignal() {
         return reloadNeeded.compareAndSet(true, false);
+    }
+
+    public Set<String> consumeChangedProfiles() {
+        synchronized (changedProfiles) {
+            Set<String> result = new LinkedHashSet<>(changedProfiles);
+            changedProfiles.clear();
+            return result;
+        }
     }
 
     public void stop() {

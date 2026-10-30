@@ -228,6 +228,16 @@ public final class CobaltRuntime {
         return new LuaError("Lua execution exceeded " + timeoutMs + " ms and was stopped");
     }
 
+    void unloadProfile(String profile) {
+        Object owner = loadOwners.remove(profile);
+        if (owner != null) RenderBuffer.removeOwner(owner);
+        listeners.values().forEach(callbacks -> callbacks.stream()
+                .filter(callback -> Objects.equals(callback.profile, profile)).forEach(RenderBuffer::removeOwner));
+        timers.stream().filter(timer -> Objects.equals(timer.callback.profile, profile))
+                .forEach(timer -> RenderBuffer.removeOwner(timer.callback));
+        removeProfileRegistrations(profile);
+    }
+
     private void removeProfileRegistrations(String profile) {
         listeners.values().forEach(callbacks -> callbacks.removeIf(callback -> Objects.equals(callback.profile, profile)));
         listeners.entrySet().removeIf(entry -> entry.getValue().isEmpty());

@@ -49,6 +49,10 @@ final class RenderQueue {
         current = new Invocation(new Object());
     }
 
+    void removeOwner(Object owner) {
+        entries.removeIf(entry -> entry.owner() == owner);
+    }
+
     void beginInvocation(Object owner) {
         entries.removeIf(entry -> entry.owner() == owner && entry.duration() == null);
         invocations.push(current);
