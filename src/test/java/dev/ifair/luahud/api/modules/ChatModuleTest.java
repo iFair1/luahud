@@ -27,7 +27,7 @@ class ChatModuleTest {
     }
 
     private CobaltRuntime runtime() throws LuaError {
-        CobaltRuntime runtime = new CobaltRuntime(registry());
+        CobaltRuntime runtime = new CobaltRuntime(registry(), () -> {}, 100);
         runtime.start();
         return runtime;
     }
