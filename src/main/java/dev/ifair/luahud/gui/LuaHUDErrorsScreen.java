@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 public final class LuaHUDErrorsScreen extends Screen {
     private static final int CONTENT_MAX_WIDTH = 760;
@@ -198,14 +199,9 @@ public final class LuaHUDErrorsScreen extends Screen {
         ErrorEntry error = currentSelection();
         if (error == null || this.client == null) return;
 
-        String location = error.line().equals("—") ? error.source() : error.source() + ":" + error.line();
-        String details = "LuaHUD error\n"
-                + "Source: " + location + "\n"
-                + "Phase: " + error.phase() + "\n"
-                + "Occurrences: " + error.count() + "\n"
-                + "First seen: " + COPY_TIME_FORMAT.format(Instant.ofEpochMilli(error.firstSeen())) + "\n"
-                + "Last seen: " + COPY_TIME_FORMAT.format(Instant.ofEpochMilli(error.lastSeen())) + "\n\n"
-                + error.displayMessage();
+        String details = "Phase: " + error.phase() + "\n"
+                + "Message: " + error.displayMessage() + "\n"
+                + "Count: " + error.count();
         this.client.keyboard.setClipboard(details);
         this.copyButton.setMessage(Text.literal("Copied!"));
     }
