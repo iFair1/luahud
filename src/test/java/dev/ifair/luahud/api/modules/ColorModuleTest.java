@@ -80,6 +80,13 @@ class ColorModuleTest {
         registry.freeze();
         String stub = StubGenerator.generate(registry);
         assertTrue(stub.contains("---@class Color"));
+        assertTrue(stub.contains("---@class LuaHUD_color\nlh.color = {}\n"));
+        assertTrue(stub.contains("""
+                ---Create a Color from an ARGB integer or a 6-digit RGB / 8-digit ARGB hex string.
+                ---@param value integer | string ARGB integer or RGB/ARGB hex string, optionally prefixed with #
+                ---@return Color
+                function lh.color.from(value) end
+                """));
         assertTrue(stub.contains("---@field asInt integer"));
         assertTrue(stub.contains("---@field asString string"));
         assertTrue(stub.contains("function lh.color.rgb(r, g, b, a) end"));

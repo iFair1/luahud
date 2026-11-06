@@ -15,6 +15,44 @@ import static org.junit.jupiter.api.Assertions.*;
 class StubGeneratorTest {
     @TempDir Path temp;
 
+    @Test void namespaceClassesBindToTheirOwnTablesBeforeFunctionsAreDeclared() {
+        var registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        api.root().namespace("color", color -> {
+            color.integer("max", "Maximum channel value", () -> 255);
+            color.namespace("nested", nested -> {
+                var function = nested.function("parse", LuaType.integer(), "Parse a color\nPreserve alpha");
+                var value = function.parameter("value", LuaType.string(), "Hex color input");
+                function.optionalParameter("alpha", LuaType.integer(), "Optional alpha override");
+                function.overload(LuaType.integer(), LuaType.literal("white"), LuaType.optional(LuaType.integer()));
+                function.overload(LuaType.integer(), LuaType.string(), LuaType.optional(LuaType.integer()));
+                function.call(args -> args.get(value).length());
+            });
+        });
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry);
+        String root = "---@class API\n---@field color LuaHUD_color\nlh = {}\n";
+        String color = "---@class LuaHUD_color\n---@field max integer Maximum channel value\n"
+                + "---@field nested LuaHUD_color_nested\nlh.color = {}\n";
+        String nested = "---@class LuaHUD_color_nested\nlh.color.nested = {}\n";
+        assertTrue(stub.contains(root));
+        assertTrue(stub.contains(color));
+        assertTrue(stub.contains(nested));
+        assertTrue(stub.indexOf(root) < stub.indexOf(color));
+        assertTrue(stub.indexOf(color) < stub.indexOf(nested));
+        assertTrue(stub.indexOf(nested) < stub.indexOf("function lh.color.nested.parse"));
+        assertTrue(stub.contains("""
+                ---Parse a color
+                ---Preserve alpha
+                ---@overload fun(value: string, alpha?: integer): integer
+                ---@param value "white" Hex color input
+                ---@param alpha? integer Optional alpha override
+                ---@return integer
+                function lh.color.nested.parse(value, alpha) end
+                """));
+    }
+
     @Test void functionOverloadsCollectTheirOwnTypesAndPreserveOptionalParameters() {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("example-addon");

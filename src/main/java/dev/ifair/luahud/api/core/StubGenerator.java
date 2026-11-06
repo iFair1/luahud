@@ -59,16 +59,18 @@ public final class StubGenerator {
 
         List<NamespaceInfo> namespaces = new ArrayList<>();
         collectNamespaces(registry.rootNode(), "lh", namespaces);
-        namespaces.sort(Comparator.comparing(NamespaceInfo::path).reversed());
+        // Attach every namespace class to its own table, with parents declared first.
+        // A typed field alone is a reference to the class in LuaLS: later function
+        // declarations cannot add members to it without a class-bound table definition.
+        namespaces.sort(Comparator.comparing(NamespaceInfo::path));
         for (NamespaceInfo info : namespaces) {
             out.append("---@class ").append(className(info.path())).append('\n');
             info.node().children().values().stream().sorted(Comparator.comparing(ApiRegistry.Node::name)).forEach(child -> {
                 if (child instanceof ApiRegistry.NamespaceNode) field(out, child.name(), className(info.path() + "." + child.name()), child.doc().description(), false);
                 else if (child instanceof ApiRegistry.ValueNode value) field(out, child.name(), context.type(value.type(), value.providerId()), value.doc().description(), false);
             });
-            if (!info.path().equals("lh")) out.append('\n');
+            out.append(info.path()).append(" = {}\n\n");
         }
-        out.append("lh = {}\n\n");
 
         List<FunctionInfo> functions = new ArrayList<>();
         collectFunctions(registry.rootNode(), "lh", functions);
