@@ -33,6 +33,7 @@ public final class CoreApi {
         CoreModels models = CoreModels.register(api);
         var death = DeathModel.register(api, models);
 
+        ColorModule.register(api, models.color());
         RenderModule.register(api, models);
         PcModule.register(api, client);
         PerformanceModule.register(api, client);

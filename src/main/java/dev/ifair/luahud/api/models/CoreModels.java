@@ -35,7 +35,8 @@ public record CoreModels(
         ModelBuilder<Entity> entity,
         ModelBuilder<ItemStack> itemStack,
         ModelBuilder<StatusEffectInstance> statusEffect,
-        ModelBuilder<AbstractHorseEntity> horse
+        ModelBuilder<AbstractHorseEntity> horse,
+        ModelBuilder<ColorModel.Color> color
 ) {
     public record BlockView(ClientWorld world, BlockPos pos) {}
 
@@ -52,7 +53,7 @@ public record CoreModels(
         block.integer("y", "Block Y coordinate", value -> value.pos() == null ? 0 : value.pos().getY());
         block.integer("z", "Block Z coordinate", value -> value.pos() == null ? 0 : value.pos().getZ());
 
-        return new CoreModels(block, entity, registerItemStack(api), statusEffect, horse);
+        return new CoreModels(block, entity, registerItemStack(api), statusEffect, horse, ColorModel.register(api));
     }
 
     private static ModelBuilder<StatusEffectInstance> registerStatusEffect(LuaApiRegistrar api) {

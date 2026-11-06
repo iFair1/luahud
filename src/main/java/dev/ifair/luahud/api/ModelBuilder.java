@@ -98,6 +98,7 @@ public final class ModelBuilder<T> {
     private final List<Field<? super T, ?>> fields = new ArrayList<>();
     private Function<Fields<T>, ? extends T> decoder;
     private boolean frozen;
+    private boolean mutableTable;
 
     public ModelBuilder(String providerId, String name, Class<T> javaType) {
         this.providerId = Objects.requireNonNull(providerId);
@@ -141,6 +142,15 @@ public final class ModelBuilder<T> {
         return this;
     }
 
+    /** Materializes input fields as a mutable Lua snapshot; output-only fields decode its current values. */
+    public ModelBuilder<T> mutableTable() {
+        ensureMutable();
+        mutableTable = true;
+        return this;
+    }
+
+    public boolean isMutableTable() { return mutableTable; }
+
     public ModelBuilder<T> include(ModelBuilder<? super T> parent) {
         ensureMutable();
         for (Field<? super T, ?> field : parent.fields()) {
@@ -167,6 +177,10 @@ public final class ModelBuilder<T> {
         T decoded = decoder.apply(new Fields<>(this, Objects.requireNonNull(value), Objects.requireNonNull(source)));
         return javaType.cast(Objects.requireNonNull(decoded, "Model decoder returned null: " + name));
     }
-    public void freeze() { fields.forEach(field -> field.frozen = true); frozen = true; }
+    public void freeze() {
+        if (mutableTable && decoder == null) throw new IllegalStateException("Mutable table model needs a decoder: " + name);
+        fields.forEach(field -> field.frozen = true);
+        frozen = true;
+    }
     private void ensureMutable() { if (frozen) throw new IllegalStateException("Lua model registration is closed; the registry has already been frozen"); }
 }

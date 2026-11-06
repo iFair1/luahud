@@ -3,6 +3,7 @@ package dev.ifair.luahud.api.modules;
 import dev.ifair.luahud.api.LuaApiRegistrar;
 import dev.ifair.luahud.api.ModelBuilder;
 import dev.ifair.luahud.api.models.CoreModels;
+import dev.ifair.luahud.api.models.ColorModel;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
@@ -26,10 +27,10 @@ public final class PositionModule {
                     .string("name", "Localized biome name", () -> biomeName(client))
                     .string("precipitation", "Biome precipitation type", () -> String.valueOf(precipitation(client)))
                     .number("temperature", "Biome temperature",  () -> (double) biome(client).getTemperature())
-                    .integer("waterColor", "Water color of the biome", () -> biome(client).getWaterColor())
-                    .integer("skyColor", "Sky color of the biome", () -> skyColor(client))
-                    .integer("foliageColor", "Foliage color of the biome", () -> biome(client).getFoliageColor())
-                    .integer("grassColor", "Grass color of the biome", () -> biome(client).getGrassColorAt(client.player.getBlockX(), client.player.getBlockZ())));
+                    .model("waterColor", models.color(), "Water color of the biome", () -> ColorModel.fromRgb(biome(client).getWaterColor()))
+                    .model("skyColor", models.color(), "Sky color of the biome", () -> ColorModel.fromRgb(skyColor(client)))
+                    .model("foliageColor", models.color(), "Foliage color of the biome", () -> ColorModel.fromRgb(biome(client).getFoliageColor()))
+                    .model("grassColor", models.color(), "Grass color of the biome", () -> ColorModel.fromRgb(biome(client).getGrassColorAt(client.player.getBlockX(), client.player.getBlockZ()))));
 
             pos.namespace("chunk", chunk -> chunk
                     .bool("slimeChunk", "Whether the chunk is a slime chunk", () -> isSlimeChunk(client))

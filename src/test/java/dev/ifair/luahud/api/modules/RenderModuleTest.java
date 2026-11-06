@@ -176,6 +176,46 @@ class RenderModuleTest {
         assertTrue(missing.getMessage().contains("Item not found: minecraft:doesntexist"));
     }
 
+    @Test void renderOptionsAcceptMutableColorsAndExistingLiterals() throws Exception {
+        var registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        var models = CoreModels.register(api);
+        ColorModule.register(api, models.color());
+        RenderModule.register(api, models);
+        var states = new java.util.ArrayList<SectionState>();
+        api.root().function("captureState", dev.ifair.luahud.api.LuaType.nil(), "Capture rendering state")
+                .call(args -> { states.add(RenderModule.currentSectionState()); return null; });
+        registry.freeze();
+        var runtime = new CobaltRuntime(registry);
+        runtime.start();
+        try {
+            runtime.execute("""
+                    local color = lh.color.rgb(120, 180, 255)
+                    color.a = 128
+                    lh.section({textColor = color, backgroundColor = '#112233'})
+                    lh.captureState()
+                    color.r = 0
+                    lh.section({textColor = color, backgroundColor = 0})
+                    lh.captureState()
+                    lh.canvas({width = 10, height = 10, textColor = color})
+                    lh.drawRect(0, 0, 10, 10, {color = color, borderColor = '#FFFFFF'})
+                    lh.endCanvas()
+                    lh.section({textColor = {r = 1, g = 2, b = 3}})
+                    lh.captureState()
+                    """, "color-render");
+            assertEquals(0x8078B4FF, states.get(0).textColor());
+            assertEquals(0xFF112233, states.get(0).backgroundColor());
+            assertEquals(0x8000B4FF, states.get(1).textColor());
+            assertEquals(0, states.get(1).backgroundColor());
+            assertEquals(0xFF010203, states.get(2).textColor());
+            assertThrows(LuaError.class, () -> runtime.execute(
+                    "lh.section({textColor = {r = 256, g = 0, b = 0}})", "invalid-color-table"));
+        } finally {
+            RenderBuffer.clear();
+            RenderModule.resetSection();
+        }
+    }
+
     @Test void numericColorsAreStrictArgb() {
         assertEquals(0x00000000, RenderModule.color(0x0));
         assertEquals(0xFF00FF00, RenderModule.color(0xFF00FF00));

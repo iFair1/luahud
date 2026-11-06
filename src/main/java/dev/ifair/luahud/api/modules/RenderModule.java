@@ -67,7 +67,7 @@ public final class RenderModule {
     }
 
     public static void register(LuaApiRegistrar api, CoreModels models) {
-        LuaType<Object> color = LuaType.union(LuaType.string(), LuaType.integer());
+        LuaType<Object> color = LuaType.union(LuaType.string(), LuaType.integer(), models.color().type());
         LuaType<LuaTableValue> sectionOptions = optionsType("SectionOptions", color, true, true, false, false);
         LuaType<LuaTableValue> textOptions = optionsType("TextOptions", color, false, true, false, false);
         LuaType<LuaTableValue> iconOptions = optionsType("IconOptions", color, false, false, false, false);
@@ -263,7 +263,7 @@ public final class RenderModule {
         return LuaType.inputTable(name, fields -> {
             if (!section) canvasFields(fields, text);
             fields.optional("opacity", LuaType.number(), "Opacity from 0 to 1; multiplies section opacity and color alpha; defaults to 1")
-                    .optional("backgroundColor", color, "ARGB integer or RGB/ARGB hex string")
+                    .optional("backgroundColor", color, "ARGB integer, RGB/ARGB hex string, or Color table")
                     .optional("offsetX", LuaType.integer(), section
                             ? "Horizontal inset for edge anchors or signed shift for center anchors"
                             : "Local horizontal offset")
@@ -548,6 +548,7 @@ public final class RenderModule {
     }
 
     static int color(Object value) {
+        if (value instanceof dev.ifair.luahud.api.models.ColorModel.Color color) return color.asInt();
         if (value instanceof Number number) {
             return number.intValue();
         }

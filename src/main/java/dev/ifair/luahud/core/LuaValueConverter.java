@@ -32,7 +32,7 @@ final class LuaValueConverter {
     LuaValue supplied(Supplier<?> supplier, LuaType<?> type, String path, String provider) throws LuaError {
         try {
             while (type.kind() == LuaType.Kind.ALIAS) type = type.elementType();
-            if (type.kind() == LuaType.Kind.MODEL) {
+            if (type.kind() == LuaType.Kind.MODEL && !type.model().isMutableTable()) {
                 @SuppressWarnings("unchecked") Supplier<Object> dynamic = (Supplier<Object>) supplier;
                 @SuppressWarnings("unchecked") ModelBuilder<Object> model = (ModelBuilder<Object>) type.model();
                 return modelTable(dynamic, model, path, provider);
@@ -88,12 +88,23 @@ final class LuaValueConverter {
         Map<String, ModelBuilder.Field<? super Object, ?>> fields = new HashMap<>();
         for (ModelBuilder.Field<? super Object, ?> field : model.fields()) fields.put(field.name(), field);
         LuaTable metatable = new LuaTable();
-        metatable.rawset(modelValueKey, new LuaUserdata(new ModelValue(object, model)));
+        if (model.isMutableTable()) {
+            Object instance = object.get();
+            for (ModelBuilder.Field<? super Object, ?> field : model.fields()) {
+                if (field.inputMode() != ModelBuilder.InputMode.OUTPUT_ONLY) {
+                    table.rawset(field.name(), toLua(field.accessor().apply(instance), field.type(), path + "." + field.name(), provider));
+                }
+            }
+        } else {
+            metatable.rawset(modelValueKey, new LuaUserdata(new ModelValue(object, model)));
+        }
         metatable.rawset("__index", LibFunction.create((luaState, ignored, key) -> {
             ModelBuilder.Field<? super Object, ?> field = key.isString() ? fields.get(key.checkString()) : null;
             if (field == null) return Constants.NIL;
+            // A removed input field must stay nil rather than recursively decoding itself.
+            if (model.isMutableTable() && field.inputMode() != ModelBuilder.InputMode.OUTPUT_ONLY) return Constants.NIL;
             try {
-                Object instance = object.get();
+                Object instance = model.isMutableTable() ? modelFromLua(table, model.inputType()) : object.get();
                 Object value = instance == null ? null : field.accessor().apply(instance);
                 return toLua(value, field.type(), path + "." + field.name(), provider);
             } catch (Throwable error) { throw providerError(path + "." + field.name(), provider, error); }
