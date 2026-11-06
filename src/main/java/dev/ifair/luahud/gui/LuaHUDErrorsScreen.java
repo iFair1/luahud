@@ -103,7 +103,7 @@ public final class LuaHUDErrorsScreen extends Screen {
         });
 
         int footerY = this.height - 28;
-        int buttonWidth = Math.min(126, Math.max(1, (contentWidth - 16) / 3));
+        int buttonWidth = Math.clamp((contentWidth - 16) / 3, 1, 126);
         this.copyButton = this.addDrawableChild(ButtonWidget.builder(
                         Text.literal("Copy details"), button -> copySelectedError())
                 .dimensions(contentX, footerY, buttonWidth, 20)

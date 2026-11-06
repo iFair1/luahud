@@ -3,13 +3,21 @@
 	"id": "luahud",
 	"version": "${version}",
 	"name": "LuaHUD",
-	"description": "Creates highly flexible and fully customizable HUDs using Lua scripting",
+	"description": "Creates extremely customizable and powerful HUDs using Lua scripting",
 	"authors": [
 		"iFair"
 	],
 	"contact": {
 		"homepage": "https://modrinth.com/mod/luahud",
-		"sources": "https://github.com/iFair1/luahud"
+		"sources": "https://github.com/iFair1/luahud",
+		"issues": "https://github.com/iFair1/luahud/issues"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.wiki": "https://luahud.ifair.dev"
+			}
+		}
 	},
 	"license": "LGPLv3",
 	"icon": "assets/luahud/icon.png",
