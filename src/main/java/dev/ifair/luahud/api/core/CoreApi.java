@@ -47,6 +47,7 @@ public final class CoreApi {
         FunctionsModule.register(api, client, models);
         ChatModule.register(api, client);
         DisplayModule.register(api, client);
+        OptionsModule.register(api, client == null ? () -> null : () -> client.options);
         var profile = ProfileModel.register(api);
         api.event("reload", LuaType.list(profile.type()),
                 "Reports the profiles loaded by this reload, including first world entry.");

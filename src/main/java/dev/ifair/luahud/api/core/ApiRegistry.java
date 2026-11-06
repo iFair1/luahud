@@ -30,11 +30,19 @@ public final class ApiRegistry {
 
     public record ValueNode(String name, String providerId, LuaDoc doc, LuaType<?> type, Supplier<?> supplier) implements Node {}
 
+    public record FunctionOverload(LuaType<?> returnType, List<LuaType<?>> parameterTypes) {
+        public FunctionOverload {
+            Objects.requireNonNull(returnType);
+            parameterTypes = List.copyOf(parameterTypes);
+        }
+    }
+
     public static final class FunctionNode implements Node {
         private final String name, providerId;
         private final LuaDoc doc;
         private final LuaType<?> returnType;
         private final List<LuaParameter<?>> parameters = new ArrayList<>();
+        private final List<FunctionOverload> overloads = new ArrayList<>();
         private LuaCallable<?> callable;
         private final SpecialFunction special;
         private FunctionNode(String name, String providerId, LuaDoc doc, LuaType<?> returnType, SpecialFunction special) {
@@ -43,6 +51,7 @@ public final class ApiRegistry {
         public String name() { return name; } public String providerId() { return providerId; } public LuaDoc doc() { return doc; }
         public LuaType<?> returnType() { return returnType; } public List<LuaParameter<?>> parameters() { return List.copyOf(parameters); }
         public LuaCallable<?> callable() { return callable; } public SpecialFunction special() { return special; }
+        public List<FunctionOverload> overloads() { return List.copyOf(overloads); }
     }
 
     private final NamespaceNode root = new NamespaceNode("lh", "luahud", LuaDoc.NONE);
@@ -145,6 +154,8 @@ public final class ApiRegistry {
             if (child instanceof NamespaceNode table) validate(table, path + "." + child.name());
             if (child instanceof FunctionNode fn && fn.special == SpecialFunction.NONE && fn.callable == null)
                 throw new IllegalStateException("Lua API function has no implementation: " + path + "." + fn.name);
+            if (child instanceof FunctionNode fn && fn.overloads.stream().anyMatch(overload -> overload.parameterTypes().size() != fn.parameters.size()))
+                throw new IllegalStateException("Lua API overload parameter count differs from its function: " + path + "." + fn.name);
         }
     }
     private void merge(NamespaceNode target, NamespaceNode source, String path) {
@@ -210,12 +221,16 @@ public final class ApiRegistry {
             LuaParameter<T> p = new LuaParameter<>(node, node.parameters.size(), name, type, LuaDoc.of(doc)); node.parameters.add(p); return p;
         }
         public <T> LuaParameter<T> optionalParameter(String name, LuaType<T> type, String doc) { return parameter(name, LuaType.optional(type), doc); }
+        public FunctionBuilder<R> overload(LuaType<?> returnType, LuaType<?>... parameterTypes) {
+            mutable(); node.overloads.add(new FunctionOverload(returnType, Arrays.asList(parameterTypes))); return this;
+        }
         public FunctionBuilder<R> call(LuaCallable<R> callable) { mutable(); if (node.callable != null) throw new IllegalStateException("Function already implemented"); node.callable = Objects.requireNonNull(callable); return this; }
     }
     private final class IgnoredFunction<R> implements FunctionBuilder<R> {
         private int index; private final Object owner = new Object();
         public <T> LuaParameter<T> parameter(String n, LuaType<T> t, String d) { mutable(); return new LuaParameter<>(owner, index++, n, t, LuaDoc.of(d)); }
         public <T> LuaParameter<T> optionalParameter(String n, LuaType<T> t, String d) { return parameter(n, LuaType.optional(t), d); }
+        public FunctionBuilder<R> overload(LuaType<?> r, LuaType<?>... p) { mutable(); return this; }
         public FunctionBuilder<R> call(LuaCallable<R> c) { mutable(); return this; }
     }
 }

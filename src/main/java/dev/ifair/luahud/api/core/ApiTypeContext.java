@@ -38,7 +38,20 @@ final class ApiTypeContext {
         collect(registry.rootNode());
         registry.events().forEach(event -> collect(event.payloadType(), event.providerId()));
     }
-    private void collect(ApiRegistry.NamespaceNode node) { for (ApiRegistry.Node child : node.children().values()) { if (child instanceof ApiRegistry.NamespaceNode table) collect(table); else if (child instanceof ApiRegistry.ValueNode value) collect(value.type(), value.providerId()); else if (child instanceof ApiRegistry.FunctionNode function) { collect(function.returnType(), function.providerId()); function.parameters().forEach(parameter -> collect(parameter.type(), function.providerId())); } } }
+    private void collect(ApiRegistry.NamespaceNode node) {
+        for (ApiRegistry.Node child : node.children().values()) {
+            if (child instanceof ApiRegistry.NamespaceNode table) collect(table);
+            else if (child instanceof ApiRegistry.ValueNode value) collect(value.type(), value.providerId());
+            else if (child instanceof ApiRegistry.FunctionNode function) {
+                collect(function.returnType(), function.providerId());
+                function.parameters().forEach(parameter -> collect(parameter.type(), function.providerId()));
+                function.overloads().forEach(overload -> {
+                    collect(overload.returnType(), function.providerId());
+                    overload.parameterTypes().forEach(type -> collect(type, function.providerId()));
+                });
+            }
+        }
+    }
     private void collect(LuaType<?> type, String provider) {
         if (type == null) return;
         if (type.kind() == LuaType.Kind.MODEL || type.kind() == LuaType.Kind.MODEL_INPUT) {

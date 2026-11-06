@@ -15,6 +15,40 @@ import static org.junit.jupiter.api.Assertions.*;
 class StubGeneratorTest {
     @TempDir Path temp;
 
+    @Test void functionOverloadsCollectTheirOwnTypesAndPreserveOptionalParameters() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("example-addon");
+        var result = api.model("Result", String.class);
+        result.string("text", "", value -> value);
+        var input = LuaType.inputTable("Input", fields -> fields.field("count", LuaType.integer(), ""));
+        var function = api.root().function("lookup", LuaType.any(), "");
+        function.parameter("name", LuaType.string(), "");
+        function.optionalParameter("options", LuaType.any(), "");
+        function.overload(result.type(), LuaType.literal("result"), LuaType.optional(input));
+        function.call(args -> null);
+        registry.freeze();
+
+        String stub = StubGenerator.generate(registry);
+        assertTrue(stub.contains("---@class example_addon_Input"));
+        assertTrue(stub.contains("---@param name \"result\""));
+        assertTrue(stub.contains("---@param options? example_addon_Input"));
+        assertTrue(stub.contains("---@return example_addon_Result"));
+        assertFalse(stub.contains("---@param name string"));
+        String json = DocumentationGenerator.generate(registry);
+        assertTrue(json.contains("\"overloads\""));
+        assertTrue(json.contains("\"id\": \"Input\""));
+        assertThrows(IllegalStateException.class, () -> function.overload(LuaType.string(), LuaType.string(), LuaType.any()));
+    }
+
+    @Test void rejectsOverloadsWithDifferentParameterCountsWhenFreezing() {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var function = registry.registrar("luahud").root().function("lookup", LuaType.any(), "");
+        function.parameter("name", LuaType.string(), "");
+        function.overload(LuaType.integer());
+        function.call(args -> 1);
+        assertTrue(assertThrows(IllegalStateException.class, registry::freeze).getMessage().contains("overload parameter count"));
+    }
+
     @Test void outputIsDeterministicMergedEscapedAndMatchesRuntimePaths() {
         ApiRegistry registry = fixture();
         String first = StubGenerator.generate(registry), second = StubGenerator.generate(registry);
@@ -75,10 +109,11 @@ class StubGeneratorTest {
         registry.addEventFunctions();
         registry.freeze();
         String stub = StubGenerator.generate(registry);
-        assertTrue(stub.contains("---@overload fun(event: \"damage\", callback: fun(event: example_addon_Damage))"));
+        assertTrue(stub.contains("---@param event \"damage\""));
+        assertTrue(stub.contains("---@param callback fun(event: example_addon_Damage)"));
         assertTrue(stub.contains("---@overload fun(event: \"reload\", callback: fun())"));
-        assertTrue(stub.contains("---@param event string Registered event name"));
-        assertFalse(stub.contains("---@param event \""));
+        assertFalse(stub.contains("---@param event string"));
+        assertTrue(stub.contains("---@overload fun(number: integer, event: \"reload\", callback: fun()): nil"));
     }
 
     @Test void aliasesReadFreshSortedValuesOnlyDuringStubGeneration() {

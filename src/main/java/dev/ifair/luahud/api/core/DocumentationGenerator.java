@@ -73,6 +73,24 @@ public final class DocumentationGenerator {
             }
             item.add("parameters", parameters);
             item.add("returnType", type(function.returnType()));
+            if (!function.overloads().isEmpty()) {
+                JsonArray overloads = new JsonArray();
+                for (ApiRegistry.FunctionOverload overload : function.overloads()) {
+                    JsonObject signature = new JsonObject();
+                    JsonArray arguments = new JsonArray();
+                    for (int i = 0; i < overload.parameterTypes().size(); i++) {
+                        LuaParameter<?> parameter = function.parameters().get(i);
+                        LuaType<?> argument = overload.parameterTypes().get(i);
+                        boolean optional = argument.kind() == LuaType.Kind.OPTIONAL;
+                        arguments.add(field(parameter.name(), parameter.doc().description(),
+                                type(optional ? argument.elementType() : argument), optional));
+                    }
+                    signature.add("parameters", arguments);
+                    signature.add("returnType", type(overload.returnType()));
+                    overloads.add(signature);
+                }
+                item.add("overloads", overloads);
+            }
         }
         return item;
     }

@@ -14,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.squiddev.cobalt.LuaError;
@@ -91,8 +92,14 @@ class CoreApiTest {
             assertTrue(registry.models().contains(modelType.model()));
         }
         String callback = hasPayload ? "fun(event: " + payload + ")" : "fun()";
-        assertTrue(StubGenerator.generate(registry).contains(
-                "---@overload fun(event: \"" + name + "\", callback: " + callback + ")"));
+        String stub = StubGenerator.generate(registry);
+        if (name.equals("attack")) {
+            assertTrue(stub.contains("---@param event \"attack\""));
+            assertTrue(stub.contains("---@param callback " + callback));
+        } else {
+            assertTrue(stub.contains("---@overload fun(event: \"" + name + "\", callback: " + callback + ")"));
+        }
+        assertFalse(stub.contains("---@param event string"));
     }
 
     @ParameterizedTest

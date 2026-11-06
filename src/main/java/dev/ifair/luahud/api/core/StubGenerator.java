@@ -76,28 +76,78 @@ public final class StubGenerator {
         for (FunctionInfo info : functions) {
             ApiRegistry.FunctionNode function = info.function();
             description(out, function.doc().description());
-            if (function.special() == ApiRegistry.SpecialFunction.EVENT) {
-                registry.events().stream().sorted(Comparator.comparing(EventType::name)).forEach(event -> {
-                    out.append("---@overload fun(event: ").append(LuaType.literal(event.name()).luaName())
-                            .append(", callback: fun(");
-                    if (event.hasPayload()) out.append("event: ").append(context.type(event.payloadType(), event.providerId()));
-                    out.append("))\n");
-                });
+            List<Signature> signatures = signatures(registry, function, context);
+            // The function declaration itself is a callable signature in LuaLS. Use one
+            // concrete overload there instead of leaving a permissive string/any fallback.
+            Signature primary = signatures.removeFirst();
+            for (Signature signature : signatures) {
+                out.append("---@overload fun(");
+                for (int i = 0; i < signature.parameters().size(); i++) {
+                    if (i > 0) out.append(", ");
+                    ParameterInfo parameter = signature.parameters().get(i);
+                    out.append(function.parameters().get(i).name());
+                    if (parameter.optional()) out.append('?');
+                    out.append(": ").append(parameter.type());
+                }
+                out.append("): ").append(signature.returnType()).append('\n');
             }
-            for (LuaParameter<?> parameter : function.parameters()) {
+            for (int i = 0; i < primary.parameters().size(); i++) {
+                LuaParameter<?> parameter = function.parameters().get(i);
+                ParameterInfo type = primary.parameters().get(i);
                 out.append("---@param ").append(parameter.name());
-                if (parameter.type().kind() == LuaType.Kind.OPTIONAL) out.append('?');
-                out.append(' ').append(context.type(parameter.type().kind() == LuaType.Kind.OPTIONAL ? parameter.type().elementType() : parameter.type(), function.providerId()));
+                if (type.optional()) out.append('?');
+                out.append(' ').append(type.type());
                 appendDescription(out, parameter.doc().description());
                 out.append('\n');
             }
-            out.append("---@return ").append(context.type(function.returnType(), function.providerId())).append('\n');
+            out.append("---@return ").append(primary.returnType()).append('\n');
             out.append("function ").append(info.path()).append('(')
                     .append(String.join(", ", function.parameters().stream().map(LuaParameter::name).toList()))
                     .append(") end\n\n");
         }
         return out.toString();
     }
+
+    private static List<Signature> signatures(ApiRegistry registry, ApiRegistry.FunctionNode function, ApiTypeContext context) {
+        List<Signature> signatures = new ArrayList<>();
+        for (ApiRegistry.FunctionOverload overload : function.overloads()) {
+            signatures.add(new Signature(overload.parameterTypes().stream()
+                    .map(type -> parameter(type, function.providerId(), context)).toList(),
+                    context.type(overload.returnType(), function.providerId())));
+        }
+        if (function.special() == ApiRegistry.SpecialFunction.EVENT || function.special() == ApiRegistry.SpecialFunction.INTERVAL) {
+            registry.events().stream().sorted(Comparator.comparing(EventType::name)).forEach(event -> {
+                List<ParameterInfo> parameters = new ArrayList<>();
+                if (function.special() == ApiRegistry.SpecialFunction.INTERVAL) {
+                    parameters.add(parameter(LuaType.integer(), function.providerId(), context));
+                }
+                parameters.add(new ParameterInfo(LuaType.literal(event.name()).luaName(), false));
+                String payload = event.hasPayload() ? "event: " + context.type(event.payloadType(), event.providerId()) : "";
+                parameters.add(new ParameterInfo("fun(" + payload + ")", false));
+                signatures.add(new Signature(parameters, "nil"));
+            });
+            if (signatures.isEmpty()) {
+                // No event name can be valid in an empty registry.
+                signatures.add(new Signature(function.parameters().stream().map(value ->
+                        value.name().equals("event") ? new ParameterInfo("nil", false)
+                                : parameter(value.type(), function.providerId(), context)).toList(), "nil"));
+            }
+        }
+        if (signatures.isEmpty()) {
+            signatures.add(new Signature(function.parameters().stream()
+                    .map(value -> parameter(value.type(), function.providerId(), context)).toList(),
+                    context.type(function.returnType(), function.providerId())));
+        }
+        return signatures;
+    }
+
+    private static ParameterInfo parameter(LuaType<?> type, String provider, ApiTypeContext context) {
+        boolean optional = type.kind() == LuaType.Kind.OPTIONAL;
+        return new ParameterInfo(context.type(optional ? type.elementType() : type, provider), optional);
+    }
+
+    private record ParameterInfo(String type, boolean optional) {}
+    private record Signature(List<ParameterInfo> parameters, String returnType) {}
 
     public static boolean writeIfChanged(Path target, String content) throws IOException {
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
