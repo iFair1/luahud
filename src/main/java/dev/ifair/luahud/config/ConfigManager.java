@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,8 @@ public class ConfigManager {
     private static ConfigData config = new ConfigData();
     private static long profileRevision;
     private static long profileKeybindRevision;
+
+    private enum Change { PROFILES, KEYBINDS, RELOAD }
 
     public static synchronized void load() {
         boolean saveNormalizedConfig = false;
@@ -104,10 +107,23 @@ public class ConfigManager {
         }
     }
 
-    private static boolean commit(ConfigData candidate) {
+    private static boolean commit(ConfigData candidate, Change... changes) {
         if (!persist(candidate)) return false;
         config = candidate;
+        for (Change change : changes) {
+            switch (change) {
+                case PROFILES -> profileRevision++;
+                case KEYBINDS -> profileKeybindRevision++;
+                case RELOAD -> profileReloadNeeded.set(true);
+            }
+        }
         return true;
+    }
+
+    private static void updateConfig(Consumer<ConfigData> update, Change... changes) {
+        ConfigData candidate = copyConfig();
+        update.accept(candidate);
+        commit(candidate, changes);
     }
 
     private static ConfigData copyConfig() {
@@ -151,18 +167,13 @@ public class ConfigManager {
     public static synchronized void setShowHiddenFiles(boolean value) {
         if (config.showHiddenFiles == value) return;
 
-        ConfigData candidate = copyConfig();
-        candidate.showHiddenFiles = value;
-        if (!commit(candidate)) return;
-        profileRevision++;
+        updateConfig(candidate -> candidate.showHiddenFiles = value, Change.PROFILES);
     }
 
     public static synchronized void setGenerateExampleProfiles(boolean value) {
         if (config.generateExampleProfiles == value) return;
 
-        ConfigData candidate = copyConfig();
-        candidate.generateExampleProfiles = value;
-        commit(candidate);
+        updateConfig(candidate -> candidate.generateExampleProfiles = value);
     }
 
     public static synchronized boolean hasProfile(String name) {
@@ -179,10 +190,7 @@ public class ConfigManager {
         added.setName(name);
         added.normalize();
         candidate.profiles.add(added);
-        if (!commit(candidate)) return;
-        profileReloadNeeded.set(true);
-        profileRevision++;
-        profileKeybindRevision++;
+        commit(candidate, Change.RELOAD, Change.PROFILES, Change.KEYBINDS);
     }
 
     private static String incrementSuffix(String name) {
@@ -215,13 +223,10 @@ public class ConfigManager {
 
         try {
             Files.createFile(profileFile);
-            if (!commit(candidate)) {
+            if (!commit(candidate, Change.RELOAD, Change.PROFILES, Change.KEYBINDS)) {
                 Files.deleteIfExists(profileFile);
                 return;
             }
-            profileReloadNeeded.set(true);
-            profileRevision++;
-            profileKeybindRevision++;
         } catch (IOException e) {
             ErrorManager.reportSystem("profile create", e);
         }
@@ -230,12 +235,8 @@ public class ConfigManager {
     public static synchronized void removeProfile(String name) {
         int index = indexOfProfile(name);
         if (index < 0) return;
-        ConfigData candidate = copyConfig();
-        candidate.profiles.remove(index);
-        if (!commit(candidate)) return;
-        profileReloadNeeded.set(true);
-        profileRevision++;
-        profileKeybindRevision++;
+        updateConfig(candidate -> candidate.profiles.remove(index),
+                Change.RELOAD, Change.PROFILES, Change.KEYBINDS);
     }
 
     public static synchronized void deleteProfile(String name) {
@@ -256,14 +257,11 @@ public class ConfigManager {
                 Files.move(profileFile, stagedFile, StandardCopyOption.REPLACE_EXISTING);
                 deleteStagedFile = false;
             }
-            if (!commit(candidate)) {
+            if (!commit(candidate, Change.RELOAD, Change.PROFILES, Change.KEYBINDS)) {
                 if (stagedFile != null) restoreFile(stagedFile, profileFile, "profile delete");
                 return;
             }
             deleteStagedFile = true;
-            profileReloadNeeded.set(true);
-            profileRevision++;
-            profileKeybindRevision++;
         } catch (IOException e) {
             ErrorManager.reportSystem("profile delete", e);
         } finally {
@@ -283,22 +281,17 @@ public class ConfigManager {
         int target = index + offset;
         if (index < 0 || target < 0 || target >= config.profiles.size()) return;
 
-        ConfigData candidate = copyConfig();
-        Collections.swap(candidate.profiles, index, target);
-        if (!commit(candidate)) return;
-        profileReloadNeeded.set(true);
-        profileRevision++;
+        updateConfig(candidate -> Collections.swap(candidate.profiles, index, target),
+                Change.RELOAD, Change.PROFILES);
     }
 
     public static synchronized void setProfileActive(String name, boolean active) {
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null || profile.isActive() == active) return;
 
-        ConfigData candidate = copyConfig();
-        candidate.profiles.get(indexOfProfile(name)).setActive(active);
-        if (!commit(candidate)) return;
-        profileReloadNeeded.set(true);
-        profileRevision++;
+        int index = indexOfProfile(name);
+        updateConfig(candidate -> candidate.profiles.get(index).setActive(active),
+                Change.RELOAD, Change.PROFILES);
     }
 
     public static synchronized void toggleProfileActive(String name) {
@@ -311,23 +304,19 @@ public class ConfigManager {
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null || profile.isHidden() == hidden) return;
 
-        ConfigData candidate = copyConfig();
-        candidate.profiles.get(indexOfProfile(name)).setHidden(hidden);
-        if (!commit(candidate)) return;
-        profileRevision++;
+        int index = indexOfProfile(name);
+        updateConfig(candidate -> candidate.profiles.get(index).setHidden(hidden), Change.PROFILES);
     }
 
     public static synchronized void setProfileKeybind(String name, String keybind) {
-        keybind = ConfigData.ProfileData.normalizeKeybind(keybind);
+        String normalized = ConfigData.ProfileData.normalizeKeybind(keybind);
         ConfigData.ProfileData profile = findProfile(name);
         if (profile == null) return;
-        if (profile.getKeybind().equals(keybind)) return;
+        if (profile.getKeybind().equals(normalized)) return;
 
-        ConfigData candidate = copyConfig();
-        candidate.profiles.get(indexOfProfile(name)).setKeybind(keybind);
-        if (!commit(candidate)) return;
-        profileRevision++;
-        profileKeybindRevision++;
+        int index = indexOfProfile(name);
+        updateConfig(candidate -> candidate.profiles.get(index).setKeybind(normalized),
+                Change.PROFILES, Change.KEYBINDS);
     }
 
     public static synchronized void renameProfile(String oldName, String newName) {
@@ -349,13 +338,10 @@ public class ConfigManager {
 
         try {
             Files.move(oldFile, newFile);
-            if (!commit(candidate)) {
+            if (!commit(candidate, Change.RELOAD, Change.PROFILES, Change.KEYBINDS)) {
                 restoreFile(newFile, oldFile, "profile rename");
                 return;
             }
-            profileReloadNeeded.set(true);
-            profileRevision++;
-            profileKeybindRevision++;
         } catch (IOException e) {
             ErrorManager.reportSystem("profile rename", e);
         }

@@ -181,6 +181,48 @@ class ConfigManagerTest {
         assertTrue(Files.exists(ConfigManager.JSON_CONFIG.resolve("blocker")));
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("successfulSettingChanges")
+    void successfulChangesNotifyOnlyAffectedConsumers(String name, Runnable change,
+                                                       boolean profilesChanged, boolean keybindsChanged,
+                                                       boolean reload) throws Exception {
+        change.run();
+
+        assertEquals(revision + (profilesChanged ? 1 : 0), ConfigManager.getProfileRevision());
+        assertEquals(keybindRevision + (keybindsChanged ? 1 : 0), ConfigManager.getProfileKeybindRevision());
+        assertEquals(reload, ConfigManager.consumeProfileReloadSignal());
+        assertFalse(ConfigManager.consumeProfileReloadSignal());
+        Gson gson = new Gson();
+        ConfigData saved = gson.fromJson(Files.readString(ConfigManager.JSON_CONFIG), ConfigData.class);
+        assertEquals(ConfigManager.isShowHiddenFilesEnabled(), saved.showHiddenFiles);
+        assertEquals(ConfigManager.isGenerateExampleProfilesEnabled(), saved.generateExampleProfiles);
+        assertEquals(gson.toJson(ConfigManager.getProfiles()), gson.toJson(saved.profiles));
+    }
+
+    private static Stream<Arguments> successfulSettingChanges() {
+        return Stream.of(
+                Arguments.of("show hidden files", (Runnable) () -> ConfigManager.setShowHiddenFiles(true), true, false, false),
+                Arguments.of("example profiles", (Runnable) () -> ConfigManager.setGenerateExampleProfiles(false), false, false, false),
+                Arguments.of("active profile", (Runnable) () -> ConfigManager.setProfileActive("First", false), true, false, true),
+                Arguments.of("hidden profile", (Runnable) () -> ConfigManager.setProfileHidden("First", true), true, false, false),
+                Arguments.of("profile keybind", (Runnable) () -> ConfigManager.setProfileKeybind("First", "key.keyboard.a"), true, true, false),
+                Arguments.of("profile order", (Runnable) () -> ConfigManager.moveProfile("First", 1), true, false, true),
+                Arguments.of("remove profile", (Runnable) () -> ConfigManager.removeProfile("First"), true, true, true),
+                Arguments.of("add profile", (Runnable) () -> ConfigManager.addProfile("Third"), true, true, true));
+    }
+
+    @Test
+    void unchangedSettingsDoNotWriteOrNotify() throws Exception {
+        ConfigManager.setShowHiddenFiles(false);
+        ConfigManager.setGenerateExampleProfiles(true);
+        ConfigManager.setProfileActive("First", true);
+        ConfigManager.setProfileHidden("First", false);
+        ConfigManager.setProfileKeybind("First", "key.keyboard.unknown");
+
+        assertUnchanged();
+        assertEquals(originalJson, Files.readString(ConfigManager.JSON_CONFIG));
+    }
+
     private static Stream<Arguments> settingChanges() {
         return Stream.of(
                 settingChange("show hidden files", () -> ConfigManager.setShowHiddenFiles(true)),
