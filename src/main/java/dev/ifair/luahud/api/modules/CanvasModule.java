@@ -19,7 +19,7 @@ final class CanvasModule {
     private CanvasModule() {}
 
     static float number(LuaTableValue options, String key, float fallback) {
-        double value = options == null ? fallback : options.number(key, fallback);
+        double value = LuaTableValue.orEmpty(options).number(key, fallback);
         if (!Double.isFinite(value) || Math.abs(value) > 1_000_000) {
             throw new IllegalArgumentException(key + " must be finite and between -1000000 and 1000000");
         }
@@ -98,14 +98,15 @@ final class CanvasModule {
                 }
                 values[i] = (float) value;
             }
-            RenderBuffer.opacity(RenderModule.currentSectionState().opacity() * RenderModule.opacity(args.get(opts)));
-            RenderBuffer.addMesh(shape.create(values, args.get(opts)));
+            LuaTableValue shapeOptions = LuaTableValue.orEmpty(args.get(opts));
+            RenderBuffer.opacity(RenderModule.currentSectionState().opacity() * RenderModule.opacity(shapeOptions));
+            RenderBuffer.addMesh(shape.create(values, shapeOptions));
             return null;
         });
     }
 
     private static int color(LuaTableValue options, String key) {
-        return options != null && options.contains(key) ? RenderModule.color(options.get(key)) : 0xFFFFFFFF;
+        return options.contains(key) ? RenderModule.color(options.get(key)) : 0xFFFFFFFF;
     }
 
     static void drawImage(Identifier texture, LuaTableValue options, CanvasTransform transform) {
@@ -115,9 +116,10 @@ final class CanvasModule {
 
     static void drawImage(Identifier texture, int sourceWidth, int sourceHeight,
                           LuaTableValue options, CanvasTransform transform) {
+        options = LuaTableValue.orEmpty(options);
         ImageSize size = new ImageSize(sourceWidth, sourceHeight);
-        LuaTableValue region = options == null ? null : options.table("region");
-        LuaTableValue slice = options == null ? null : options.table("nineSlice");
+        LuaTableValue region = options.table("region");
+        LuaTableValue slice = options.table("nineSlice");
         if (region != null && slice != null) throw new IllegalArgumentException("region and nineSlice cannot be combined");
         int sx = region == null ? 0 : region.integer("x", 0);
         int sy = region == null ? 0 : region.integer("y", 0);

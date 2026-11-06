@@ -29,6 +29,32 @@ class CallbackRenderingTest {
         return runtime;
     }
 
+    @Test void omittedNilAndEmptyOptionsKeepDefaultsAndExplicitSectionStyle() throws Exception {
+        CobaltRuntime runtime = runtime();
+        runtime.execute("""
+                lh.section(); lh.draw('default')
+                lh.section(nil); lh.draw('default', nil)
+                lh.section({}); lh.draw('default', {})
+                lh.section({shadow=false, textColor=0, backgroundColor=0, opacity=0.5})
+                lh.draw('styled'); lh.draw('styled', nil); lh.draw('styled', {})
+                """, "options");
+
+        List<RenderSection> sections = RenderBuffer.sections();
+        assertEquals(4, sections.size());
+        SectionState defaults = SectionState.defaults();
+        RenderElement.Text defaultText = new RenderElement.Text(
+                "default", defaults.textColor(), defaults.backgroundColor(), defaults.shadow(), 0, 0);
+        for (RenderSection section : sections.subList(0, 3)) {
+            assertEquals(defaults.layout(), section.layout());
+            assertEquals(List.of(defaultText), section.rows().getFirst().elements());
+        }
+        assertEquals(List.of(
+                new RenderElement.Text("styled", 0, 0, false, 0, 0, 0.5f),
+                new RenderElement.Text("styled", 0, 0, false, 0, 0, 0.5f),
+                new RenderElement.Text("styled", 0, 0, false, 0, 0, 0.5f)),
+                sections.getLast().rows().getFirst().elements());
+    }
+
     @Test void reloadTickRenderAndTimersRetainIndependentDrawings() throws Exception {
         CobaltRuntime runtime = runtime();
         runtime.execute("lh.draw('load'); "

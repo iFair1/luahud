@@ -10,6 +10,7 @@ import dev.ifair.luahud.render.InlineDirection;
 import dev.ifair.luahud.render.RenderBuffer;
 import dev.ifair.luahud.render.RowAlignment;
 import dev.ifair.luahud.render.RowDirection;
+import dev.ifair.luahud.render.SectionLayout;
 import dev.ifair.luahud.render.SectionState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
@@ -197,7 +198,7 @@ public final class RenderModule {
             SectionState canvasState = sectionState(o);
             closeCanvas();
             SectionState previous = currentState;
-            RenderBuffer.beginCanvas(canvasState.layout(), width, height, inline ? canvasState.scale() : 1,
+            RenderBuffer.beginCanvas(canvasState.layout(), width, height, inline ? canvasState.layout().scale() : 1,
                     o.bool("clip", true), o.bool("visible", true), inline,
                     o.string("id", null), o.contains("duration") ? o.number("duration", 0) : null);
             canvasPreviousState = previous;
@@ -225,10 +226,8 @@ public final class RenderModule {
     private static CanvasTransform prepareDraw(LuaTableValue options) {
         RenderBuffer.opacity(currentState.opacity() * opacity(options));
         if (!RenderBuffer.isCanvas()) {
-            if (options != null) {
-                for (String key : java.util.List.of("x", "y", "rotation", "originX", "originY")) {
-                    if (options.contains(key)) throw new IllegalArgumentException(key + " requires a canvas");
-                }
+            for (String key : java.util.List.of("x", "y", "rotation", "originX", "originY")) {
+                if (options.contains(key)) throw new IllegalArgumentException(key + " requires a canvas");
             }
             return CanvasTransform.IDENTITY;
         }
@@ -326,11 +325,12 @@ public final class RenderModule {
     }
 
     private static void applySection(LuaTableValue options) {
+        options = LuaTableValue.orEmpty(options);
         closeCanvas();
         SectionState state = sectionState(options);
-        String id = options == null ? null : options.string("id", null);
-        Double duration = options == null || !options.contains("duration") ? null : options.number("duration", 0);
-        if (options != null && !options.bool("visible", true)) {
+        String id = options.string("id", null);
+        Double duration = options.contains("duration") ? options.number("duration", 0) : null;
+        if (!options.bool("visible", true)) {
             RenderBuffer.hideSection(id);
             currentState = state;
             return;
@@ -340,50 +340,44 @@ public final class RenderModule {
     }
 
     static SectionState sectionState(LuaTableValue options) {
+        options = LuaTableValue.orEmpty(options);
         SectionState defaults = SectionState.defaults();
-        Anchor anchor = options == null ? defaults.anchor() : Anchor.fromString(options.string("anchor", null));
-        int offsetX = options == null ? anchor.defaultOffsetX() : options.integer("offsetX", anchor.defaultOffsetX());
-        int offsetY = options == null ? defaults.offsetY() : options.integer("offsetY", defaults.offsetY());
-        RowAlignment rowAlignment = options == null || !options.contains("rowAlign")
+        SectionLayout defaultLayout = defaults.layout();
+        Anchor anchor = Anchor.fromString(options.string("anchor", null));
+        int offsetX = options.integer("offsetX", anchor.defaultOffsetX());
+        int offsetY = options.integer("offsetY", defaultLayout.offsetY());
+        RowAlignment rowAlignment = !options.contains("rowAlign")
                 ? anchor.defaultRowAlignment()
                 : RowAlignment.fromString(options.string("rowAlign", null));
-        InlineAlignment inlineAlignment = options == null || !options.contains("inlineAlign")
-                ? defaults.inlineAlignment()
+        InlineAlignment inlineAlignment = !options.contains("inlineAlign")
+                ? defaultLayout.inlineAlignment()
                 : InlineAlignment.fromString(options.string("inlineAlign", null));
-        InlineDirection inlineDirection = options == null || !options.contains("inlineDirection")
-                ? defaults.inlineDirection()
+        InlineDirection inlineDirection = !options.contains("inlineDirection")
+                ? defaultLayout.inlineDirection()
                 : InlineDirection.fromString(options.string("inlineDirection", null));
-        RowDirection rowDirection = options == null || !options.contains("rowDirection")
-                ? defaults.rowDirection()
+        RowDirection rowDirection = !options.contains("rowDirection")
+                ? defaultLayout.rowDirection()
                 : RowDirection.fromString(options.string("rowDirection", null));
-        RowHeight rowHeight = rowHeight(options, defaults);
+        RowHeight rowHeight = rowHeight(options, defaultLayout);
 
+        SectionLayout layout = new SectionLayout(
+                anchor, offsetX, offsetY, rowAlignment, inlineAlignment, inlineDirection, rowDirection,
+                scale(options, "scale", defaultLayout.scale()), rowHeight.value(), rowHeight.auto(),
+                options.integer("lineSpacing", defaultLayout.lineSpacing()),
+                options.integer("inlineSpacing", defaultLayout.inlineSpacing()));
         return new SectionState(
-                anchor,
-                offsetX,
-                offsetY,
-                rowAlignment,
-                inlineAlignment,
-                inlineDirection,
-                rowDirection,
-                options == null ? defaults.shadow() : options.bool("shadow", defaults.shadow()),
-                options != null && options.contains("textColor") ? color(options.get("textColor")) : defaults.textColor(),
-                options != null && options.contains("backgroundColor")
-                        ? color(options.get("backgroundColor")) : defaults.backgroundColor(),
-                scale(options, "scale", defaults.scale()),
+                layout,
+                options.bool("shadow", defaults.shadow()),
+                resolveColor(options, "textColor", defaults.textColor()),
+                resolveColor(options, "backgroundColor", defaults.backgroundColor()),
                 scale(options, "iconScale", defaults.iconScale()),
-                rowHeight.value(),
-                rowHeight.auto(),
-                options == null ? defaults.lineSpacing() : options.integer("lineSpacing", defaults.lineSpacing()),
-                options == null ? defaults.inlineSpacing() : options.integer("inlineSpacing", defaults.inlineSpacing()),
-                opacity(options)
-        );
+                opacity(options));
     }
 
     private record RowHeight(int value, boolean auto) {}
 
-    private static RowHeight rowHeight(LuaTableValue options, SectionState defaults) {
-        if (options == null || !options.contains("rowHeight")) {
+    private static RowHeight rowHeight(LuaTableValue options, SectionLayout defaults) {
+        if (!options.contains("rowHeight")) {
             return new RowHeight(defaults.rowHeight(), defaults.autoRowHeight());
         }
         Object requested = options.get("rowHeight");
@@ -393,27 +387,29 @@ public final class RenderModule {
     }
 
     private static void drawText(String text, LuaTableValue options, boolean newline) {
+        options = LuaTableValue.orEmpty(options);
         prepareDraw(options);
-        if (!RenderBuffer.isCanvas() && options != null && options.contains("scale")) {
+        if (!RenderBuffer.isCanvas() && options.contains("scale")) {
             throw new IllegalArgumentException("Text scale requires a canvas");
         }
         if (RenderBuffer.isCanvas() && newline) throw new IllegalArgumentException("Canvas does not support line breaks");
         RenderBuffer.addText(text,
                 resolveColor(options, "textColor", currentState.textColor()),
                 resolveColor(options, "backgroundColor", currentState.backgroundColor()),
-                options == null ? currentState.shadow() : options.bool("shadow", currentState.shadow()),
+                options.bool("shadow", currentState.shadow()),
                 offset(options, "offsetX"), offset(options, "offsetY"), newline);
     }
 
     private static void drawStack(ItemStack stack, LuaTableValue options) {
+        options = LuaTableValue.orEmpty(options);
         prepareDraw(options);
-        boolean showCount = options == null || options.bool("showCount", true);
-        boolean showDurability = options == null || options.bool("showDurabilityBar", true);
-        boolean drawAir = options != null && options.bool("drawAir", false);
+        boolean showCount = options.bool("showCount", true);
+        boolean showDurability = options.bool("showDurabilityBar", true);
+        boolean drawAir = options.bool("drawAir", false);
         ItemStack value = stack.copy();
         if (!showCount) value.setCount(1);
         if (!showDurability) value.setDamage(0);
-        if (options != null && options.contains("showGlint")) {
+        if (options.contains("showGlint")) {
             value.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, options.bool("showGlint", true));
         }
         RenderBuffer.addStack(value, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
@@ -421,6 +417,7 @@ public final class RenderModule {
     }
 
     private static void drawItem(Object reference, LuaTableValue options) {
+        options = LuaTableValue.orEmpty(options);
         prepareDraw(options);
         Item item = reference instanceof ItemStack stack
                 ? stack.getItem()
@@ -441,6 +438,7 @@ public final class RenderModule {
     }
 
     private static void drawEntity(Object reference, LuaTableValue options) {
+        options = LuaTableValue.orEmpty(options);
         prepareDraw(options);
         Entity entity = reference instanceof Entity value ? value : findEntity((String) reference);
         RenderBuffer.addEntity(entity, iconScale(options), angle(options, "yaw"), angle(options, "pitch"),
@@ -480,6 +478,7 @@ public final class RenderModule {
     }
 
     private static void drawTexture(String path, LuaTableValue options) {
+        options = LuaTableValue.orEmpty(options);
         CanvasTransform transform = prepareDraw(options);
         MinecraftClient client = MinecraftClient.getInstance();
         Identifier texture = textureIdentifier(path,
@@ -488,8 +487,8 @@ public final class RenderModule {
             CanvasModule.drawImage(texture, options, transform);
             return;
         }
-        if (options != null && (options.contains("width") || options.contains("height")
-                || options.contains("region") || options.contains("nineSlice"))) {
+        if (options.contains("width") || options.contains("height")
+                || options.contains("region") || options.contains("nineSlice")) {
             throw new IllegalArgumentException("Texture size, region and nineSlice require a canvas");
         }
         RenderBuffer.addTexture(texture, iconScale(options), resolveColor(options, "backgroundColor", currentState.backgroundColor()),
@@ -512,13 +511,13 @@ public final class RenderModule {
     }
 
     static float angle(LuaTableValue options, String key) {
-        double requested = options == null ? 0 : options.number(key, 0);
+        double requested = LuaTableValue.orEmpty(options).number(key, 0);
         if (!Double.isFinite(requested)) throw new IllegalArgumentException("Angle must be finite");
         return (float) (requested % 360);
     }
 
     static boolean bool(LuaTableValue options, String key, boolean fallback) {
-        return options == null ? fallback : options.bool(key, fallback);
+        return LuaTableValue.orEmpty(options).bool(key, fallback);
     }
 
     static boolean newLine(LuaTableValue options) {
@@ -526,14 +525,14 @@ public final class RenderModule {
     }
 
     static float opacity(LuaTableValue options) {
-        double value = options == null ? 1 : options.number("opacity", 1);
+        double value = LuaTableValue.orEmpty(options).number("opacity", 1);
         if (!Double.isFinite(value) || value < 0 || value > 1)
             throw new IllegalArgumentException("Opacity must be finite and between 0 and 1");
         return (float) value;
     }
 
     private static float scale(LuaTableValue options, String key, float fallback) {
-        double requested = options == null ? fallback : options.number(key, fallback);
+        double requested = options.number(key, fallback);
         if (!Double.isFinite(requested) || requested <= 0 || requested > Float.MAX_VALUE) {
             throw new IllegalArgumentException("Scale must be finite and greater than zero");
         }
@@ -541,11 +540,11 @@ public final class RenderModule {
     }
 
     private static int offset(LuaTableValue options, String key) {
-        return options == null ? 0 : options.integer(key, 0);
+        return options.integer(key, 0);
     }
 
     private static int resolveColor(LuaTableValue options, String key, int fallback) {
-        return options != null && options.contains(key) ? color(options.get(key)) : fallback;
+        return options.contains(key) ? color(options.get(key)) : fallback;
     }
 
     static int color(Object value) {

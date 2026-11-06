@@ -48,8 +48,8 @@ class RenderModuleTest {
             runtime.fireEvent("tick");
 
             SectionState state = RenderModule.currentSectionState();
-            assertEquals(Anchor.TOP_LEFT, state.anchor());
-            assertEquals(RowAlignment.LEFT, state.rowAlignment());
+            assertEquals(Anchor.TOP_LEFT, state.layout().anchor());
+            assertEquals(RowAlignment.LEFT, state.layout().rowAlignment());
         } finally {
             RenderBuffer.clear();
             RenderModule.resetSection();
@@ -188,37 +188,37 @@ class RenderModuleTest {
 
     @Test void sectionsDefaultToZeroHorizontalOffsetAndTwoVerticalOffsetForEveryAnchor() {
         SectionState defaults = RenderModule.sectionState(null);
-        assertEquals(0, defaults.offsetX());
-        assertEquals(2, defaults.offsetY());
+        assertEquals(0, defaults.layout().offsetX());
+        assertEquals(2, defaults.layout().offsetY());
 
         for (String anchor : List.of("topLeft", "topCenter", "topRight",
                 "bottomLeft", "bottomCenter", "bottomRight")) {
             SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of("anchor", anchor)));
-            assertEquals(0, state.offsetX(), anchor);
-            assertEquals(2, state.offsetY(), anchor);
+            assertEquals(0, state.layout().offsetX(), anchor);
+            assertEquals(2, state.layout().offsetY(), anchor);
         }
     }
 
     @Test void centerAnchorsDefaultToZeroHorizontalOffsetAndCenteredRows() {
         SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of("anchor", "topCenter")));
 
-        assertEquals(Anchor.TOP_CENTER, state.anchor());
-        assertEquals(0, state.offsetX());
-        assertEquals(RowAlignment.CENTER, state.rowAlignment());
-        assertEquals(InlineAlignment.CENTER, state.inlineAlignment());
-        assertEquals(RowDirection.TOP_TO_BOTTOM, state.rowDirection());
-        assertTrue(state.autoRowHeight());
-        assertEquals(2, state.lineSpacing());
-        assertEquals(0, state.inlineSpacing());
+        assertEquals(Anchor.TOP_CENTER, state.layout().anchor());
+        assertEquals(0, state.layout().offsetX());
+        assertEquals(RowAlignment.CENTER, state.layout().rowAlignment());
+        assertEquals(InlineAlignment.CENTER, state.layout().inlineAlignment());
+        assertEquals(RowDirection.TOP_TO_BOTTOM, state.layout().rowDirection());
+        assertTrue(state.layout().autoRowHeight());
+        assertEquals(2, state.layout().lineSpacing());
+        assertEquals(0, state.layout().inlineSpacing());
         assertEquals(0, state.layout().scaledInlineSpacing());
     }
 
     @Test void rightAnchorsDefaultToZeroHorizontalOffsetAndDeriveRightRowAlignment() {
         SectionState state = RenderModule.sectionState(new LuaTableValue(Map.of("anchor", "bottomRight")));
 
-        assertEquals(0, state.offsetX());
-        assertEquals(2, state.offsetY());
-        assertEquals(RowAlignment.RIGHT, state.rowAlignment());
+        assertEquals(0, state.layout().offsetX());
+        assertEquals(2, state.layout().offsetY());
+        assertEquals(RowAlignment.RIGHT, state.layout().rowAlignment());
     }
 
     @Test void sectionDirectionsAndAlignmentCanBeOverridden() {
@@ -230,10 +230,10 @@ class RenderModuleTest {
                 "rowDirection", "bottomToTop"
         )));
 
-        assertEquals(RowAlignment.LEFT, state.rowAlignment());
-        assertEquals(InlineAlignment.BOTTOM, state.inlineAlignment());
-        assertEquals(InlineDirection.RIGHT_TO_LEFT, state.inlineDirection());
-        assertEquals(RowDirection.BOTTOM_TO_TOP, state.rowDirection());
+        assertEquals(RowAlignment.LEFT, state.layout().rowAlignment());
+        assertEquals(InlineAlignment.BOTTOM, state.layout().inlineAlignment());
+        assertEquals(InlineDirection.RIGHT_TO_LEFT, state.layout().inlineDirection());
+        assertEquals(RowDirection.BOTTOM_TO_TOP, state.layout().rowDirection());
     }
 
     @Test void sectionScaleMustBePositiveAndFinite() {
@@ -252,22 +252,22 @@ class RenderModuleTest {
                 "inlineSpacing", 2
         )));
 
-        assertEquals(2f, state.scale());
+        assertEquals(2f, state.layout().scale());
         assertEquals(1.5f, state.iconScale());
-        assertEquals(10, state.rowHeight());
-        assertFalse(state.autoRowHeight());
+        assertEquals(10, state.layout().rowHeight());
+        assertFalse(state.layout().autoRowHeight());
         assertEquals(20, state.layout().scaledRowHeight());
-        assertEquals(3, state.lineSpacing());
+        assertEquals(3, state.layout().lineSpacing());
         assertEquals(4, state.layout().spacingAbove());
         assertEquals(2, state.layout().spacingBelow());
         assertEquals(6, state.layout().scaledLineSpacing());
-        assertEquals(2, state.inlineSpacing());
+        assertEquals(2, state.layout().inlineSpacing());
         assertEquals(4, state.layout().scaledInlineSpacing());
     }
 
     @Test void inlineSpacingDefaultsToZeroAndCannotBeNegative() {
-        assertEquals(0, RenderModule.sectionState(null).inlineSpacing());
-        assertEquals(0, RenderModule.sectionState(new LuaTableValue(Map.of())).inlineSpacing());
+        assertEquals(0, RenderModule.sectionState(null).layout().inlineSpacing());
+        assertEquals(0, RenderModule.sectionState(new LuaTableValue(Map.of())).layout().inlineSpacing());
         assertThrows(IllegalArgumentException.class,
                 () -> RenderModule.sectionState(new LuaTableValue(Map.of("inlineSpacing", -1))));
     }
@@ -276,9 +276,9 @@ class RenderModuleTest {
         SectionState defaults = RenderModule.sectionState(null);
         SectionState explicit = RenderModule.sectionState(new LuaTableValue(Map.of("rowHeight", "auto")));
 
-        assertTrue(defaults.autoRowHeight());
-        assertTrue(explicit.autoRowHeight());
-        assertEquals(12, explicit.rowHeight());
+        assertTrue(defaults.layout().autoRowHeight());
+        assertTrue(explicit.layout().autoRowHeight());
+        assertEquals(12, explicit.layout().rowHeight());
     }
 
     @Test void iconScaleAndRowHeightMustBePositiveAndLineSpacingCannotBeNegative() {

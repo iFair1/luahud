@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 /** Engine-neutral representation of a Lua input table. */
 public final class LuaTableValue {
+    private static final LuaTableValue EMPTY = new LuaTableValue(Map.of());
     private final Map<String, Object> values;
     private final Set<String> lazyKeys;
     private final Function<String, Object> resolver;
@@ -21,6 +22,11 @@ public final class LuaTableValue {
         this.values = Collections.unmodifiableMap(new LinkedHashMap<>(values));
         this.lazyKeys = Collections.unmodifiableSet(new LinkedHashSet<>(lazyKeys));
         this.resolver = resolver;
+    }
+
+    /** Treat an omitted options table as an immutable empty table. */
+    public static LuaTableValue orEmpty(LuaTableValue value) {
+        return value == null ? EMPTY : value;
     }
 
     public boolean isExplicit(String key) { return values.containsKey(key); }
