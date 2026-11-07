@@ -2,7 +2,6 @@ package dev.ifair.luahud.api.modules;
 
 import com.sun.management.OperatingSystemMXBean;
 import dev.ifair.luahud.api.LuaApiRegistrar;
-import dev.ifair.luahud.api.core.CachedValue;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.GlTimer;
 import oshi.SystemInfo;
@@ -24,29 +23,29 @@ public final class PcModule {
     }
 
     public static void register(LuaApiRegistrar api, MinecraftClient client) {
-        CachedValue<Integer> cpuUsage = new CachedValue<>(1000, () -> {
-            OperatingSystemMXBean os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-            double load = os.getProcessCpuLoad();
-            return load < 0 ? 0 : (int) Math.round(load * 100);
-        });
-        CachedValue<Integer> gpuUsage = new CachedValue<>(1000, () -> getGpuUsage(client));
         Runtime runtime = Runtime.getRuntime();
 
         api.root().namespace("pc", pc -> {
             pc.namespace("cpu", cpu -> cpu
                     .string("name", "Processor name", () -> Hardware.PROCESSOR.getProcessorIdentifier().getName())
-                    .integer("cores", "Physical core count", () -> Hardware.PROCESSOR.getPhysicalProcessorCount())
-                    .integer("threads", "Logical processor count", () -> Hardware.PROCESSOR.getLogicalProcessorCount())
-                    .integer("usage", "Minecraft process CPU usage percent", cpuUsage));
+                    .integer("cores", "Physical core count", Hardware.PROCESSOR::getPhysicalProcessorCount)
+                    .integer("threads", "Logical processor count", Hardware.PROCESSOR::getLogicalProcessorCount)
+                    .integer("usage", "Minecraft process CPU usage percent", PcModule::getCpuUsage));
             pc.namespace("gpu", gpu -> gpu
                     .string("name", "Primary graphics card name", () -> Hardware.CARDS.isEmpty() ? "Unknown GPU" : Hardware.CARDS.getFirst().getName())
-                    .integer("usage", "Minecraft GPU usage percent, or -1 when unavailable", gpuUsage));
+                    .integer("usage", "Minecraft GPU usage percent, or -1 when unavailable", () -> getGpuUsage(client)));
             pc.namespace("memory", memory -> memory
                     .integer("used", "Memory used in MiB", () -> (int) ((runtime.totalMemory() - runtime.freeMemory()) / MIB))
                     .integer("allocated", "Memory allocated in MiB", () -> (int) (runtime.totalMemory() / MIB))
                     .integer("max", "Maximum memory in MiB", () -> (int) (runtime.maxMemory() / MIB))
                     .integer("free", "Memory still available in MiB", () -> (int) ((runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory()) / MIB)));
         });
+    }
+
+    private static int getCpuUsage() {
+        OperatingSystemMXBean os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        double load = os.getProcessCpuLoad();
+        return load < 0 ? 0 : (int) Math.round(load * 100);
     }
 
     private static int getGpuUsage(MinecraftClient client) {
