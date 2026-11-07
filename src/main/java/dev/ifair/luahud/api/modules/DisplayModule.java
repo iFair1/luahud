@@ -16,6 +16,7 @@ public class DisplayModule {
                         .integer("windowHeight", "Window height", () -> client.getWindow().getHeight())
                         .integer("hz", "Monitor refresh rate", () -> client.getWindow().getRefreshRate())
                         .bool("isF3On", "Whether the debug menu is on", () -> client.getDebugHud().shouldShowDebugHud())
-                        .bool("isChatOn", "Whether the chat is on", () -> client.inGameHud.getChatHud().isChatFocused()));
+                        .bool("isChatOn", "Whether the chat is on", () -> client.inGameHud.getChatHud().isChatFocused())
+                        .bool("isHudHidden", "Whether the hud is hidden", () -> client.options.hudHidden));
     }
 }

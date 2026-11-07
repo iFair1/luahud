@@ -60,7 +60,6 @@ public final class OptionsModule {
 
     /** Add settings which Minecraft does not include in its persistence visitor here. */
     private static void addExtraOptions(Map<String, Option> options) {
-        add(options, "hudHidden", LuaType.bool(), value -> value.hudHidden);
         add(options, "smoothCameraEnabled", LuaType.bool(), value -> value.smoothCameraEnabled);
         add(options, "perspective", enumType(Perspective.class), value -> enumName(value.getPerspective()));
     }
