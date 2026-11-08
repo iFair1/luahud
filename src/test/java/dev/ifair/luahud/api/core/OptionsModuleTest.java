@@ -58,8 +58,9 @@ class OptionsModuleTest {
         runtime.execute("pause = lh.getOption('pauseOnLostFocus')", "changed-primitive");
         assertFalse(runtime.global("pause").checkBoolean());
         options.hudHidden = true;
-        runtime.execute("hidden = lh.getOption('hudHidden')", "changed-option");
-        assertTrue(runtime.global("hidden").checkBoolean());
+        assertTrue(assertThrows(LuaError.class,
+                () -> runtime.execute("lh.getOption('hudHidden')", "removed-option"))
+                .getMessage().contains("Unknown Minecraft option: hudHidden"));
         GameOptions replacement = defaultOptions();
         replacement.language = "tr_tr";
         current.set(replacement);
