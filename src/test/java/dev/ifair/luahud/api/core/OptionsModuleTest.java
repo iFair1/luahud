@@ -114,8 +114,13 @@ class OptionsModuleTest {
         assertTrue(StubGenerator.generate(registry, true).contains("---@overload fun(name: \"fov\"): number"));
         var document = JsonParser.parseString(DocumentationGenerator.generate(registry)).getAsJsonObject();
         var function = document.getAsJsonObject("root").getAsJsonArray("children").get(0).getAsJsonObject();
-        var definition = (ApiRegistry.FunctionNode) registry.rootNode().children().get("getOption");
-        assertEquals(definition.overloads().size(), function.getAsJsonArray("overloads").size());
+        assertEquals(3, document.get("schemaVersion").getAsInt());
+        assertFalse(function.has("overloads"));
+        assertEquals(JsonParser.parseString("{kind:'primitive',name:'string'}"),
+                function.getAsJsonArray("parameters").get(0).getAsJsonObject().get("type"));
+        assertEquals(JsonParser.parseString("{kind:'union',alternatives:[{kind:'primitive',name:'boolean'},"
+                + "{kind:'primitive',name:'integer'},{kind:'primitive',name:'number'},{kind:'primitive',name:'string'}]}"),
+                function.get("returnType"));
     }
 
     private static ApiRegistry registry(AtomicReference<GameOptions> options) {
