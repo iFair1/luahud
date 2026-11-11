@@ -74,9 +74,9 @@ public final class PlayerModule {
                     /*.number("toughness", "Armor toughness attribute", () -> attribute(client, EntityAttributes.ARMOR_TOUGHNESS))
                     *///?}
                     //? if <1.21.2 {
-                    .number("knockbackResistance", "Explosion knockback resistance", () -> attribute(client, EntityAttributes.GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE)));
+                    .number("knockbackResistance", "Knockback resistance", () -> attribute(client, EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE)));
                     //?} else {
-                    /*.number("knockbackResistance", "Explosion knockback resistance", () -> attribute(client, EntityAttributes.EXPLOSION_KNOCKBACK_RESISTANCE)));
+                    /*.number("knockbackResistance", "Knockback resistance", () -> attribute(client, EntityAttributes.KNOCKBACK_RESISTANCE)));
                     *///?}
             player.namespace("xp", xp -> xp
                     .integer("total", "Total experience points", () -> client.player.totalExperience)
