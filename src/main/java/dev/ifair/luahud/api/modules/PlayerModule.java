@@ -47,6 +47,8 @@ public final class PlayerModule {
                     //?} else {
                     /*.string("username", "Account username", () -> client.player.getGameProfile().name())
                     *///?}
+                    .bool("canSleep", "Whether it is night or thundering. Not 100% accurate.",
+                            () -> client.world.isNight() || client.world.isThundering())
                     .bool("sprinting", "Whether the character is sprinting", () -> client.player.isSprinting())
                     .bool("sneaking", "Whether the character is sneaking", () -> client.player.isSneaking())
                     .bool("swimming", "Whether the character is swimming", () -> client.player.isSwimming())
