@@ -5,6 +5,10 @@ import dev.ifair.luahud.api.core.StubGenerator;
 import dev.ifair.luahud.api.core.DocumentationGenerator;
 import com.google.gson.JsonParser;
 import dev.ifair.luahud.core.CobaltRuntime;
+import dev.ifair.luahud.api.models.CoreModels;
+import dev.ifair.luahud.render.RenderBuffer;
+import dev.ifair.luahud.render.RenderTestAssertions;
+import org.junit.jupiter.api.AfterEach;
 import net.minecraft.text.Text;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,6 +25,8 @@ class ChatModuleTest {
         net.minecraft.SharedConstants.createGameVersion();
         net.minecraft.Bootstrap.initialize();
     }
+
+    @AfterEach void clearRenderBuffer() { RenderBuffer.clear(); RenderModule.resetSection(); }
 
     private final List<Text> messages = new ArrayList<>();
 
@@ -41,6 +47,7 @@ class ChatModuleTest {
         ApiRegistry registry = new ApiRegistry(ignored -> {});
         var api = registry.registrar("luahud");
         ChatModule.register(api, messages::add, () -> null);
+        RenderModule.register(api, CoreModels.register(api));
         api.event("error", dev.ifair.luahud.api.models.ErrorModel.register(api).type(), "");
         api.event("reload", dev.ifair.luahud.api.LuaType.list(
                 dev.ifair.luahud.api.models.ProfileModel.register(api).type()), "");
@@ -55,9 +62,9 @@ class ChatModuleTest {
         runtime.fireEvent("reload", List.of(new dev.ifair.luahud.core.Profile("example", true, false, "")));
         runtime.fireEvent("error", new dev.ifair.luahud.error.ErrorEntry(42, "example", false, "tick", "oops", 1, 0, 0));
         runtime.fireEvent("error", new dev.ifair.luahud.error.ErrorEntry(42, "example", false, "tick", "oops", 2, 0, 0));
-        assertEquals(2, messages.size());
-        assertEquals("[LuaHUD] Reloaded: example", messages.getFirst().getString());
-        Text view = messages.get(1).getSiblings().get(1);
+        assertEquals(1, messages.size());
+        RenderTestAssertions.assertFirstText("example reloaded successfully!");
+        Text view = messages.getFirst().getSiblings().get(1);
         assertNotNull(view.getStyle().getClickEvent());
         assertNotNull(view.getStyle().getHoverEvent());
     }
