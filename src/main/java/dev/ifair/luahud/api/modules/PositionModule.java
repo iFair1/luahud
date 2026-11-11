@@ -39,7 +39,13 @@ public final class PositionModule {
                     .integer("localZ", "In chunk z coordinate", () -> client.player.getBlockZ() & 15));
 
             pos.string("dimension", "Namespaced dimension ID", () -> client.world.getRegistryKey().getValue().toString())
-                    .model("highestBlock", block, "Highest block at player coordinates", () -> getHighestBlock(client));
+                    .model("highestBlock", block, "Highest block at player coordinates", () -> getHighestBlock(client))
+                    .number("x", "X coordinate", () -> client.player.getX())
+                    .number("y", "Y coordinate", () -> client.player.getY())
+                    .number("z", "Z coordinate", () -> client.player.getZ())
+                    .integer("blockX", "X Block Coordinate", () -> client.player.getBlockX())
+                    .integer("blockY", "Y Block Coordinate", () -> client.player.getBlockY())
+                    .integer("blockZ", "Z Block Coordinate", () -> client.player.getBlockZ());
         });
     }
 
