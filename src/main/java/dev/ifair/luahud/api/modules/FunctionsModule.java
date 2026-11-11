@@ -30,6 +30,16 @@ public final class FunctionsModule {
             BlockPos pos = resolveCoordinates(arguments.get(coordinate), client.player);
             return pos == null ? null : new BlockView(client.world, pos);
         });
+
+        FunctionBuilder<Void> runCommand = api.root().function(
+                "runCommand", LuaType.nil(), "Run vanilla commands"
+        );
+        LuaParameter<String> command = runCommand.parameter("command", LuaType.string(), "Command starting with or without '/'.");
+        runCommand.call(arguments -> {
+            String value = arguments.get(command);
+            client.getNetworkHandler().sendChatCommand(value.startsWith("/") ? value.substring(1) : value);
+            return null;
+        });
     }
 
     private static BlockPos resolveCoordinates(String value, ClientPlayerEntity player) {
