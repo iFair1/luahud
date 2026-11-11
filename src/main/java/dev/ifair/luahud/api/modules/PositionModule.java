@@ -38,6 +38,13 @@ public final class PositionModule {
                     .integer("localY", "In chunk y coordinate", () -> client.player.getBlockY() & 15)
                     .integer("localZ", "In chunk z coordinate", () -> client.player.getBlockZ() & 15));
 
+            pos.namespace("velocity", velocity -> velocity
+                    .number("x", "X velocity in blocks per second", () -> client.player.getVelocity().x * 20)
+                    .number("y", "Y velocity in blocks per second", () -> client.player.getVelocity().y * 20)
+                    .number("z", "Z velocity in blocks per second", () -> client.player.getVelocity().z * 20)
+                    .number("horizontal", "Horizontal speed in blocks per second", () -> client.player.getVelocity().horizontalLength() * 20)
+                    .number("total", "Total speed in blocks per second", () -> client.player.getVelocity().length() * 20));
+
             pos.string("dimension", "Namespaced dimension ID", () -> client.world.getRegistryKey().getValue().toString())
                     .model("highestBlock", block, "Highest block at player coordinates", () -> getHighestBlock(client))
                     .number("x", "X coordinate", () -> client.player.getX())
