@@ -10,7 +10,6 @@ import dev.ifair.luahud.core.Engine;
 import dev.ifair.luahud.core.EventDispatcher;
 import dev.ifair.luahud.core.ProfileKeybindManager;
 import dev.ifair.luahud.error.ErrorManager;
-import dev.ifair.luahud.error.ErrorNotifications;
 import dev.ifair.luahud.gui.LuaHUDScreen;
 import dev.ifair.luahud.render.RenderBuffer;
 import net.fabricmc.api.ClientModInitializer;
@@ -75,7 +74,6 @@ public class LuaHUD implements ClientModInitializer {
 		LuaHUDCommands.register(engine);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			ErrorNotifications.flush(client);
 			handleKeybinds(client);
 			engine.checkForUpdates();
 			if (!engine.isReady()) return;

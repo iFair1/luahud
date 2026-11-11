@@ -46,6 +46,7 @@ public final class Engine {
             return new CobaltRuntime(registry, RenderModule::resetSection, ConfigManager.getLuaTimeoutMs());
         };
         profileLoader = engine -> {
+            ConfigManager.getSystemScripts().forEach(engine::runProfile);
             for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) {
                 if (profile.isActive()) engine.runProfile(profile.getName());
             }
@@ -91,7 +92,7 @@ public final class Engine {
     }
 
     public void runProfile(String name) {
-        runScript(ConfigManager.getScriptsDir().resolve(name + ".lua"), name);
+        runScript(ConfigManager.getProfilePath(name), name);
         ConfigManager.getProfiles().stream().filter(profile -> profile.getName().equals(name)).findFirst()
                 .ifPresent(profile -> loadedProfiles.add(new Profile(name, true, profile.isHidden(), profile.getKeybind())));
     }
@@ -105,6 +106,7 @@ public final class Engine {
     private void rememberProfiles() {
         knownProfiles.clear();
         ConfigManager.getProfiles().forEach(profile -> knownProfiles.put(profile.getName(), profile.isActive()));
+        if (registry != null) ConfigManager.getSystemScripts().forEach(name -> knownProfiles.put(name, true));
     }
 
     private void reloadChangedProfiles() {
@@ -112,6 +114,8 @@ public final class Engine {
         List<ConfigData.ProfileData> profiles = ConfigManager.getProfiles();
         Map<String, Boolean> current = new LinkedHashMap<>();
         profiles.forEach(profile -> current.put(profile.getName(), profile.isActive()));
+        java.util.List<String> systemScripts = ConfigManager.getSystemScripts();
+        systemScripts.forEach(name -> current.put(name, true));
         current.forEach((name, active) -> {
             if (!Objects.equals(knownProfiles.get(name), active)) changed.add(name);
         });
@@ -120,6 +124,9 @@ public final class Engine {
         for (String name : changed) {
             runtime.unloadProfile(name);
             ErrorManager.beginProfileReload(name);
+        }
+        for (String name : systemScripts) {
+            if (changed.contains(name)) runProfile(name);
         }
         for (ConfigData.ProfileData profile : profiles) {
             if (profile.isActive() && changed.contains(profile.getName())) runProfile(profile.getName());

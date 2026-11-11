@@ -71,15 +71,20 @@ class ConfigManagerTest {
         assertTrue(Files.isRegularFile(ConfigManager.getScriptsDir().resolve("Welcome Profile.lua")));
         assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("Welcome Profile.lua")));
         assertFalse(Files.exists(ConfigManager.getApiDir().resolve(".luarc.json")));
-        assertFalse(Files.exists(ConfigManager.MOD_CONFIG_DIR.resolve("system")));
+        assertTrue(Files.isRegularFile(ConfigManager.getProfilePath("system/notifications")));
+        assertFalse(ConfigManager.hasProfile("system/notifications"));
+        assertEquals(List.of("system/notifications"), ConfigManager.getSystemScripts());
         String settings = Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve(".luarc.json"));
         assertEquals("./api", com.google.gson.JsonParser.parseString(settings).getAsJsonObject()
                 .getAsJsonArray("Lua.workspace.library").get(0).getAsString());
 
+        Files.writeString(ConfigManager.getProfilePath("system/notifications"), "custom notifications");
         Files.writeString(ConfigManager.MOD_CONFIG_DIR.resolve(".luarc.json"), "custom settings");
         Files.writeString(ConfigManager.getScriptsDir().resolve("Welcome Profile.lua"), "custom profile");
         ConfigInstaller.generateDefaults();
 
+        assertEquals("custom notifications", Files.readString(ConfigManager.getProfilePath("system/notifications")));
+        assertFalse(ConfigManager.hasProfile("system/notifications"));
         assertEquals("custom settings", Files.readString(ConfigManager.MOD_CONFIG_DIR.resolve(".luarc.json")));
         assertEquals("custom profile", Files.readString(ConfigManager.getScriptsDir().resolve("Welcome Profile.lua")));
     }
@@ -102,6 +107,43 @@ class ConfigManagerTest {
         } finally {
             watcher.stop();
         }
+    }
+
+    @Test
+    void watcherTracksSystemScriptsWithoutCreatingProfiles() throws Exception {
+        FileWatcher watcher = new FileWatcher();
+        watcher.start();
+        try {
+            Path script = ConfigManager.getProfilePath("system/custom");
+            Files.writeString(script, "-- custom");
+            await(watcher::consumeReloadSignal);
+            assertTrue(watcher.consumeChangedProfiles().contains("system/custom"));
+            assertEquals(List.of("First", "Second"), names());
+            Files.writeString(script, "-- edited");
+            await(watcher::consumeReloadSignal);
+            assertTrue(watcher.consumeChangedProfiles().contains("system/custom"));
+            assertEquals(List.of("First", "Second"), names());
+            Files.delete(script);
+            await(watcher::consumeReloadSignal);
+            assertTrue(watcher.consumeChangedProfiles().contains("system/custom"));
+            assertEquals(List.of("First", "Second"), names());
+        } finally {
+            watcher.stop();
+        }
+    }
+
+    @Test
+    void oldSystemProfileSettingsAreDiscardedOnLoad() throws Exception {
+        ConfigData oldConfig = new ConfigData();
+        ConfigData.ProfileData system = new ConfigData.ProfileData("system/notifications");
+        system.setActive(false);
+        oldConfig.profiles.add(system);
+        Files.writeString(ConfigManager.JSON_CONFIG, new Gson().toJson(oldConfig));
+
+        ConfigManager.load();
+
+        assertTrue(ConfigManager.getProfiles().isEmpty());
+        assertFalse(Files.readString(ConfigManager.JSON_CONFIG).contains("system/notifications"));
     }
 
     @Test

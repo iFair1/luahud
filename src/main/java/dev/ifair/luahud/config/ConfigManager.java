@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 public class ConfigManager {
     static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir();
     static final Path MOD_CONFIG_DIR = CONFIG_DIR.resolve("luahud");
+    static final Path SYSTEM_DIR = MOD_CONFIG_DIR.resolve("system");
     static final Path PROFILES_DIR = MOD_CONFIG_DIR.resolve("profiles");
     static final Path API_DIR = MOD_CONFIG_DIR.resolve("api");
     static final Path JSON_CONFIG = CONFIG_DIR.resolve("luahud.json");
@@ -144,7 +145,26 @@ public class ConfigManager {
         }
     }
 
-    // This is where the profiles live
+    /** System scripts have runtime owners, but no configurable profile entries. */
+    public static java.util.List<String> getSystemScripts() {
+        try (var files = Files.list(SYSTEM_DIR)) {
+            return files.filter(Files::isRegularFile)
+                    .map(path -> path.getFileName().toString())
+                    .filter(name -> name.endsWith(".lua"))
+                    .sorted()
+                    .map(name -> "system/" + name.substring(0, name.length() - 4))
+                    .toList();
+        } catch (IOException error) {
+            ErrorManager.reportSystem("system scripts", error);
+            return java.util.List.of();
+        }
+    }
+
+    public static Path getProfilePath(String name) {
+        if (name.startsWith("system/")) return SYSTEM_DIR.resolve(name.substring(7) + ".lua").normalize();
+        return PROFILES_DIR.resolve(name + ".lua").normalize();
+    }
+
     public static Path getScriptsDir() {
         return PROFILES_DIR;
     }
@@ -212,10 +232,10 @@ public class ConfigManager {
 
     public static synchronized void createProfile(String name) {
         if (!validateProfileName(name)) return;
-        Path profileFile = PROFILES_DIR.resolve(name + ".lua").normalize();
+        Path profileFile = getProfilePath(name);
         while (hasProfile(name) || Files.exists(profileFile)) {
             name = incrementSuffix(name);
-            profileFile = PROFILES_DIR.resolve(name + ".lua").normalize();
+            profileFile = getProfilePath(name);
         }
 
         ConfigData candidate = copyConfig();
@@ -243,7 +263,7 @@ public class ConfigManager {
         int index = indexOfProfile(name);
         if (index < 0) return;
 
-        Path profileFile = PROFILES_DIR.resolve(name + ".lua").normalize();
+        Path profileFile = getProfilePath(name);
         ConfigData candidate = copyConfig();
         candidate.profiles.remove(index);
         Path stagedFile = null;
@@ -330,8 +350,8 @@ public class ConfigManager {
             newName = incrementSuffix(newName);
         }
 
-        Path oldFile = PROFILES_DIR.resolve(oldName + ".lua").normalize();
-        Path newFile = PROFILES_DIR.resolve(newName + ".lua").normalize();
+        Path oldFile = getProfilePath(oldName);
+        Path newFile = getProfilePath(newName);
 
         ConfigData candidate = copyConfig();
         candidate.profiles.get(indexOfProfile(oldName)).setName(newName);

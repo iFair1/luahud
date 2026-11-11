@@ -18,11 +18,14 @@ public class ConfigInstaller {
 
         try {
             Files.createDirectories(PROFILES_DIR);
+            Files.createDirectories(SYSTEM_DIR);
             Files.createDirectories(API_DIR);
         } catch (IOException e) {
             ErrorManager.reportSystem("default config", e);
             return;
         }
+
+        copyFromResourceIfAbsent(ASSETS_SOURCE + "system/notifications.lua", SYSTEM_DIR);
 
         if (ConfigManager.isGenerateExampleProfilesEnabled()) {
             generateExampleProfile("Welcome Profile", true, false, "key.keyboard.j");

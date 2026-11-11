@@ -74,10 +74,9 @@ public final class LuaHUDCommands {
     private static int reload(FabricClientCommandSource source, Engine engine) {
         engine.reloadAll();
         if (!engine.isReady()) {
-            source.sendError(Text.literal("[LuaHUD] Runtime could not be started. See /luahud errors."));
+            ErrorManager.reportSystem("engine", "Runtime could not be started.");
             return 0;
         }
-        source.sendFeedback(Text.literal("[LuaHUD] Active profiles reloaded."));
         return 1;
     }
 

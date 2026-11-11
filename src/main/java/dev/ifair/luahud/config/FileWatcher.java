@@ -28,12 +28,11 @@ public class FileWatcher {
             }
 
             watchService = FileSystems.getDefault().newWatchService();
-            ConfigManager.PROFILES_DIR.register(
-                    watchService,
-                    StandardWatchEventKinds.ENTRY_CREATE,
-                    StandardWatchEventKinds.ENTRY_MODIFY,
-                    StandardWatchEventKinds.ENTRY_DELETE
-            );
+            Files.createDirectories(ConfigManager.SYSTEM_DIR);
+            for (Path directory : new Path[]{ConfigManager.PROFILES_DIR, ConfigManager.SYSTEM_DIR}) {
+                directory.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
+                        StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
+            }
 
             syncExistingFiles();
 
@@ -54,7 +53,7 @@ public class FileWatcher {
         try (DirectoryStream<Path> files = Files.newDirectoryStream(ConfigManager.PROFILES_DIR, "*" + LUA_EXTENSION)) {
             for (Path file : files) {
                 if (!Files.isRegularFile(file)) continue;
-                String profileName = stripExtension(file.getFileName().toString());
+                String profileName = profileName(file);
                 if (!ConfigManager.hasProfile(profileName)) ConfigManager.addProfile(profileName);
             }
         } catch (IOException e) {
@@ -63,7 +62,7 @@ public class FileWatcher {
 
         for (ConfigData.ProfileData profile : ConfigManager.getProfiles()) {
             String profileName = profile.getName();
-            Path expectedFile = ConfigManager.PROFILES_DIR.resolve(profileName + LUA_EXTENSION);
+            Path expectedFile = ConfigManager.getProfilePath(profileName);
             if (Files.notExists(expectedFile)) {
                 ConfigManager.removeProfile(profileName);
             }
@@ -84,8 +83,11 @@ public class FileWatcher {
                         for (Path changedFile : changedFiles) reconcileFile(changedFile);
                     }
                     synchronized (changedProfiles) {
-                        if (overflow) ConfigManager.getProfiles().forEach(profile -> changedProfiles.add(profile.getName()));
-                        for (Path file : changedFiles) changedProfiles.add(stripExtension(file.toString()));
+                        if (overflow) {
+                            ConfigManager.getProfiles().forEach(profile -> changedProfiles.add(profile.getName()));
+                            changedProfiles.addAll(ConfigManager.getSystemScripts());
+                        }
+                        for (Path file : changedFiles) changedProfiles.add(profileName(file));
                     }
                     reloadNeeded.set(true);
                     changedFiles.clear();
@@ -98,7 +100,7 @@ public class FileWatcher {
                         continue;
                     }
 
-                    Path changedFile = (Path) event.context();
+                    Path changedFile = ((Path) key.watchable()).resolve((Path) event.context());
                     String fileName = changedFile.toString();
 
                     if (!fileName.endsWith(LUA_EXTENSION)) continue;
@@ -118,15 +120,21 @@ public class FileWatcher {
     }
 
     private void reconcileFile(Path changedFile) {
+        if (changedFile.getParent().equals(ConfigManager.SYSTEM_DIR)) return;
         // Editors may delete and recreate a script during one save. Reconcile
         // only after the event burst settles, preserving its profile settings.
-        String profileName = stripExtension(changedFile.toString());
-        Path profileFile = ConfigManager.PROFILES_DIR.resolve(changedFile);
+        String profileName = profileName(changedFile);
+        Path profileFile = changedFile;
         if (Files.notExists(profileFile)) {
             ConfigManager.removeProfile(profileName);
         } else if (Files.isRegularFile(profileFile) && !ConfigManager.hasProfile(profileName)) {
             ConfigManager.addProfile(profileName);
         }
+    }
+
+    private static String profileName(Path file) {
+        String name = stripExtension(file.getFileName().toString());
+        return file.getParent().equals(ConfigManager.SYSTEM_DIR) ? "system/" + name : name;
     }
 
     private static String stripExtension(String fileName) {

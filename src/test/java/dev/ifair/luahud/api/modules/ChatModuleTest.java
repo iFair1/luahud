@@ -17,6 +17,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ChatModuleTest {
+    @org.junit.jupiter.api.BeforeAll static void bootstrapMinecraft() {
+        net.minecraft.SharedConstants.createGameVersion();
+        net.minecraft.Bootstrap.initialize();
+    }
+
     private final List<Text> messages = new ArrayList<>();
 
     private ApiRegistry registry() {
@@ -30,6 +35,31 @@ class ChatModuleTest {
         CobaltRuntime runtime = new CobaltRuntime(registry(), () -> {}, 100);
         runtime.start();
         return runtime;
+    }
+
+    @Test void bundledNotificationsUseNormalEventsAndClickableChat() throws Exception {
+        ApiRegistry registry = new ApiRegistry(ignored -> {});
+        var api = registry.registrar("luahud");
+        ChatModule.register(api, messages::add, () -> null);
+        api.event("error", dev.ifair.luahud.api.models.ErrorModel.register(api).type(), "");
+        api.event("reload", dev.ifair.luahud.api.LuaType.list(
+                dev.ifair.luahud.api.models.ProfileModel.register(api).type()), "");
+        registry.addEventFunctions();
+        registry.freeze();
+        CobaltRuntime runtime = new CobaltRuntime(registry, () -> {}, 100);
+        runtime.start();
+        try (var script = getClass().getResourceAsStream("/assets/luahud/system/notifications.lua")) {
+            assertNotNull(script);
+            runtime.execute(script, "notifications.lua");
+        }
+        runtime.fireEvent("reload", List.of(new dev.ifair.luahud.core.Profile("example", true, false, "")));
+        runtime.fireEvent("error", new dev.ifair.luahud.error.ErrorEntry(42, "example", false, "tick", "oops", 1, 0, 0));
+        runtime.fireEvent("error", new dev.ifair.luahud.error.ErrorEntry(42, "example", false, "tick", "oops", 2, 0, 0));
+        assertEquals(2, messages.size());
+        assertEquals("[LuaHUD] Reloaded: example", messages.getFirst().getString());
+        Text view = messages.get(1).getSiblings().get(1);
+        assertNotNull(view.getStyle().getClickEvent());
+        assertNotNull(view.getStyle().getHoverEvent());
     }
 
     @Test void stringsRemainLiteralIncludingJsonLookingTextAndSectionCodes() throws Exception {
