@@ -98,6 +98,7 @@ public final class RenderBuffer {
 
     public static void addText(
             String text,
+            float scale,
             int textColor,
             int backgroundColor,
             boolean shadow,
@@ -106,7 +107,7 @@ public final class RenderBuffer {
             boolean newLine
     ) {
         QUEUE.add(new RenderElement.Text(
-                text, textColor, backgroundColor, shadow, offsetX, offsetY), newLine);
+                text, textColor, backgroundColor, shadow, offsetX, offsetY, 1, scale), newLine);
         invalidateLayout();
     }
 

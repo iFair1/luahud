@@ -102,7 +102,7 @@ final class RenderQueue {
     void add(RenderElement element, boolean endsRow) {
         float opacity = current.opacity;
         element = switch (element) {
-            case RenderElement.Text e -> new RenderElement.Text(e.value(), e.textColor(), e.backgroundColor(), e.shadow(), e.offsetX(), e.offsetY(), opacity);
+            case RenderElement.Text e -> new RenderElement.Text(e.value(), e.textColor(), e.backgroundColor(), e.shadow(), e.offsetX(), e.offsetY(), opacity, e.scale());
             case RenderElement.Item e -> new RenderElement.Item(e.value(), e.scale(), e.backgroundColor(), e.offsetX(), e.offsetY(), opacity);
             case RenderElement.Stack e -> new RenderElement.Stack(e.value(), e.scale(), e.backgroundColor(), e.offsetX(), e.offsetY(), e.drawAir(), opacity);
             case RenderElement.Entity e -> new RenderElement.Entity(e.value(), e.scale(), e.yaw(), e.pitch(), e.fullBright(), e.useEntityRotation(), e.backgroundColor(), e.offsetX(), e.offsetY(), opacity);

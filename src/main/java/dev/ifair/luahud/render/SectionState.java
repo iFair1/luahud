@@ -8,12 +8,16 @@ public record SectionState(
         int textColor,
         int backgroundColor,
         float iconScale,
+        float textScale,
         float opacity
 ) {
     public SectionState {
         Objects.requireNonNull(layout, "layout");
         if (!Float.isFinite(opacity) || opacity < 0 || opacity > 1)
             throw new IllegalArgumentException("Opacity must be finite and between 0 and 1");
+        if (!Float.isFinite(textScale) || textScale <= 0) {
+            throw new IllegalArgumentException("Text scale must be finite and greater than zero");
+        }
         if (!Float.isFinite(iconScale) || iconScale <= 0) {
             throw new IllegalArgumentException("Icon scale must be finite and greater than zero");
         }
@@ -23,6 +27,6 @@ public record SectionState(
         Anchor anchor = Anchor.TOP_LEFT;
         return new SectionState(
                 SectionLayout.defaults(anchor, anchor.defaultOffsetX(), 2),
-                true, 0xFFFFFFFF, 0x80000000, 1.0f, 1.0f);
+                true, 0xFFFFFFFF, 0x80000000, 1.0f, 1.0f, 1.0f);
     }
 }

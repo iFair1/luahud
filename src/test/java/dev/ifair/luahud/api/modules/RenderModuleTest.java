@@ -73,6 +73,8 @@ class RenderModuleTest {
         assertTrue(stub.contains("---@field useEntityRotation? boolean "
                 + "Use the entity's current rotation as the base for yaw and pitch offsets"));
         assertTrue(stub.contains("function lh.drawEntity(uuid, options) end"));
+        assertTrue(stub.contains("---@field textScale? number Default text scale relative to the section; defaults to 1"));
+        assertFalse(stub.contains("Canvas-only text scale"));
         assertTrue(stub.contains("---@field rowHeight? integer | \"auto\" Fixed unscaled row height"));
         assertTrue(stub.contains("---@field lineSpacing? integer Unscaled background spacing around each row, favoring the top; defaults to 2"));
         assertTrue(stub.contains("---@field inlineSpacing? integer "

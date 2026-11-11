@@ -18,7 +18,7 @@ class RenderBufferTest {
 
     @Test void newlineClosesTheCurrentRowAndCreatesEmptyRowsAtRowBoundaries() {
         RenderBuffer.beginSection(SectionLayout.defaults(Anchor.TOP_LEFT, 2, 2));
-        RenderBuffer.addText("first", 0, 0, false, 0, 0, false);
+        RenderBuffer.addText("first", 1f, 0, 0, false, 0, 0, false);
 
         RenderBuffer.newLine(2);
 

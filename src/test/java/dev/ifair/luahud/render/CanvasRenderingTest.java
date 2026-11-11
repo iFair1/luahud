@@ -144,7 +144,7 @@ class CanvasRenderingTest {
     @Test void validatesCanvasOnlyOptionsAndGeometryWithoutCorruptingFollowingInvocations() throws Exception {
         var runtime = runtime();
         for (String script : List.of(
-                "lh.draw('a',{x=1})", "lh.draw('a',{scale=2})", "lh.drawRect(0,0,1,1)",
+                "lh.draw('a',{x=1})", "lh.drawRect(0,0,1,1)",
                 "lh.canvas({width=0,height=10})", "lh.canvas({width=-1,height=10})",
                 "lh.canvas({width=0/0,height=10})", "lh.canvas({width=math.huge,height=10})",
                 "lh.canvas({inline=true,width=10,height=10,id='invalid'})",

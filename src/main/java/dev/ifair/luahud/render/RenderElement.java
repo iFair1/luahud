@@ -20,10 +20,15 @@ sealed interface RenderElement permits RenderElement.Text, RenderElement.Stack, 
             boolean shadow,
             int offsetX,
             int offsetY,
-            float opacity
+            float opacity,
+            float scale
     ) implements RenderElement {
         Text(String value, int textColor, int backgroundColor, boolean shadow, int offsetX, int offsetY) {
-            this(value, textColor, backgroundColor, shadow, offsetX, offsetY, 1);
+            this(value, textColor, backgroundColor, shadow, offsetX, offsetY, 1, 1);
+        }
+
+        Text(String value, int textColor, int backgroundColor, boolean shadow, int offsetX, int offsetY, float opacity) {
+            this(value, textColor, backgroundColor, shadow, offsetX, offsetY, opacity, 1);
         }
     }
 

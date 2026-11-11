@@ -138,13 +138,12 @@ public final class RenderModule {
 
     public static void clearTextureCache() { CanvasModule.clearImageSizes(); }
 
-    private static void canvasFields(LuaType.InputTableBuilder fields, boolean text) {
+    private static void canvasFields(LuaType.InputTableBuilder fields) {
         fields.optional("x", LuaType.number(), "Canvas-local X; defaults to 0")
                 .optional("y", LuaType.number(), "Canvas-local Y; defaults to 0")
                 .optional("rotation", LuaType.number(), "Canvas-only clockwise 2D rotation in degrees")
                 .optional("originX", LuaType.number(), "Canvas-only rotation pivot X relative to the element")
                 .optional("originY", LuaType.number(), "Canvas-only rotation pivot Y relative to the element");
-        if (text) fields.optional("scale", LuaType.number(), "Canvas-only text scale; defaults to 1");
     }
 
     private static LuaType<LuaTableValue> textureOptions(LuaType<Object> color) {
@@ -261,7 +260,7 @@ public final class RenderModule {
             boolean entity
     ) {
         return LuaType.inputTable(name, fields -> {
-            if (!section) canvasFields(fields, text);
+            if (!section) canvasFields(fields);
             fields.optional("opacity", LuaType.number(), "Opacity from 0 to 1; multiplies section opacity and color alpha; defaults to 1")
                     .optional("backgroundColor", color, "ARGB integer, RGB/ARGB hex string, or Color table")
                     .optional("offsetX", LuaType.integer(), section
@@ -288,6 +287,8 @@ public final class RenderModule {
                         .optional("rowDirection", LuaType.union(
                                 LuaType.literal("topToBottom"), LuaType.literal("bottomToTop")),
                                 "Visual order of rows within the section; defaults to topToBottom")
+                        .optional("textScale", LuaType.number(),
+                                "Default text scale relative to the section; defaults to 1")
                         .optional("iconScale", LuaType.number(),
                                 "Default item, stack, entity, and texture scale relative to the section")
                         .optional("rowHeight", LuaType.union(LuaType.integer(), LuaType.literal("auto")),
@@ -301,10 +302,8 @@ public final class RenderModule {
                 fields.optional("textColor", color, "Text color")
                         .optional("shadow", LuaType.bool(), "Draw text shadow");
             }
-            if (section || !text) {
-                fields.optional("scale", LuaType.number(),
-                        section ? "Scale applied to the entire section" : "Scale relative to the section");
-            }
+            fields.optional("scale", LuaType.number(),
+                    section ? "Scale applied to the entire section" : "Scale relative to the section; overrides the section default");
             if (!section && !text) {
                 fields.optional("newLine", LuaType.bool(), "Advance to the next line after drawing; defaults to false");
             }
@@ -371,6 +370,7 @@ public final class RenderModule {
                 resolveColor(options, "textColor", defaults.textColor()),
                 resolveColor(options, "backgroundColor", defaults.backgroundColor()),
                 scale(options, "iconScale", defaults.iconScale()),
+                scale(options, "textScale", defaults.textScale()),
                 opacity(options));
     }
 
@@ -389,11 +389,8 @@ public final class RenderModule {
     private static void drawText(String text, LuaTableValue options, boolean newline) {
         options = LuaTableValue.orEmpty(options);
         prepareDraw(options);
-        if (!RenderBuffer.isCanvas() && options.contains("scale")) {
-            throw new IllegalArgumentException("Text scale requires a canvas");
-        }
         if (RenderBuffer.isCanvas() && newline) throw new IllegalArgumentException("Canvas does not support line breaks");
-        RenderBuffer.addText(text,
+        RenderBuffer.addText(text, RenderBuffer.isCanvas() ? 1 : scale(options, "scale", currentState.textScale()),
                 resolveColor(options, "textColor", currentState.textColor()),
                 resolveColor(options, "backgroundColor", currentState.backgroundColor()),
                 options.bool("shadow", currentState.shadow()),

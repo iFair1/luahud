@@ -55,6 +55,41 @@ class CallbackRenderingTest {
                 sections.getLast().rows().getFirst().elements());
     }
 
+    @Test void textScaleUsesSectionDefaultAndAllowsPerDrawOverrides() throws Exception {
+        CobaltRuntime runtime = runtime();
+        runtime.execute("""
+                lh.section({scale=2, textScale=1.5, opacity=0.5})
+                lh.draw('inherited')
+                lh.drawln('override', {scale=0.5})
+                lh.draw('inherited again', {})
+                lh.section()
+                lh.draw('reset')
+                """, "text-scale");
+
+        var section = RenderBuffer.sections().getFirst();
+        var inherited = (RenderElement.Text) section.rows().getFirst().elements().getFirst();
+        var override = (RenderElement.Text) section.rows().getFirst().elements().get(1);
+        var nextRow = (RenderElement.Text) section.rows().get(1).elements().getFirst();
+        var reset = (RenderElement.Text) RenderBuffer.sections().getLast().rows().getFirst().elements().getFirst();
+        assertEquals(1.5f, inherited.scale());
+        assertEquals(0.5f, override.scale());
+        assertEquals(1.5f, nextRow.scale());
+        assertEquals(1f, reset.scale());
+        assertEquals(0.5f, inherited.opacity());
+        assertEquals(3f, RenderElementMeasurer.effectiveTextScale(inherited.scale(), section.layout().scale()));
+        assertEquals(1f, RenderElementMeasurer.effectiveTextScale(override.scale(), section.layout().scale()));
+    }
+
+    @Test void textScaleRejectsNonPositiveAndNonFiniteValues() throws Exception {
+        CobaltRuntime runtime = runtime();
+        for (String value : List.of("0", "-1", "0/0", "math.huge")) {
+            assertThrows(org.squiddev.cobalt.LuaError.class,
+                    () -> runtime.execute("lh.section({textScale=" + value + "})", "invalid-text-scale"));
+            assertThrows(org.squiddev.cobalt.LuaError.class,
+                    () -> runtime.execute("lh.draw('text', {scale=" + value + "})", "invalid-draw-scale"));
+        }
+    }
+
     @Test void reloadTickRenderAndTimersRetainIndependentDrawings() throws Exception {
         CobaltRuntime runtime = runtime();
         runtime.execute("lh.draw('load'); "

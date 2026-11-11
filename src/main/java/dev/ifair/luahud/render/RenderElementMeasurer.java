@@ -10,7 +10,7 @@ final class RenderElementMeasurer {
         return switch (element) {
             case RenderElement.Canvas canvas -> (int) Math.ceil(canvas.drawing().width * canvas.drawing().scale * sectionScale);
             case RenderElement.Text text -> RenderDimensions.scaleLength(
-                    textRenderer.getWidth(text.value()), sectionScale);
+                    textRenderer.getWidth(text.value()), effectiveTextScale(text.scale(), sectionScale));
             case RenderElement.Stack stack -> stackWidth(
                     stack.value(), stack.scale(), sectionScale, stack.drawAir());
             case RenderElement.Item item -> stackWidth(item.value(), item.scale(), sectionScale, false);
@@ -22,8 +22,8 @@ final class RenderElementMeasurer {
     static int height(RenderElement element, TextRenderer textRenderer, float sectionScale) {
         return switch (element) {
             case RenderElement.Canvas canvas -> (int) Math.ceil(canvas.drawing().height * canvas.drawing().scale * sectionScale);
-            case RenderElement.Text ignored -> RenderDimensions.scaleLength(
-                    textRenderer.fontHeight, sectionScale);
+            case RenderElement.Text text -> RenderDimensions.scaleLength(
+                    textRenderer.fontHeight, effectiveTextScale(text.scale(), sectionScale));
             case RenderElement.Stack stack -> stackHeight(
                     stack.value(), stack.scale(), sectionScale, stack.drawAir());
             case RenderElement.Item item -> stackHeight(
@@ -52,13 +52,21 @@ final class RenderElementMeasurer {
                 RenderDimensions.BASE_ICON_SIZE, effectiveIconScale(iconScale, sectionScale));
     }
 
+    static float effectiveTextScale(float textScale, float sectionScale) {
+        return effectiveScale(textScale, sectionScale);
+    }
+
     static float effectiveIconScale(float iconScale, float sectionScale) {
-        if (!Float.isFinite(iconScale) || iconScale <= 0
+        return effectiveScale(iconScale, sectionScale);
+    }
+
+    private static float effectiveScale(float elementScale, float sectionScale) {
+        if (!Float.isFinite(elementScale) || elementScale <= 0
                 || !Float.isFinite(sectionScale) || sectionScale <= 0) {
             throw new IllegalArgumentException("Scale must be finite and greater than zero");
         }
-        float effective = iconScale * sectionScale;
-        if (!Float.isFinite(effective)) throw new IllegalArgumentException("Combined icon scale is too large");
+        float effective = elementScale * sectionScale;
+        if (!Float.isFinite(effective)) throw new IllegalArgumentException("Combined scale is too large");
         return effective;
     }
 }

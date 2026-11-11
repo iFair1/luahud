@@ -40,7 +40,7 @@ final class RenderPainter {
             case RenderElement.Canvas canvas -> CanvasPainter.paint(context, textRenderer,
                     canvas.drawing(), x, y, positioned.sectionScale());
             case RenderElement.Text text -> paintText(
-                    context, textRenderer, text, positioned.sectionScale(), x, y);
+                    context, textRenderer, text, RenderElementMeasurer.effectiveTextScale(text.scale(), positioned.sectionScale()), x, y);
             case RenderElement.Stack stack -> paintItem(
                     context, textRenderer, stack.value(), stack.scale(), positioned.sectionScale(),
                     x, y - 1);
