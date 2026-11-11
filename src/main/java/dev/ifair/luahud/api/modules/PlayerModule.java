@@ -48,7 +48,12 @@ public final class PlayerModule {
                     /*.string("username", "Account username", () -> client.player.getGameProfile().name())
                     *///?}
                     .bool("sprinting", "Whether the character is sprinting", () -> client.player.isSprinting())
+                    .bool("sneaking", "Whether the character is sneaking", () -> client.player.isSneaking())
+                    .bool("swimming", "Whether the character is swimming", () -> client.player.isSwimming())
+                    .bool("flying", "Whether the character is flying", () -> client.player.getAbilities().flying)
+                    .bool("onGround", "Whether the character is on the ground", () -> client.player.isOnGround())
                     .bool("sprintHeld", "Whether the sprint key is held or toggled", () -> client.options.sprintKey.isPressed())
+                    .bool("sneakHeld", "Whether the sneak key is held or toggled", () -> client.options.sneakKey.isPressed())
                     .string("gamemode", "Current game mode", () -> gameMode(client))
                     .value("effects", LuaType.map(RegistryIds.STATUS_EFFECT, models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
                             () -> CoreModels.statusEffects(client.player))
