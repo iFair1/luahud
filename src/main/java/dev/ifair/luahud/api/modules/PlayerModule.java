@@ -5,6 +5,8 @@ import dev.ifair.luahud.api.LuaDoc;
 import dev.ifair.luahud.api.LuaType;
 import dev.ifair.luahud.api.ModelBuilder;
 import dev.ifair.luahud.api.models.CoreModels;
+import dev.ifair.luahud.api.models.EntityModel;
+import dev.ifair.luahud.api.models.HorseModel;
 import dev.ifair.luahud.api.models.RegistryIds;
 import dev.ifair.luahud.core.DeathEvent;
 import dev.ifair.luahud.core.DeathState;
@@ -58,9 +60,9 @@ public final class PlayerModule {
                     .bool("sneakHeld", "Whether the sneak key is held or toggled", () -> client.options.sneakKey.isPressed())
                     .string("gamemode", "Current game mode", () -> gameMode(client))
                     .value("effects", LuaType.map(RegistryIds.STATUS_EFFECT, models.statusEffect().type()), LuaDoc.of("Active status effects keyed by namespaced ID"),
-                            () -> CoreModels.statusEffects(client.player))
+                            () -> EntityModel.statusEffects(client.player))
                     .value("horse", LuaType.optional(models.horse().type()), LuaDoc.of("Currently ridden horse-family animal, or nil"),
-                            () -> CoreModels.horse(client.player.getVehicle()));
+                            () -> HorseModel.horse(client.player.getVehicle()));
             player.namespace("hunger", hunger -> hunger
                     .number("food", "Food level", () -> (double) client.player.getHungerManager().getFoodLevel())
                     .number("saturation", "Saturation level", () -> (double) client.player.getHungerManager().getSaturationLevel()));

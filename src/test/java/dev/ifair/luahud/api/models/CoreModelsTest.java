@@ -190,7 +190,7 @@ class CoreModelsTest {
         /*assertTrue(EntityAttributes.MOVEMENT_SPEED.value().isTracked());
         assertTrue(EntityAttributes.JUMP_STRENGTH.value().isTracked());
         *///?}
-        assertNull(CoreModels.horse(null));
+        assertNull(HorseModel.horse(null));
     }
 
     @Test void horseAndRiderCyclesHaveCompleteStubsAndSeparateInputFields() {
