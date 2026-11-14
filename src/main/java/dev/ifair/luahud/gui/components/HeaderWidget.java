@@ -11,7 +11,7 @@ import net.minecraft.util.Identifier;
 public class HeaderWidget {
     private static final String GITHUB_URL = "https://github.com/iFair1/luahud";
     private static final String MODRINTH_URL = "https://modrinth.com/mod/luahud";
-    // TODO: Discord
+    private static final String DISCORD_URL = "https://discord.gg/usVs5wyKTG";
     public static final String DOCS_URL = "https://luahud.ifair.dev";
 
     public static final int MARGIN = 8;
@@ -60,17 +60,19 @@ public class HeaderWidget {
                         ignored -> GuiUtils.openInBrowser(MODRINTH_URL)
                 )
         );
+
         screen.addWidget(
                 new IconButtonWidget(
-                left3,
-                y,
-                BUTTON_SIZE,
-                BUTTON_SIZE,
-                GuiTextures.DISCORD,
+                        left3,
+                        y,
+                        BUTTON_SIZE,
+                        BUTTON_SIZE,
+                        GuiTextures.DISCORD,
                         "Discord",
-                ignored -> {}
-            )
+                        ignored -> GuiUtils.openInBrowser(DISCORD_URL)
+                )
         );
+
         screen.addWidget(
                 new IconButtonWidget(
                 left4,
