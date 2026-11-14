@@ -77,7 +77,7 @@ class CoreApiTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"reload, Profile[]", "tick, nil", "render, nil", "item-pickup, ItemStack",
+    @CsvSource({"reload, Profile[]", "tick, nil", "render, nil", "item-pickup, ItemStack", "item-drop, ItemStack",
             "damage, Damage", "attack, Damage", "death, Death", "kill, Death", "error, Error"})
     void builtInEventsHaveMatchingRegistryAndLuaOverloads(String name, String payload) {
         var event = registry.event(name);

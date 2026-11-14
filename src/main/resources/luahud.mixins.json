@@ -7,6 +7,8 @@
         "ClientDamageMixin",
         "ClientAttackMixin",
         "ClientItemPickupMixin",
+        "ClientItemDropMixin",
+        "PlayerItemDropMixin",
         "SoundManagerMixin",
         "ClientWorldSoundMixin",
         ${canvas_mixins}

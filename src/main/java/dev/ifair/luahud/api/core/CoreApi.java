@@ -57,6 +57,10 @@ public final class CoreApi {
         api.event("item-pickup", models.itemStack().type(),
                 "Reports a server-confirmed ground item pickup by the local player. "
                         + "The ItemStack contains the picked-up count and preserves the item's components.");
+        api.event("item-drop", models.itemStack().type(),
+                "Reports a client-observed item drop by the local player, including inventory drops. "
+                        + "The ItemStack contains the positive dropped count and preserves the item's components; "
+                        + "server acceptance is not confirmed.");
         var damage = DamageModel.register(api, models);
         api.event("damage", damage.type(),
                 "Reports local-player damage with observed health loss including absorption. Nearby updates are combined using the latest damage source; "
