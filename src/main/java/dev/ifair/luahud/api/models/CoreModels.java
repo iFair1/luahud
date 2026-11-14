@@ -67,8 +67,8 @@ public record CoreModels(
                 effect -> durationInSeconds(effect.getDuration())).inputOptional();
         var ticks = model.integer("durationInTicks", "Remaining duration in ticks (-1 if infinite); takes precedence over seconds for input tables",
                 StatusEffectInstance::getDuration).inputOptional();
-        var showParticles = model.bool("showParticles", "Whether effect particles are shown; defaults to true for input tables",
-                StatusEffectInstance::shouldShowParticles).inputDefault(true);
+        model.bool("showParticles", "Whether effect particles are shown; defaults to true for input tables", StatusEffectInstance::shouldShowParticles).inputDefault(true);
+        model.bool("isAmbient", "Whether the source is a beacon or a conduit", StatusEffectInstance::isAmbient).inputDefault(false);
         model.fromFields(fields -> {
             StatusEffect effect = registryValue(Registries.STATUS_EFFECT, fields.get(id), "status effect");
             Integer durationTicks;
@@ -88,7 +88,7 @@ public record CoreModels(
             if (durationTicks < StatusEffectInstance.INFINITE) throw new IllegalArgumentException("Effect duration must be -1 or non-negative");
             StatusEffectInstance source = fields.source();
             return new StatusEffectInstance(Registries.STATUS_EFFECT.getEntry(effect), durationTicks, effectLevel - 1,
-                    source != null && source.isAmbient(), fields.get(showParticles),
+                    source == null || source.isAmbient(), source != null && source.shouldShowParticles(),
                     source == null || source.shouldShowIcon());
         });
         return model;
